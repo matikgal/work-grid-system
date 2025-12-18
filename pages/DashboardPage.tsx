@@ -12,10 +12,11 @@ import Sidebar from '../components/Sidebar';
 import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
 import EmployeeModal from '../components/EmployeeModal';
+import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
 import { SHIFT_TEMPLATES } from '../constants';
-import { getRandomColor, calculateDuration, cn } from '../utils';
+import { getRandomColor, calculateDuration, cn, getShiftStyle } from '../utils';
 import { supabase } from '../lib/supabase';
 
 // Props inherited from parent or fetched here? 
@@ -115,6 +116,32 @@ export const DashboardPage: React.FC = () => {
       return !isSunday && !isHoliday;
     }).length;
   }, [currentDate]);
+
+  // --- KEYBOARD SHORTCUTS ---
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if typing in an input or textarea
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const key = e.key;
+      const index = parseInt(key, 10) - 1;
+
+      if (index >= 0 && index < SHIFT_TEMPLATES.length) {
+        const template = SHIFT_TEMPLATES[index];
+        setActiveTemplate(activeTemplate?.id === template.id ? null : template);
+      }
+      
+      // Escape to clear template
+      if (e.key === 'Escape') {
+        setActiveTemplate(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [activeTemplate]);
 
   // --- HANDLERS ---
   const handlePrev = () => {
@@ -265,6 +292,72 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
+    <MainLayout 
+      onAddEmployee={() => setIsSidebarOpen(true)}
+      headerLeft={
+        <div className="flex items-center gap-1 md:gap-3">
+           <button onClick={handlePrev} className="p-1 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+           </button>
+           <div className="text-center min-w-[100px] md:min-w-[120px]">
+              <h2 className="text-[11px] md:text-sm font-bold text-slate-800 capitalize whitespace-nowrap leading-none">
+                {viewMode === 'week' ? (
+                   <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
+                ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
+              </h2>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                Dni robocze: <span className="text-emerald-600">{workingDaysCount}</span>
+              </div>
+           </div>
+           <button onClick={handleNext} className="p-1 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+              <ChevronRight className="w-4 h-4" />
+           </button>
+        </div>
+      }
+      headerCenter={
+        <div className="hidden lg:flex items-center gap-1.5 px-4 py-1 max-w-full">
+            {SHIFT_TEMPLATES.map((template, index) => {
+                const style = getShiftStyle(template.label);
+                return (
+                   <button
+                    key={template.id}
+                    onClick={() => setActiveTemplate(activeTemplate?.id === template.id ? null : template)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all active:scale-95 text-center min-w-[85px] relative group",
+                      style.bg, 
+                      activeTemplate?.id === template.id ? "border-slate-800 shadow-sm" : cn(style.border, "border-opacity-50 shadow-sm opacity-90 hover:opacity-100 hover:border-opacity-100"),
+                      style.text
+                    )}
+                  >
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold border border-white shadow-sm">
+                      {index + 1}
+                    </span>
+                    {template.label}
+                   </button>
+                );
+            })}
+        </div>
+      }
+      headerRight={
+        <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsCompactMode(!isCompactMode)}
+              className={cn(
+                  "p-2 rounded-lg transition-all border active:scale-95", 
+                  isCompactMode ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200"
+              )}
+              title={isCompactMode ? "Pełny widok" : "Kompaktowo"}
+            >
+                {isCompactMode ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
+            </button>
+
+            <div className="hidden sm:flex bg-white p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
+               <button onClick={() => setViewMode('week')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'week' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Tydzień</button>
+               <button onClick={() => setViewMode('month')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'month' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Miesiąc</button>
+            </div>
+        </div>
+      }
+    >
     <div className="flex h-full w-full flex-col bg-slate-50 relative overflow-hidden">
       
       {/* Sidebar Overlay */}
@@ -286,71 +379,6 @@ export const DashboardPage: React.FC = () => {
           onAddEmployee={() => setIsEmployeeModalOpen(true)}
           onClose={() => setIsSidebarOpen(false)}
         />
-      </div>
-
-      {/* Top Controls Bar - Specific for Dashboard */}
-      <div className="bg-white border-b border-slate-200 p-3 flex flex-col gap-3 shadow-sm z-20 shrink-0">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            
-            {/* Sidebar Toggle */}
-            <div className="flex items-center w-20">
-               <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg" title="Zarządzaj pracownikami">
-                 <UserPlus className="w-5 h-5" />
-               </button>
-            </div>
-
-            {/* Date Navigation */}
-            <div className="flex-1 flex justify-center items-center gap-4">
-               <button onClick={handlePrev} className="p-1 hover:bg-slate-100 rounded-full text-slate-500"><ChevronLeft /></button>
-               <div className="text-center">
-                  <h2 className="text-xl font-bold text-slate-800 capitalize leading-none">
-                    {viewMode === 'week' ? (
-                       <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 text-base">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
-                    ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
-                  </h2>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                    Dni robocze: <span className="text-emerald-600">{workingDaysCount}</span>
-                  </div>
-               </div>
-               <button onClick={handleNext} className="p-1 hover:bg-slate-100 rounded-full text-slate-500"><ChevronRight /></button>
-            </div>
-
-             {/* View Mode Switcher */}
-             <div className="flex items-center gap-2 justify-end w-auto min-w-[140px]">
-                <button 
-                  onClick={() => setIsCompactMode(!isCompactMode)}
-                  className={cn("p-2 rounded-lg transition-colors border", isCompactMode ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50")}
-                  title={isCompactMode ? "Pełny widok" : "Widok kompaktowy (wszyscy pracownicy)"}
-                >
-                    {isCompactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-                </button>
-
-                <div className="bg-slate-100 p-1 rounded-lg border border-slate-200 flex text-xs font-bold">
-                   <button onClick={() => setViewMode('week')} className={cn("px-3 py-1.5 rounded", viewMode === 'week' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>Tydzień</button>
-                   <button onClick={() => setViewMode('month')} className={cn("px-3 py-1.5 rounded", viewMode === 'month' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500")}>Miesiąc</button>
-                </div>
-             </div>
-          </div>
-
-          {/* Quick Add Toolbar */}
-          <div className="flex items-center gap-2 overflow-x-auto p-1 scrollbar-hide">
-              <span className="text-[10px] font-bold uppercase text-slate-400 whitespace-nowrap">Szybkie dodawanie:</span>
-              {SHIFT_TEMPLATES.map(template => (
-                  <button
-                    key={template.id}
-                    onClick={() => setActiveTemplate(activeTemplate?.id === template.id ? null : template)}
-                    className={cn(
-                      "px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 whitespace-nowrap transition-all",
-                      activeTemplate?.id === template.id ? `ring-2 ring-emerald-500 border-transparent shadow-sm ${template.colorClass}` : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    )}
-                  >
-                    {template.label}
-                  </button>
-              ))}
-              {activeTemplate && (
-                  <button onClick={() => setActiveTemplate(null)} className="text-xs text-rose-500 font-bold hover:underline flex items-center"><X size={12}/> Anuluj</button>
-              )}
-          </div>
       </div>
 
       {/* Grid Content */}
@@ -380,5 +408,6 @@ export const DashboardPage: React.FC = () => {
         onAdd={handleSaveEmployee}
       />
     </div>
+    </MainLayout>
   );
 };

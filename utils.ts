@@ -49,23 +49,23 @@ export const getRandomColor = () => {
 // Determine shift color based on shift type
 export const getShiftStyle = (type: string): { bg: string; border: string; text: string } => {
   switch (type) {
-    case 'Ranna':
-    case '06:00': // Legacy support if needed
-      return { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' };
+    case '6-14':
+    case '06:00':
+      return { bg: 'bg-emerald-100', border: 'border-emerald-200', text: 'text-emerald-800' };
     
-    case 'Popołudniowa':
+    case '14-22':
     case '14:00':
-      return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+      return { bg: 'bg-indigo-100', border: 'border-indigo-200', text: 'text-indigo-800' };
 
     case '10-18':
     case '10:00':
-      return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+      return { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-800' };
 
     case 'Urlop':
-      return { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-800' };
+      return { bg: 'bg-orange-100', border: 'border-orange-200', text: 'text-orange-800' };
     
     case 'Wolna Sobota':
-      return { bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-500' };
+      return { bg: 'bg-slate-100', border: 'border-slate-200', text: 'text-slate-500' };
 
     case 'Szkoła':
       return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' };

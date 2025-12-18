@@ -182,7 +182,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
 
         {/* Body Rows */}
         <div className="divide-y divide-slate-100">
-          {sortedEmployees.map((employee) => {
+          {sortedEmployees.map((employee, index) => {
             // Get employee summary
             const currentMonthStr = format(days[0], 'MM');
             const empShifts = shifts.filter(s => s.employeeId === employee.id && format(new Date(s.date), 'MM') === currentMonthStr);
@@ -193,13 +193,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                 const isTailwindClass = employee.avatarColor?.startsWith('bg-');
                 const avatarStyle = isTailwindClass ? {} : { backgroundColor: employee.avatarColor || stringToColor(employee.name) };
                 const avatarClass = isTailwindClass ? employee.avatarColor : undefined;
+                
+                const isEven = index % 2 === 0;
 
                 return (
-                <div key={employee.id} className={cn("flex group/row transition-colors hover:bg-slate-50", isCompactMode ? "h-10 text-xs" : "h-24")}>
+                <div key={employee.id} className={cn(
+                  "flex group/row transition-colors hover:bg-slate-50/80", 
+                  isCompactMode ? "h-10 text-xs" : "h-24",
+                  isEven ? "bg-white" : "bg-slate-50/40"
+                )}>
                   {/* Employee Header Cell */}
                   <div className={cn(
-                      "w-28 md:w-64 sticky left-0 z-10 bg-white border-r border-slate-200 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
-                      isCompactMode ? "py-1" : ""
+                      "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
+                      isCompactMode ? "py-1" : "",
+                      isEven ? "bg-white" : "bg-slate-50"
                   )}>
                     <div 
                       className={cn(
@@ -235,8 +242,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                         // Compact view for month mode
                         let abbr = shift.type.substring(0, 3).toUpperCase();
                         if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                        if (shift.type === 'Ranna') abbr = 'R';
-                        if (shift.type === 'Popołudniowa') abbr = 'P';
+                        if (shift.type === '6-14') abbr = '6';
+                        if (shift.type === '14-22') abbr = '14';
                         if (shift.type === '10-18') abbr = '10';
 
                         const startH = shift.startTime.split(':')[0];
@@ -307,8 +314,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                  {/* Summary Column Logic (Updated for ViewMode==Month) */}
                 {viewMode === 'month' && (
                   <div className={cn(
-                      "w-20 md:w-24 sticky right-0 z-10 bg-white border-l border-slate-200 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0",
-                      isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1"
+                      "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0",
+                      isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1",
+                      isEven ? "bg-white" : "bg-slate-50"
                   )}>
                        <div className="text-center" title="Godziny">
                           <span className="font-bold text-slate-700">{totalHours}h</span>
