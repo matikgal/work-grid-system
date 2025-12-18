@@ -46,43 +46,80 @@ export const DashboardPage: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isCompactMode, setIsCompactMode] = useState(false);
   
-  // --- DATA FETCHING (Scoped to Dashboard) ---
+  // --- DATA FETCHING (Optimized with Caching) ---
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      // 1. Try to load from cache first for instant UI
+      const cachedData = localStorage.getItem('grafik_cache');
+      let localEmployees: Employee[] = [];
+      let localShifts: Shift[] = [];
+      let lastUpdateTS = 0;
+
+      if (cachedData) {
+        try {
+          const parsed = JSON.parse(cachedData);
+          localEmployees = parsed.employees || [];
+          localShifts = parsed.shifts || [];
+          lastUpdateTS = parsed.last_updated || 0;
+          
+          setEmployees(localEmployees);
+          setShifts(localShifts);
+          setLoading(false); // Stop loading if we have cached data
+        } catch (e) {
+          console.error("Cache corrupted");
+        }
+      }
+
       try {
-        const { data: emps, error: empsError } = await supabase
-          .from('employees')
-          .select('*')
-          .order('name');
-        
-        if (empsError) throw empsError;
-        
-        const mappedEmps = (emps || []).map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role,
-          avatarColor: e.avatar_color
-        }));
+        // 2. Efficiently check if DB has newer data
+        const { data: updateCheck, error: updateError } = await supabase
+          .rpc('get_max_updated_at'); // We'll add this RPC or use a simple query
 
-        const { data: shfts, error: shftsError } = await supabase
-          .from('shifts')
-          .select('*');
-        
-        if (shftsError) throw shftsError;
+        // If RPC fails (not yet defined), fallback to query
+        let dbMaxUpdated = 0;
+        if (updateError) {
+          const { data: maxEmp } = await supabase.from('employees').select('updated_at').order('updated_at', { ascending: false }).limit(1).single();
+          const { data: maxShift } = await supabase.from('shifts').select('updated_at').order('updated_at', { ascending: false }).limit(1).single();
+          dbMaxUpdated = Math.max(
+            new Date(maxEmp?.updated_at || 0).getTime(),
+            new Date(maxShift?.updated_at || 0).getTime()
+          );
+        } else {
+          dbMaxUpdated = new Date(updateCheck).getTime();
+        }
 
-        const mappedShfts = (shfts || []).map(s => ({
-          id: s.id,
-          employeeId: s.employee_id,
-          date: s.date,
-          startTime: s.start_time,
-          endTime: s.end_time,
-          duration: s.duration,
-          type: s.type
-        }));
+        // 3. Only fetch full datasets if DB is newer
+        if (dbMaxUpdated > lastUpdateTS || !cachedData) {
+          const { data: emps } = await supabase.from('employees').select('id, name, role, avatar_color').order('name');
+          const { data: shfts } = await supabase.from('shifts').select('id, employee_id, date, start_time, end_time, duration, type');
 
-        setEmployees(mappedEmps);
-        setShifts(mappedShfts);
+          const mappedEmps = (emps || []).map(e => ({
+            id: e.id,
+            name: e.name,
+            role: e.role,
+            avatarColor: e.avatar_color
+          }));
+
+          const mappedShfts = (shfts || []).map(s => ({
+            id: s.id,
+            employeeId: s.employee_id,
+            date: s.date,
+            startTime: s.start_time,
+            endTime: s.end_time,
+            duration: s.duration,
+            type: s.type
+          }));
+
+          setEmployees(mappedEmps);
+          setShifts(mappedShfts);
+          
+          // Update cache
+          localStorage.setItem('grafik_cache', JSON.stringify({
+            employees: mappedEmps,
+            shifts: mappedShfts,
+            last_updated: dbMaxUpdated
+          }));
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -92,6 +129,17 @@ export const DashboardPage: React.FC = () => {
 
     fetchData();
   }, []);
+
+  // Helper to update cache after mutations
+  const syncCache = (newEmployees: Employee[], newShifts: Shift[]) => {
+    setEmployees(newEmployees);
+    setShifts(newShifts);
+    localStorage.setItem('grafik_cache', JSON.stringify({
+      employees: newEmployees,
+      shifts: newShifts,
+      last_updated: Date.now()
+    }));
+  };
 
   // --- DATE LOGIC ---
   const daysToDisplay = useMemo(() => {
@@ -182,8 +230,7 @@ export const DashboardPage: React.FC = () => {
               .eq('id', existingShift.id)
               .select()
               .single();
-            if (error) throw error;
-            setShifts(prev => prev.map(s => s.id === existingShift.id ? {
+            const newShifts = prev => prev.map(s => s.id === existingShift.id ? {
               id: data.id,
               employeeId: data.employee_id,
               date: data.date,
@@ -191,7 +238,9 @@ export const DashboardPage: React.FC = () => {
               endTime: data.end_time,
               duration: data.duration,
               type: data.type
-            } : s));
+            } : s);
+            setShifts(newShifts);
+            // Refresh cache in background or just trust state
           } else {
             const { data, error } = await supabase
               .from('shifts')
@@ -199,7 +248,7 @@ export const DashboardPage: React.FC = () => {
               .select()
               .single();
             if (error) throw error;
-            setShifts(prev => [...prev, {
+            const newShifts = [...shifts, {
               id: data.id,
               employeeId: data.employee_id,
               date: data.date,
@@ -207,7 +256,8 @@ export const DashboardPage: React.FC = () => {
               endTime: data.end_time,
               duration: data.duration,
               type: data.type
-            }]);
+            }];
+            syncCache(employees, newShifts);
           }
         } catch (error) {
           console.error('Error saving shift:', error);
@@ -246,7 +296,8 @@ export const DashboardPage: React.FC = () => {
           .update(supabaseData)
           .eq('id', shiftData.id);
         if (error) throw error;
-        setShifts(prev => prev.map(s => s.id === shiftData.id ? shiftData as Shift : s));
+        const newShifts = shifts.map(s => s.id === shiftData.id ? shiftData as Shift : s);
+        syncCache(employees, newShifts);
       } else {
         const { data, error } = await supabase
           .from('shifts')
@@ -254,7 +305,7 @@ export const DashboardPage: React.FC = () => {
           .select()
           .single();
         if (error) throw error;
-        setShifts(prev => [...prev, {
+        const newShifts = [...shifts, {
           id: data.id,
           employeeId: data.employee_id,
           date: data.date,
@@ -262,7 +313,8 @@ export const DashboardPage: React.FC = () => {
           endTime: data.end_time,
           duration: data.duration,
           type: data.type
-        }]);
+        }];
+        syncCache(employees, newShifts);
       }
     } catch (error) {
       console.error('Error saving shift:', error);
@@ -273,7 +325,8 @@ export const DashboardPage: React.FC = () => {
     try {
       const { error } = await supabase.from('shifts').delete().eq('id', id);
       if (error) throw error;
-      setShifts(prev => prev.filter(s => s.id !== id));
+      const newShifts = shifts.filter(s => s.id !== id);
+      syncCache(employees, newShifts);
     } catch (error) {
       console.error('Error deleting shift:', error);
     }
@@ -293,15 +346,17 @@ export const DashboardPage: React.FC = () => {
         
         if (error) throw error;
         
-        setEmployees(prev => prev.map(e => 
+        const newEmps = employees.map(e => 
           e.id === editingEmployee.id ? { ...e, name, role } : e
-        ));
+        );
+        syncCache(newEmps, shifts);
         setEditingEmployee(null);
       } else {
         const newEmpData = { name, role, avatar_color: getRandomColor() };
         const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
         if (error) throw error;
-        setEmployees(prev => [...prev, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }]);
+        const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
+        syncCache(newEmps, shifts);
       }
     } catch (error) { 
       console.error('Error saving employee:', error); 
