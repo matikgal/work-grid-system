@@ -13,10 +13,10 @@ export const INITIAL_EMPLOYEES: Employee[] = [
 ];
 
 export const SHIFT_TEMPLATES: ShiftTemplate[] = [
-  { id: 't1', label: 'Ranna', startTime: '06:00', endTime: '14:00', colorClass: 'bg-emerald-100 border-emerald-300 text-emerald-800' },
-  { id: 't2', label: 'Dzienna', startTime: '08:00', endTime: '16:00', colorClass: 'bg-amber-100 border-amber-300 text-amber-800' },
-  { id: 't3', label: 'Popołudniowa', startTime: '14:00', endTime: '22:00', colorClass: 'bg-indigo-100 border-indigo-300 text-indigo-800' },
-  { id: 't4', label: 'Nocna', startTime: '22:00', endTime: '06:00', colorClass: 'bg-slate-800 border-slate-600 text-slate-100' },
+  { id: 't1', label: 'Ranna', startTime: '06:00', endTime: '14:00', colorClass: 'bg-emerald-100 border-emerald-300 text-emerald-800', type: 'work' },
+  { id: 't3', label: 'Popołudniowa', startTime: '14:00', endTime: '22:00', colorClass: 'bg-indigo-100 border-indigo-300 text-indigo-800', type: 'work' },
+  { id: 't_vacation', label: 'Urlop', startTime: '08:00', endTime: '16:00', colorClass: 'bg-rose-100 border-rose-300 text-rose-800', type: 'vacation' },
+  { id: 't_sat', label: 'Wolna Sobota', startTime: '00:00', endTime: '00:00', colorClass: 'bg-slate-100 border-slate-300 text-slate-500', type: 'dayoff' },
 ];
 
 // Helper to create a shift relative to today

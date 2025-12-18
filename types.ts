@@ -12,6 +12,7 @@ export interface Shift {
   startTime: string; // Format: HH:MM
   endTime: string; // Format: HH:MM
   duration: number; // In hours
+  type?: 'work' | 'vacation' | 'dayoff';
 }
 
 export interface ModalState {
@@ -27,6 +28,7 @@ export interface ShiftTemplate {
   startTime: string;
   endTime: string;
   colorClass: string;
+  type: 'work' | 'vacation' | 'dayoff';
 }
 
 export type ViewMode = 'week' | 'month';
