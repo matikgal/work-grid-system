@@ -1,0 +1,5 @@
+{
+  "name": "FreshMarket Scheduler",
+  "description": "A modern SPA for managing grocery store employee schedules with automatic hour calculations.",
+  "requestFramePermissions": []
+}
