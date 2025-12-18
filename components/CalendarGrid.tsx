@@ -95,7 +95,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
   const colWidthClass = viewMode === 'week' ? 'min-w-[140px] flex-1' : 'flex-1 min-w-0 overflow-hidden';
 
   return (
-    <div className="flex-1 overflow-auto bg-slate-50 relative custom-scrollbar h-full">
+    <div className="flex-1 overflow-auto bg-slate-50 relative custom-scrollbar h-full calendar-grid">
       <div className={cn(viewMode === 'week' ? "min-w-max w-full" : "w-full min-w-0")}>
         {/* Header Row */}
         <div className="flex sticky top-0 z-20 bg-white shadow-sm border-b border-slate-200">

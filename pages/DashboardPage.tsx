@@ -6,12 +6,13 @@ import {
 } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ChevronLeft, ChevronRight, Users, X, UserPlus, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, X, UserPlus, Minimize2, Maximize2, Printer } from 'lucide-react';
 
 import Sidebar from '../components/Sidebar';
 import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
 import EmployeeModal from '../components/EmployeeModal';
+import { PrintReport } from '../components/PrintReport';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
@@ -42,6 +43,7 @@ export const DashboardPage: React.FC = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isCompactMode, setIsCompactMode] = useState(false);
   
   // --- DATA FETCHING (Scoped to Dashboard) ---
@@ -277,13 +279,33 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleSaveEmployee = async (name: string, role: string) => {
-    const newEmpData = { name, role, avatar_color: getRandomColor() };
     try {
-      const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
-      if (error) throw error;
-      setEmployees(prev => [...prev, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }]);
-    } catch (error) { console.error('Error adding employee:', error); }
+      if (editingEmployee) {
+        const { error } = await supabase
+          .from('employees')
+          .update({ name, role })
+          .eq('id', editingEmployee.id);
+        
+        if (error) throw error;
+        
+        setEmployees(prev => prev.map(e => 
+          e.id === editingEmployee.id ? { ...e, name, role } : e
+        ));
+        setEditingEmployee(null);
+      } else {
+        const newEmpData = { name, role, avatar_color: getRandomColor() };
+        const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
+        if (error) throw error;
+        setEmployees(prev => [...prev, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }]);
+      }
+    } catch (error) { 
+      console.error('Error saving employee:', error); 
+    }
   };
 
   const getActiveEmployeeName = () => {
@@ -351,6 +373,14 @@ export const DashboardPage: React.FC = () => {
                 {isCompactMode ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
             </button>
 
+            <button 
+              onClick={handlePrint}
+              className="p-2 bg-white border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200 rounded-lg transition-all active:scale-95 shadow-sm"
+              title="Drukuj grafik miesiąca"
+            >
+                <Printer className="w-3.5 h-3.5" />
+            </button>
+
             <div className="hidden sm:flex bg-white p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
                <button onClick={() => setViewMode('week')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'week' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Tydzień</button>
                <button onClick={() => setViewMode('month')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'month' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Miesiąc</button>
@@ -360,6 +390,15 @@ export const DashboardPage: React.FC = () => {
     >
     <div className="flex h-full w-full flex-col bg-slate-50 relative overflow-hidden">
       
+      {/* Print-only Report Container */}
+      <div className="print-container">
+        <PrintReport 
+          currentDate={currentDate} 
+          employees={employees} 
+          shifts={shifts} 
+        />
+      </div>
+
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)} />
@@ -376,7 +415,14 @@ export const DashboardPage: React.FC = () => {
           currentMonth={currentDate}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          onAddEmployee={() => setIsEmployeeModalOpen(true)}
+          onAddEmployee={() => {
+            setEditingEmployee(null);
+            setIsEmployeeModalOpen(true);
+          }}
+          onEditEmployee={(emp) => {
+            setEditingEmployee(emp);
+            setIsEmployeeModalOpen(true);
+          }}
           onClose={() => setIsSidebarOpen(false)}
         />
       </div>
@@ -404,8 +450,12 @@ export const DashboardPage: React.FC = () => {
       />
       <EmployeeModal 
         isOpen={isEmployeeModalOpen}
-        onClose={() => setIsEmployeeModalOpen(false)}
+        onClose={() => {
+          setIsEmployeeModalOpen(false);
+          setEditingEmployee(null);
+        }}
         onAdd={handleSaveEmployee}
+        employee={editingEmployee}
       />
     </div>
     </MainLayout>

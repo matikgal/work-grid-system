@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Users, Clock, X, Layout, LayoutList } from 'lucide-react';
+import { Plus, Users, Clock, X, Layout, LayoutList, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { Employee, Shift, ViewMode } from '../types';
@@ -12,10 +12,11 @@ interface SidebarProps {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   onAddEmployee: () => void;
+  onEditEmployee: (employee: Employee) => void;
   onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, viewMode, setViewMode, onAddEmployee, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, viewMode, setViewMode, onAddEmployee, onEditEmployee, onClose }) => {
   
   // Calculate total monthly hours for an employee
   const getMonthlyHours = (employeeId: string) => {
@@ -81,7 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, view
           return (
             <div 
               key={emp.id} 
-              className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all"
+              onClick={() => onEditEmployee(emp)}
+              className="group flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className={cn(
@@ -95,10 +97,12 @@ const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, view
                   <p className="text-xs text-slate-400">{emp.role}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1 justify-end text-slate-600">
-                  <Clock className="w-3 h-3" />
-                  <span className="text-sm font-bold">{hours}h</span>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="flex items-center gap-1 justify-end text-slate-600">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-sm font-bold">{hours}h</span>
+                  </div>
                 </div>
               </div>
             </div>

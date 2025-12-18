@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { X, UserPlus, Shield, ShoppingCart, Beef, Croissant, Carrot, Trash2 } from 'lucide-react';
+import React from 'react';
+import { X, UserPlus, Shield, ShoppingCart, Beef, Croissant, Carrot, Trash2, Edit } from 'lucide-react';
 import { cn } from '../utils';
+import { Employee } from '../types';
 
 interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (name: string, role: string) => void;
+  employee?: Employee | null;
 }
 
 const ROLES = [
@@ -19,10 +21,23 @@ const ROLES = [
   { id: 'sprzataczka', label: 'Sprzątaczka', icon: Trash2 },
 ];
 
-const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onAdd }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [selectedRole, setSelectedRole] = useState(ROLES[1].label);
+const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onAdd, employee }) => {
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+  const [selectedRole, setSelectedRole] = React.useState(ROLES[1].label);
+
+  React.useEffect(() => {
+    if (employee && isOpen) {
+      const names = employee.name.split(' ');
+      setFirstName(names[0] || '');
+      setLastName(names.slice(1).join(' ') || '');
+      setSelectedRole(employee.role);
+    } else if (isOpen) {
+      setFirstName('');
+      setLastName('');
+      setSelectedRole(ROLES[1].label);
+    }
+  }, [employee, isOpen]);
 
   if (!isOpen) return null;
 
@@ -47,9 +62,11 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onAdd })
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="bg-brand-100 p-2 rounded-lg">
-              <UserPlus className="w-5 h-5 text-brand-600" />
+              {employee ? <Edit className="w-5 h-5 text-brand-600" /> : <UserPlus className="w-5 h-5 text-brand-600" />}
             </div>
-            <h2 className="text-xl font-bold text-slate-800">Nowy pracownik</h2>
+            <h2 className="text-xl font-bold text-slate-800">
+              {employee ? 'Edytuj pracownika' : 'Nowy pracownik'}
+            </h2>
           </div>
           <button 
             onClick={onClose}
@@ -123,7 +140,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onAdd })
               type="submit"
               className="flex-1 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-brand-600/20 transition-all active:scale-[0.98]"
             >
-              Dodaj pracownika
+              {employee ? 'Zapisz zmiany' : 'Dodaj pracownika'}
             </button>
           </div>
         </form>
