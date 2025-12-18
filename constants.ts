@@ -15,7 +15,8 @@ export const INITIAL_EMPLOYEES: Employee[] = [
 export const SHIFT_TEMPLATES: ShiftTemplate[] = [
   { id: 't1', label: 'Ranna', startTime: '06:00', endTime: '14:00', colorClass: 'bg-emerald-100 border-emerald-300 text-emerald-800', type: 'work' },
   { id: 't3', label: 'Popołudniowa', startTime: '14:00', endTime: '22:00', colorClass: 'bg-indigo-100 border-indigo-300 text-indigo-800', type: 'work' },
-  { id: 't_vacation', label: 'Urlop', startTime: '08:00', endTime: '16:00', colorClass: 'bg-rose-100 border-rose-300 text-rose-800', type: 'vacation' },
+  { id: 't_mid', label: '10-18', startTime: '10:00', endTime: '18:00', colorClass: 'bg-purple-100 border-purple-300 text-purple-800', type: 'work' },
+  { id: 't_vacation', label: 'Urlop', startTime: '08:00', endTime: '16:00', colorClass: 'bg-orange-100 border-orange-300 text-orange-800', type: 'vacation' },
   { id: 't_sat', label: 'Wolna Sobota', startTime: '00:00', endTime: '00:00', colorClass: 'bg-slate-100 border-slate-300 text-slate-500', type: 'dayoff' },
 ];
 

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Plus, Users, Clock, X, Layout, LayoutList, LogOut } from 'lucide-react';
+import { Plus, Users, Clock, X, Layout, LayoutList } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { supabase } from '../lib/supabase';
 import { Employee, Shift, ViewMode } from '../types';
 import { cn } from '../utils';
 
@@ -116,13 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, view
           Dodaj Pracownika
         </button>
         
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Wyloguj się
-        </button>
+
       </div>
     </aside>
   );

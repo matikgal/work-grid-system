@@ -46,14 +46,51 @@ export const getRandomColor = () => {
 };
 
 // Determine shift color based on start time
-export const getShiftStyle = (startTime: string) => {
-  const hour = parseInt(startTime.split(':')[0], 10);
-  
-  if (hour < 10) {
-    return 'bg-emerald-100 border-emerald-300 text-emerald-800 hover:bg-emerald-200'; // Morning
-  } else if (hour < 16) {
-    return 'bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200'; // Day
-  } else {
-    return 'bg-indigo-100 border-indigo-300 text-indigo-800 hover:bg-indigo-200'; // Evening
+// Determine shift color based on shift type
+export const getShiftStyle = (type: string): { bg: string; border: string; text: string } => {
+  switch (type) {
+    case 'Ranna':
+    case '06:00': // Legacy support if needed
+      return { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' };
+    
+    case 'Popołudniowa':
+    case '14:00':
+      return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+
+    case '10-18':
+    case '10:00':
+      return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+
+    case 'Urlop':
+      return { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-800' };
+    
+    case 'Wolna Sobota':
+      return { bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-500' };
+
+    case 'Szkoła':
+      return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' };
+
+    case 'L4':
+    case 'Chorobowe':
+      return { bg: 'bg-rose-100', border: 'border-rose-300', text: 'text-rose-800' };
+
+    default:
+      // Fallback for custom times - try to guess based on hour if type looks like HH:MM
+      if (type.includes(':')) {
+          const hour = parseInt(type.split(':')[0], 10);
+          if (hour < 10) return { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' };
+          if (hour < 16) return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+          return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+      }
+      return { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-700' };
   }
+};
+
+export const stringToColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+  return '#' + '00000'.substring(0, 6 - c.length) + c;
 };

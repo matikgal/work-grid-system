@@ -12,7 +12,7 @@ export interface Shift {
   startTime: string; // Format: HH:MM
   endTime: string; // Format: HH:MM
   duration: number; // In hours
-  type?: 'work' | 'vacation' | 'dayoff';
+  type?: string;
 }
 
 export interface ModalState {
