@@ -235,9 +235,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     if (!shift) return null;
 
                     if (isCompactMode) {
-                        let abbr = '8';
+                        let abbr = '';
                         if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                        if (shift.type === 'Urlop') abbr = 'U';
+                        else if (shift.type === 'Urlop') abbr = 'U';
+                        else {
+                             const start = parseInt(shift.startTime.split(':')[0]);
+                             const end = parseInt(shift.endTime.split(':')[0]);
+                             abbr = `${start}-${end}`;
+                        }
                         return <span className={cn("font-bold", style?.text)}>{abbr}</span>;
                     }
 
@@ -315,16 +320,39 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                  {/* Summary Column Logic (Updated for ViewMode==Month) */}
                 {viewMode === 'month' && (
                   <div className={cn(
-                      "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0",
+                      "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-colors",
                       isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1",
-                      isEven ? "bg-white" : "bg-slate-50"
+                      // Background logic based on norm
+                      (() => {
+                          // Calculate norm for this specific month range
+                          // Note: days[] might be the whole month view
+                          const workingDays = days.reduce((acc, day) => {
+                              const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+                              // Assuming valid holidays check from existing `hd` instance
+                              const isHoliday = hd.isHoliday(day); 
+                              // Note: We need to verify if the holiday falls on a weekday to subtract it from working days?
+                              // Standard PL logic: Holidays reduce working days regardless (if they fall on a workday? Actually usually M-F).
+                              // Simplified working hours logic: Mon-Fri excluding holidays.
+                              if (!isWeekend && !isHoliday) return acc + 1;
+                              return acc;
+                          }, 0);
+                          const targetHours = workingDays * 8;
+                          
+                          if (totalHours === targetHours) return "bg-emerald-100 text-emerald-800";
+                          return "bg-rose-100 text-rose-800";
+                      })()
                   )}>
-                       <div className="text-center" title="Godziny">
-                          <span className="font-bold text-slate-700">{totalHours}h</span>
+                       <div className="text-center flex flex-col items-center" title={`Norma: ${days.reduce((acc, d) => (!hd.isHoliday(d) && getDay(d) !== 0 && getDay(d) !== 6) ? acc + 1 : acc, 0) * 8}h`}>
+                          <div className="font-bold leading-tight">
+                              {totalHours}h
+                              <span className="text-[10px] opacity-75 font-normal ml-1">
+                                  / {parseFloat((totalHours / 8).toFixed(2))}d
+                              </span>
+                          </div>
                        </div>
                        {!isCompactMode && (
                         <div className="text-center" title="Dni urlopu">
-                            <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100">
+                            <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
                                 {vacationDays}d url.
                             </span>
                         </div>
@@ -340,24 +368,35 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
         {/* Footer Row (Totals) */}
         <div className="flex bg-slate-50 border-t border-slate-200 font-bold text-slate-700 sticky bottom-0 z-30 shadow-[0_-4px_8px_-4px_rgba(0,0,0,0.1)] h-10 md:h-12">
              <div className="w-28 md:w-64 sticky left-0 z-30 bg-slate-50 border-r border-slate-200 px-3 text-right text-xs uppercase tracking-wider flex items-center justify-end shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0">
-               Suma (osoby):
+               Suma (1zm/2zm | obecni):
              </div>
              <div className="flex flex-1 w-0">
                 {daysInfo.map(({ dateStr, isMonthChange }) => {
-                  const count = dailyStatsLookup[dateStr].count;
+                  const shiftsForDay = shifts.filter(s => s.date === dateStr);
+                  const count = shiftsForDay.length;
                   const isFullStaff = count === employees.length && count > 0;
                   
+                  // Count specific shifts
+                  const firstShiftCount = shiftsForDay.filter(s => s.startTime === '06:00').length;
+                  const secondShiftCount = shiftsForDay.filter(s => s.startTime === '14:00').length;
+
                   return (
                     <div 
                       key={dateStr}
                       className={cn(
                         colWidthClass,
-                        "h-full text-center text-xs flex items-center justify-center border-r border-slate-200 transition-colors",
+                        "h-full text-center text-[10px] md:text-xs flex items-center justify-center border-r border-slate-200 transition-colors",
                         isFullStaff ? "bg-emerald-50 text-emerald-700" : (count > 0 ? "bg-rose-50 text-rose-700" : ""),
                         isMonthChange && "border-r-[3px] border-r-slate-300"
                       )}
                     >
-                      {count > 0 ? count : '-'}
+                      {count > 0 ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                            <span>{firstShiftCount}/{secondShiftCount}</span>
+                            <span className="opacity-30">|</span>
+                            <span className="opacity-75">{count}/{employees.length}</span>
+                        </div>
+                      ) : '-'}
                     </div>
                   );
                 })}

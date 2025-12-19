@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, getDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { Employee, Shift } from '../types';
 
@@ -11,8 +11,8 @@ interface PrintReportProps {
 
 export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate, employees, shifts }) => {
   const daysInfo = useMemo(() => {
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const end = endOfWeek(currentDate, { weekStartsOn: 1 });
     const days = eachDayOfInterval({ start, end });
     
     return days.map(day => {
@@ -28,20 +28,22 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
   }, [currentDate]);
 
   const shiftsLookup = useMemo(() => {
-    const lookup: Record<string, string | number> = {};
+    const lookup: Record<string, Shift> = {};
     shifts.forEach(s => {
-      let val: string | number = s.duration || '';
-      if (s.type === 'Urlop') val = 'U';
-      else if (s.type === 'Wolna Sobota') val = 'WS';
-      lookup[`${s.employeeId}-${s.date}`] = val;
+      lookup[`${s.employeeId}-${s.date}`] = s;
     });
     return lookup;
   }, [shifts]);
 
+  const startOfWeekDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const endOfWeekDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+
   return (
     <div className="hidden print:block w-full bg-white text-black p-2 font-sans overflow-visible">
       <div className="text-center mb-4">
-        <h1 className="text-xl font-bold uppercase tracking-tight">Grafik Pracy - {format(currentDate, 'LLLL yyyy', { locale: pl })}</h1>
+        <h1 className="text-xl font-bold uppercase tracking-tight">
+          Grafik {format(startOfWeekDate, 'dd.MM', { locale: pl })} - {format(endOfWeekDate, 'dd.MM.yyyy', { locale: pl })}
+        </h1>
       </div>
       
       <table className="w-full border-collapse border-2 border-slate-800 text-[8px] table-fixed">
@@ -67,16 +69,30 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
               <tr key={emp.id} className="h-6">
                 <td className="border-2 border-slate-800 p-1 font-bold whitespace-nowrap bg-slate-50 px-2 text-[9px] overflow-hidden text-ellipsis">{emp.name}</td>
                 {daysInfo.map(info => {
-                  const val = shiftsLookup[`${emp.id}-${info.dateStr}`] || '';
-                  if (typeof val === 'number') totalHours += val;
-                  if (val === 'U') totalHours += 8;
+                  const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
+                  let displayVal = '';
+
+                  if (shift) {
+                      if (shift.type === 'Urlop') {
+                          displayVal = 'U';
+                          totalHours += 8;
+                      } else if (shift.type === 'Wolna Sobota') {
+                          displayVal = 'WS';
+                      } else {
+                          // Standard work shift
+                          const start = parseInt(shift.startTime.split(':')[0]);
+                          const end = parseInt(shift.endTime.split(':')[0]);
+                          displayVal = `${start}-${end}`;
+                          totalHours += (shift.duration || 0);
+                      }
+                  }
 
                   return (
                     <td 
                       key={info.dateStr} 
                       className={`border-2 border-slate-800 p-0.5 text-center font-bold ${info.isSunday ? 'bg-slate-100' : ''}`}
                     >
-                      {val}
+                      {displayVal}
                     </td>
                   );
                 })}
@@ -87,15 +103,12 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
         </tbody>
       </table>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 text-[9px]">
-        <div>
-          <p className="font-bold mb-4 uppercase text-slate-400">Podpis kierownika:</p>
-          <div className="w-32 border-b border-black"></div>
-        </div>
-        <div className="text-right">
-          <p className="font-bold mb-4 uppercase text-slate-400">Data sporządzenia:</p>
+      <div className="mt-2 flex items-center justify-center flex-col  text-[9px]">
+       
+        
+          <p className="font-bold mb-1 uppercase text-slate-400">Data sporządzenia:</p>
           <p className="font-bold">{format(new Date(), 'dd.MM.yyyy')}</p>
-        </div>
+        
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
