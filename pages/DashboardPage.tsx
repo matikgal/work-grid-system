@@ -373,21 +373,25 @@ export const DashboardPage: React.FC = () => {
       onAddEmployee={() => setIsSidebarOpen(true)}
       headerLeft={
         <div className="flex items-center gap-1 md:gap-3">
-           <button onClick={handlePrev} className="p-1 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
+           <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
            </button>
-           <div className="text-center min-w-[100px] md:min-w-[120px]">
-              <h2 className="text-[11px] md:text-sm font-bold text-slate-800 capitalize whitespace-nowrap leading-none">
-                {viewMode === 'week' ? (
-                   <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
-                ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
-              </h2>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
-                Dni robocze: <span className="text-emerald-600">{workingDaysCount}</span>
-              </div>
-           </div>
-           <button onClick={handleNext} className="p-1 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
-              <ChevronRight className="w-4 h-4" />
+            <div 
+              className="text-center min-w-[100px] md:min-w-[150px] cursor-pointer hover:bg-slate-50 rounded-lg p-1 transition-all active:scale-95 group/today"
+              onClick={() => setCurrentDate(new Date())}
+              title="Powrót do dzisiaj"
+            >
+               <h2 className="text-sm md:text-lg font-bold text-slate-800 capitalize whitespace-nowrap leading-tight group-hover/today:text-brand-600">
+                 {viewMode === 'week' ? (
+                    <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
+                 ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
+               </h2>
+               <div className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-tighter mt-0">
+                 Dni robocze: <span className="text-emerald-600">{workingDaysCount}</span>
+               </div>
+            </div>
+           <button onClick={handleNext} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+              <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
            </button>
         </div>
       }

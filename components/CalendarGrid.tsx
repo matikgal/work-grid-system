@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format, getDay, isToday, getMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ArrowDownAZ, Briefcase } from 'lucide-react';
+import { ArrowDownAZ, Briefcase, Info } from 'lucide-react';
 import { Employee, Shift, ViewMode } from '../types';
 import { getShiftStyle, cn, stringToColor } from '../utils';
 
@@ -136,8 +136,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     "text-center flex flex-col justify-center transition-all relative group/header",
                     isCompactMode ? "p-0.5" : "p-2",
                     isMonthChange ? "border-r-[3px] border-r-slate-300" : "border-r border-slate-100",
-                    isHolidayDay ? "bg-amber-50/70" : (isWeekend ? "bg-slate-50/80" : "bg-white"),
-                    isToday(day) ? "bg-blue-50/50" : ""
+                    isHolidayDay ? "bg-amber-100/60" : (isWeekend ? "bg-slate-100/60" : "bg-white"),
+                    isToday(day) ? "bg-blue-50/80" : ""
                   )}
                   title={holiday ? holiday.name : undefined}
                 >
@@ -162,10 +162,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     {format(day, 'd')}
                   </span>
                   
-                  {/* Holiday Name Display - ONLY IN WEEK VIEW */}
-                  {isHolidayDay && holiday && viewMode === 'week' && (
-                      <div className="mt-1 text-[9px] font-bold text-amber-600 bg-amber-100/50 px-1 py-0.5 rounded truncate w-full" title={holiday.name}>
-                          {holiday.name}
+                  {/* Holiday Indicator Icon */}
+                  {isHolidayDay && (
+                      <div className="absolute top-1 right-1 text-amber-500 opacity-70 group-hover/header:opacity-100 transition-opacity" title={holiday?.name}>
+                          <Info size={isCompactMode ? 8 : 12} />
                       </div>
                   )}
                 </div>
@@ -174,7 +174,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
             {/* Summary Column Header (ViewMode == Month only) */}
             {viewMode === 'month' && (
                <div className="w-20 md:w-24 sticky right-0 z-30 bg-white border-l border-slate-200 p-2 font-bold text-slate-700 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 text-xs text-center leading-tight">
-                   Podsumowanie
+                   SUMA
                </div>
             )}
           </div>
@@ -199,8 +199,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                 return (
                 <div key={employee.id} className={cn(
                   "flex group/row transition-colors hover:bg-slate-50/80", 
-                  isCompactMode ? "h-10 text-xs" : "h-24",
-                  isEven ? "bg-white" : "bg-slate-50/40"
+                  isCompactMode ? "h-10 text-xs" : "h-20",
+                  isEven ? "bg-white" : "bg-slate-100/40"
                 )}>
                   {/* Employee Header Cell */}
                   <div className={cn(
@@ -235,16 +235,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     if (!shift) return null;
 
                     if (isCompactMode) {
-                        return <span className={cn("font-bold", style?.text)}>{shift.type === 'Wolna Sobota' ? 'WS' : shift.type.charAt(0)}</span>;
+                        let abbr = '8';
+                        if (shift.type === 'Wolna Sobota') abbr = 'WS';
+                        if (shift.type === 'Urlop') abbr = 'U';
+                        return <span className={cn("font-bold", style?.text)}>{abbr}</span>;
                     }
 
                     if (viewMode === 'month') {
                         // Compact view for month mode
-                        let abbr = shift.type.substring(0, 3).toUpperCase();
+                        let abbr = '8';
                         if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                        if (shift.type === '6-14') abbr = '6';
-                        if (shift.type === '14-22') abbr = '14';
-                        if (shift.type === '10-18') abbr = '10';
+                        if (shift.type === 'Urlop') abbr = 'URL';
 
                         const startH = shift.startTime.split(':')[0];
                         const endH = shift.endTime.split(':')[0];
@@ -291,8 +292,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                         "border-r relative transition-all cursor-pointer flex items-center justify-center p-0.5",
                         isMonthChange ? "border-r-[3px] border-r-slate-300" : "border-r-slate-100",
                         !shift && "group-hover/row:bg-slate-50/50 hover:!bg-slate-100",
-                        isWeekend && !shift && "bg-slate-50/50",
-                        isHolidayDay && !shift && "bg-amber-50/30"
+                        isWeekend && !shift && "bg-slate-100/30",
+                        isHolidayDay && !shift && "bg-amber-100/30"
                       )}
                     >
                       {shift ? (
@@ -337,25 +338,35 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
         </div>
         
         {/* Footer Row (Totals) */}
-        <div className="flex bg-slate-50 border-t border-slate-200 font-bold text-slate-700 sticky bottom-0 z-30 shadow-[0_-4px_8px_-4px_rgba(0,0,0,0.1)]">
-             <div className="w-28 md:w-64 sticky left-0 z-30 bg-slate-50 border-r border-slate-200 p-3 text-right text-xs uppercase tracking-wider flex items-center justify-end shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0">
+        <div className="flex bg-slate-50 border-t border-slate-200 font-bold text-slate-700 sticky bottom-0 z-30 shadow-[0_-4px_8px_-4px_rgba(0,0,0,0.1)] h-10 md:h-12">
+             <div className="w-28 md:w-64 sticky left-0 z-30 bg-slate-50 border-r border-slate-200 px-3 text-right text-xs uppercase tracking-wider flex items-center justify-end shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0">
                Suma (osoby):
              </div>
              <div className="flex flex-1 w-0">
-               {daysInfo.map(({ dateStr, isMonthChange }) => (
-                  <div 
-                    key={dateStr}
-                    className={cn(
-                      colWidthClass,
-                      "p-2 text-center text-xs flex items-center justify-center border-r border-slate-200",
-                      isMonthChange && "border-r-[3px] border-r-slate-300"
-                    )}
-                  >
-                    {dailyStatsLookup[dateStr].count > 0 ? dailyStatsLookup[dateStr].count : '-'}
-                  </div>
-               ))}
+                {daysInfo.map(({ dateStr, isMonthChange }) => {
+                  const count = dailyStatsLookup[dateStr].count;
+                  const isFullStaff = count === employees.length && count > 0;
+                  
+                  return (
+                    <div 
+                      key={dateStr}
+                      className={cn(
+                        colWidthClass,
+                        "h-full text-center text-xs flex items-center justify-center border-r border-slate-200 transition-colors",
+                        isFullStaff ? "bg-emerald-50 text-emerald-700" : (count > 0 ? "bg-rose-50 text-rose-700" : ""),
+                        isMonthChange && "border-r-[3px] border-r-slate-300"
+                      )}
+                    >
+                      {count > 0 ? count : '-'}
+                    </div>
+                  );
+                })}
                
-               {viewMode === 'month' && <div className="w-20 md:w-24 sticky right-0 z-10 bg-slate-50 border-l border-slate-200 flex-shrink-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]" />}
+                {viewMode === 'month' && (
+                  <div className="w-20 md:w-24 sticky right-0 z-30 bg-slate-50 border-l border-slate-200 flex-shrink-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex items-center justify-center text-xs font-bold text-slate-500">
+                    {employees.length} os.
+                  </div>
+                )}
              </div>
         </div>
 

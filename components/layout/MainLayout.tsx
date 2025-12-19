@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight } from 'lucide-react';
+import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
 
@@ -22,6 +22,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [userEmail, setUserEmail] = useState<string>('');
   const [showAbout, setShowAbout] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [catClickCount, setCatClickCount] = useState(0);
+  const [showCat, setShowCat] = useState(false);
+  const [showDollar, setShowDollar] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -36,9 +39,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   };
 
   const menuItems = [
-    { label: 'Grafik', sub: 'Grafik zmian', active: true },
-    { label: 'Dashboard', sub: 'Statystyki', disabled: true },
-    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: true },
+    { label: 'Grafik', sub: 'Grafik zmian', active: true, icon: Calendar },
+    { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
+    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: true, icon: Settings },
   ];
 
   const infoItems = [
@@ -83,10 +86,27 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               )}
               <div className="flex items-center gap-3 shrink-0">
                  <span className="hidden sm:inline text-sm font-bold text-slate-700">{userEmail.split('@')[0]}</span>
-                 <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                     {userEmail.charAt(0).toUpperCase()}
-                 </div>
-              </div>
+                 <div 
+                    onClick={() => {
+                        const newCount = catClickCount + 1;
+                        if (newCount >= 3) {
+                            setShowCat(true);
+                            setCatClickCount(0);
+                            setTimeout(() => setShowCat(false), 3000);
+                        } else {
+                            setCatClickCount(newCount);
+                            setTimeout(() => setCatClickCount(0), 1000); // Reset if not clicked quickly enough
+                        }
+                    }}
+                    className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs cursor-pointer select-none overflow-hidden relative"
+                  >
+                      {showCat ? (
+                          <img src="/bg.webp" alt="Cat" className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                          userEmail.charAt(0).toUpperCase()
+                      )}
+                  </div>
+               </div>
            </div>
         </header>
 
@@ -120,13 +140,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                          disabled={item.disabled}
                          onClick={() => !item.disabled && setIsMenuOpen(false)}
                          className={cn(
-                           "w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm",
+                           "w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm flex items-center gap-3",
                            item.active 
                              ? "bg-emerald-50 text-emerald-700 font-bold" 
                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium",
                            item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
                          )}
                        >
+                           <item.icon className={cn("w-4 h-4", item.active ? "text-emerald-600" : "text-slate-400")} />
                            {item.label}
                        </button>
                    ))}
@@ -139,6 +160,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                          }}
                          className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 font-medium flex items-center gap-2"
                        >
+                           <UsersRound className="w-4 h-4 text-slate-400" />
                            Zarządzaj pracownikami
                        </button>
                    )}
@@ -156,15 +178,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                    Wyloguj się
                </button>
                
-               <div className="flex justify-between items-center mt-4 px-2">
-                   <button onClick={() => { setShowAbout(true); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
-                       O aplikacji
-                   </button>
-                   <span className="text-slate-300 text-[10px] select-none">•</span>
-                   <button onClick={() => { setShowTerms(true); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
-                       Regulamin
-                   </button>
-               </div>
+                <div className="flex justify-center items-center gap-4 mt-4 px-2">
+                    <button onClick={() => { setShowAbout(true); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                        O aplikacji
+                    </button>
+                    <span className="text-slate-300 text-[10px] select-none">•</span>
+                    <button onClick={() => { setShowTerms(true); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                        Regulamin
+                    </button>
+                </div>
            </div>
        </div>
 
@@ -181,8 +203,26 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                    <h3 className="text-xl font-bold mb-4">O aplikacji</h3>
                    <div className="space-y-3 text-slate-600 text-sm">
                        <p>System Grafik to nowoczesne narzędzie do zarządzania czasem pracy w małych i średnich przedsiębiorstwach.</p>
-                       <p>Wersja: <strong>2.1.0 (Build 2025)</strong></p>
-                       <p>Created by: <strong>Mateusz Gałuszka</strong></p>
+                        <p>Wersja: <strong>2.1.0 (Build 2025)</strong></p>
+                        {showDollar && (
+                            <div className="fixed inset-0 pointer-events-none z-[200] flex items-center justify-center overflow-hidden">
+                                <img src="/dollar.gif" alt="Dollar" className="w-[300px] h-[300px] object-contain opacity-80" />
+                                <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 opacity-40">
+                                    {[...Array(16)].map((_, i) => (
+                                        <img key={i} src="/dollar.gif" alt="Dollar" className="w-20 h-20" style={{ transform: `rotate(${i * 45}deg)` }} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <p 
+                          className="cursor-pointer select-none"
+                          onClick={() => {
+                              setShowDollar(true);
+                              setTimeout(() => setShowDollar(false), 4000);
+                          }}
+                        >
+                          Created by: <strong>Mateusz Gałuszka</strong>
+                        </p>
                        
                        <div className="pt-2">
                            <p className="font-bold text-slate-800 mb-1">Planowane funkcje:</p>

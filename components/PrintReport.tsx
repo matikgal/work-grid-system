@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import Holidays from 'date-holidays';
 import { Employee, Shift } from '../types';
 
 interface PrintReportProps {
@@ -15,20 +14,15 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
     const days = eachDayOfInterval({ start, end });
-    const hd = new Holidays('PL');
     
     return days.map(day => {
       const isSunday = getDay(day) === 0;
-      const isSat = getDay(day) === 6;
-      const holiday = hd.isHoliday(day);
       return {
         day,
         dateStr: format(day, 'yyyy-MM-dd'),
         label: format(day, 'd'),
         weekday: format(day, 'EEEEEE', { locale: pl }),
         isSunday,
-        isSat,
-        isHoliday: !!holiday
       };
     });
   }, [currentDate]);
@@ -57,7 +51,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
             {daysInfo.map(info => (
               <th 
                 key={info.dateStr} 
-                className={`border-2 border-slate-800 p-0.5 text-center ${info.isSunday || info.isHoliday ? 'bg-red-50 text-red-600' : info.isSat ? 'bg-slate-50' : ''}`}
+                className={`border-2 border-slate-800 p-0.5 text-center ${info.isSunday ? 'bg-slate-200' : ''}`}
               >
                 <div className="text-[6px] uppercase leading-none mb-0.5">{info.weekday}</div>
                 <div className="font-bold">{info.label}</div>
@@ -80,7 +74,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                   return (
                     <td 
                       key={info.dateStr} 
-                      className={`border-2 border-slate-800 p-0.5 text-center font-bold ${info.isSunday || info.isHoliday ? 'bg-red-50/30' : ''}`}
+                      className={`border-2 border-slate-800 p-0.5 text-center font-bold ${info.isSunday ? 'bg-slate-100' : ''}`}
                     >
                       {val}
                     </td>
