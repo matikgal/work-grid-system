@@ -13,9 +13,10 @@ interface CalendarGridProps {
   viewMode: ViewMode;
   isCompactMode?: boolean;
   onSlotClick: (employeeId: string, date: string, shift?: Shift) => void;
+  workingDaysCount?: number;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, viewMode, isCompactMode = false, onSlotClick }) => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, viewMode, isCompactMode = false, onSlotClick, workingDaysCount }) => {
   // Sorting state
   const [sortBy, setSortBy] = useState<'name' | 'role'>('name');
 
@@ -90,6 +91,51 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
       }
     });
   }, [employees, sortBy]);
+
+  // OPTIMIZATION: detailed working hours calculation for current view
+  const targetMonthlyHours = useMemo(() => {
+    if (viewMode !== 'month') return 0;
+    
+    if (workingDaysCount !== undefined && workingDaysCount > 0) {
+        return workingDaysCount * 8;
+    }
+    
+    return days.reduce((acc, day) => {
+      const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+      // We can use the pre-calculated daysInfo for holiday check if indices match, but daysInfo is mapped from days.
+      // Or just check hd here. hd is memoized.
+      const isHoliday = hd.isHoliday(day);
+      if (!isWeekend && !isHoliday) return acc + 8;
+      return acc;
+    }, 0);
+  }, [days, hd, viewMode, workingDaysCount]);
+
+  // OPTIMIZATION: Pre-calculate employee monthly stats using lookups instead of array filtering
+  const employeeSummaryStats = useMemo(() => {
+    // Only needed for month view where we show totals
+    if (viewMode !== 'month') return {};
+    
+    const stats: Record<string, { totalHours: number, vacationDays: number }> = {};
+    
+    // We use the days displayed in the grid to calculate the monthly sum.
+    // This matches the current logic where strict month view passes correct start/end of month.
+    employees.forEach(emp => {
+      let h = 0;
+      let v = 0;
+      
+      daysInfo.forEach(info => {
+        const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
+        if (shift) {
+            h += getShiftHours(shift);
+            if (shift.type === 'Urlop') v++;
+        }
+      });
+      
+      stats[emp.id] = { totalHours: h, vacationDays: v };
+    });
+    
+    return stats;
+  }, [employees, daysInfo, shiftsLookup, viewMode]);
 
   // Dynamic column width based on view mode
   const colWidthClass = viewMode === 'week' ? 'min-w-[140px] flex-1' : 'flex-1 min-w-0 overflow-hidden';
@@ -183,11 +229,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
         {/* Body Rows */}
         <div className="divide-y divide-slate-100">
           {sortedEmployees.map((employee, index) => {
-            // Get employee summary
-            const currentMonthStr = format(days[0], 'MM');
-            const empShifts = shifts.filter(s => s.employeeId === employee.id && format(new Date(s.date), 'MM') === currentMonthStr);
-            const totalHours = empShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
-            const vacationDays = empShifts.filter(s => s.type === 'Urlop').length;
+            // Get employee summary from pre-calculated lookup instead of on-the-fly filtering
+            const stats = employeeSummaryStats[employee.id] || { totalHours: 0, vacationDays: 0 };
+            const { totalHours, vacationDays } = stats;
 
                 // Determine avatar styling
                 const isTailwindClass = employee.avatarColor?.startsWith('bg-');
@@ -323,26 +367,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                       "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-colors",
                       isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1",
                       // Background logic based on norm
-                      (() => {
-                          // Calculate norm for this specific month range
-                          // Note: days[] might be the whole month view
-                          const workingDays = days.reduce((acc, day) => {
-                              const isWeekend = getDay(day) === 0 || getDay(day) === 6;
-                              // Assuming valid holidays check from existing `hd` instance
-                              const isHoliday = hd.isHoliday(day); 
-                              // Note: We need to verify if the holiday falls on a weekday to subtract it from working days?
-                              // Standard PL logic: Holidays reduce working days regardless (if they fall on a workday? Actually usually M-F).
-                              // Simplified working hours logic: Mon-Fri excluding holidays.
-                              if (!isWeekend && !isHoliday) return acc + 1;
-                              return acc;
-                          }, 0);
-                          const targetHours = workingDays * 8;
-                          
-                          if (totalHours === targetHours) return "bg-emerald-100 text-emerald-800";
-                          return "bg-rose-100 text-rose-800";
-                      })()
+                      totalHours === targetMonthlyHours ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
                   )}>
-                       <div className="text-center flex flex-col items-center" title={`Norma: ${days.reduce((acc, d) => (!hd.isHoliday(d) && getDay(d) !== 0 && getDay(d) !== 6) ? acc + 1 : acc, 0) * 8}h`}>
+                       <div className="text-center flex flex-col items-center" title={`Norma: ${targetMonthlyHours}h`}>
                           <div className="font-bold leading-tight">
                               {totalHours}h
                               <span className="text-[10px] opacity-75 font-normal ml-1">
@@ -391,10 +418,25 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                       )}
                     >
                       {count > 0 ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                            <span>{firstShiftCount}/{secondShiftCount}</span>
-                            <span className="opacity-30">|</span>
-                            <span className="opacity-75">{count}/{employees.length}</span>
+                        <div className={cn(
+                            "flex items-center justify-center",
+                            viewMode === 'month' ? "flex-col gap-0.5" : "gap-1.5"
+                        )}>
+                            <span className={cn(
+                                "font-bold", 
+                                viewMode === 'month' ? "text-[11px] leading-none" : ""
+                            )}>
+                                {firstShiftCount}/{secondShiftCount}
+                            </span>
+                            
+                            {viewMode !== 'month' && <span className="opacity-30">|</span>}
+                            
+                            <span className={cn(
+                                "opacity-75",
+                                viewMode === 'month' ? "text-[11px] leading-none font-normal" : ""
+                            )}>
+                                {count}/{employees.length}
+                            </span>
                         </div>
                       ) : '-'}
                     </div>

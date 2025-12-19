@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound } from 'lucide-react';
+import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
 
@@ -9,6 +9,8 @@ interface MainLayoutProps {
   headerCenter?: React.ReactNode;
   headerRight?: React.ReactNode;
   onAddEmployee?: () => void;
+  onOpenInstructions?: () => void;
+  onOpenFeedback?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -16,7 +18,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   headerLeft,
   headerCenter,
   headerRight,
-  onAddEmployee 
+  onAddEmployee,
+  onOpenInstructions,
+  onOpenFeedback
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -162,6 +166,32 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                        >
                            <UsersRound className="w-4 h-4 text-slate-400" />
                            Zarządzaj pracownikami
+                       </button>
+                   )}
+
+                   {onOpenInstructions && (
+                       <button 
+                         onClick={() => {
+                             onOpenInstructions();
+                             setIsMenuOpen(false);
+                         }}
+                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 font-medium flex items-center gap-2"
+                       >
+                           <BookOpen className="w-4 h-4 text-slate-400" />
+                           Instrukcja
+                       </button>
+                   )}
+
+                   {onOpenFeedback && (
+                       <button 
+                         onClick={() => {
+                             onOpenFeedback();
+                             setIsMenuOpen(false);
+                         }}
+                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-amber-50 hover:text-amber-700 font-medium flex items-center gap-2"
+                       >
+                           <Lightbulb className="w-4 h-4 text-slate-400" />
+                           Zgłoś pomysł
                        </button>
                    )}
                </div>

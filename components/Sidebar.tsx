@@ -119,7 +119,6 @@ const Sidebar: React.FC<SidebarProps> = ({ employees, shifts, currentMonth, view
           Dodaj Pracownika
         </button>
         
-
       </div>
     </aside>
   );

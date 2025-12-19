@@ -6,23 +6,21 @@ import {
 } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ChevronLeft, ChevronRight, Users, X, UserPlus, Minimize2, Maximize2, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, X, UserPlus, Minimize2, Maximize2, Printer, Loader2 } from 'lucide-react';
 
 import Sidebar from '../components/Sidebar';
 import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
 import EmployeeModal from '../components/EmployeeModal';
 import { PrintReport } from '../components/PrintReport';
+import { InstructionsModal } from '../components/InstructionsModal';
+import { FeedbackModal } from '../components/FeedbackModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
 import { SHIFT_TEMPLATES } from '../constants';
 import { getRandomColor, calculateDuration, cn, getShiftStyle } from '../utils';
 import { supabase } from '../lib/supabase';
-
-// Props inherited from parent or fetched here? 
-// Current App logic fetches data. Let's keep data fetching here for the specific page or move to a Context/Hook later.
-// For now, moving Component logic here.
 
 export const DashboardPage: React.FC = () => {
   // --- STATE ---
@@ -45,11 +43,15 @@ export const DashboardPage: React.FC = () => {
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isCompactMode, setIsCompactMode] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   
-  // --- DATA FETCHING (Optimized with Caching) ---
+  const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+
+  // --- DATA FETCHING ---
   useEffect(() => {
     const fetchData = async () => {
-      // 1. Try to load from cache first for instant UI
       const cachedData = localStorage.getItem('grafik_cache');
       let localEmployees: Employee[] = [];
       let localShifts: Shift[] = [];
@@ -61,21 +63,17 @@ export const DashboardPage: React.FC = () => {
           localEmployees = parsed.employees || [];
           localShifts = parsed.shifts || [];
           lastUpdateTS = parsed.last_updated || 0;
-          
           setEmployees(localEmployees);
           setShifts(localShifts);
-          setLoading(false); // Stop loading if we have cached data
+          setLoading(false);
         } catch (e) {
           console.error("Cache corrupted");
         }
       }
 
       try {
-        // 2. Efficiently check if DB has newer data
-        const { data: updateCheck, error: updateError } = await supabase
-          .rpc('get_max_updated_at'); // We'll add this RPC or use a simple query
+        const { data: updateCheck, error: updateError } = await supabase.rpc('get_max_updated_at'); 
 
-        // If RPC fails (not yet defined), fallback to query
         let dbMaxUpdated = 0;
         if (updateError) {
           const { data: maxEmp } = await supabase.from('employees').select('updated_at').order('updated_at', { ascending: false }).limit(1).single();
@@ -88,7 +86,6 @@ export const DashboardPage: React.FC = () => {
           dbMaxUpdated = new Date(updateCheck).getTime();
         }
 
-        // 3. Only fetch full datasets if DB is newer
         if (dbMaxUpdated > lastUpdateTS || !cachedData) {
           const { data: emps } = await supabase.from('employees').select('id, name, role, avatar_color').order('name');
           const { data: shfts } = await supabase.from('shifts').select('id, employee_id, date, start_time, end_time, duration, type');
@@ -113,7 +110,6 @@ export const DashboardPage: React.FC = () => {
           setEmployees(mappedEmps);
           setShifts(mappedShfts);
           
-          // Update cache
           localStorage.setItem('grafik_cache', JSON.stringify({
             employees: mappedEmps,
             shifts: mappedShfts,
@@ -130,7 +126,6 @@ export const DashboardPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Helper to update cache after mutations
   const syncCache = (newEmployees: Employee[], newShifts: Shift[]) => {
     setEmployees(newEmployees);
     setShifts(newShifts);
@@ -141,7 +136,7 @@ export const DashboardPage: React.FC = () => {
     }));
   };
 
-  // --- DATE LOGIC ---
+  // --- HELPERS ---
   const daysToDisplay = useMemo(() => {
     if (viewMode === 'week') {
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -155,6 +150,11 @@ export const DashboardPage: React.FC = () => {
   }, [currentDate, viewMode]);
 
   const workingDaysCount = useMemo(() => {
+    const monthKey = format(currentDate, 'yyyy-MM');
+    if (manualWorkingDays[monthKey] !== undefined) {
+        return manualWorkingDays[monthKey];
+    }
+
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start, end });
@@ -165,114 +165,97 @@ export const DashboardPage: React.FC = () => {
       const isHoliday = hd.isHoliday(day);
       return !isSunday && !isHoliday;
     }).length;
-  }, [currentDate]);
+  }, [currentDate, manualWorkingDays]);
 
-  // --- KEYBOARD SHORTCUTS ---
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Ignore if typing in an input or textarea
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+  // --- HANDLERS ---
+  const handleWorkingDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = parseInt(e.target.value);
+      const monthKey = format(currentDate, 'yyyy-MM');
+      
+      if (isNaN(val)) {
+        setManualWorkingDays(prev => ({ ...prev, [monthKey]: 0 }));
         return;
       }
+      
+      if (val >= 0 && val <= 31) {
+          setManualWorkingDays(prev => ({ ...prev, [monthKey]: val }));
+      }
+  };
+
+  const handlePrev = () => {
+    if (viewMode === 'week') setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(subMonths(currentDate, 1));
+  };
+
+  const handleNext = () => {
+    if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addMonths(currentDate, 1));
+  };
+
+  const activeEmployeeName = useMemo(() => {
+    if (!modalState.employeeId) return '';
+    return employees.find(e => e.id === modalState.employeeId)?.name || '';
+  }, [modalState.employeeId, employees]);
+
+  // Shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
 
       const key = e.key;
       const index = parseInt(key, 10) - 1;
-
       if (index >= 0 && index < SHIFT_TEMPLATES.length) {
         const template = SHIFT_TEMPLATES[index];
         setActiveTemplate(activeTemplate?.id === template.id ? null : template);
       }
-      
-      // Escape to clear template
-      if (e.key === 'Escape') {
-        setActiveTemplate(null);
-      }
+      if (e.key === 'Escape') setActiveTemplate(null);
     };
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [activeTemplate]);
 
-  // --- HANDLERS ---
-  const handlePrev = () => {
-    if (viewMode === 'week') {
-      setCurrentDate(subWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(subMonths(currentDate, 1));
+  // Printing
+  useEffect(() => {
+    if (isPrinting) {
+      const timer = setTimeout(() => { window.print(); setIsPrinting(false); }, 100);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [isPrinting]);
 
-  const handleNext = () => {
-    if (viewMode === 'week') {
-      setCurrentDate(addWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(addMonths(currentDate, 1));
-    }
-  };
+  const handlePrint = () => setIsPrinting(true);
 
+  // DB Operations
   const handleSlotClick = (employeeId: string, date: string, existingShift?: Shift) => {
     if (activeTemplate) {
       const newShiftData = {
-        employee_id: employeeId,
-        date,
-        start_time: activeTemplate.startTime,
-        end_time: activeTemplate.endTime,
-        duration: calculateDuration(activeTemplate.startTime, activeTemplate.endTime),
+        employee_id: employeeId, date, start_time: activeTemplate.startTime,
+        end_time: activeTemplate.endTime, duration: calculateDuration(activeTemplate.startTime, activeTemplate.endTime),
         type: activeTemplate.label
       };
-
-      const handleUpsert = async () => {
-        try {
-          if (existingShift) {
-            const { data, error } = await supabase
-              .from('shifts')
-              .update(newShiftData)
-              .eq('id', existingShift.id)
-              .select()
-              .single();
-            const newShifts = prev => prev.map(s => s.id === existingShift.id ? {
-              id: data.id,
-              employeeId: data.employee_id,
-              date: data.date,
-              startTime: data.start_time,
-              endTime: data.end_time,
-              duration: data.duration,
-              type: data.type
-            } : s);
-            setShifts(newShifts);
-            // Refresh cache in background or just trust state
-          } else {
-            const { data, error } = await supabase
-              .from('shifts')
-              .insert(newShiftData)
-              .select()
-              .single();
-            if (error) throw error;
-            const newShifts = [...shifts, {
-              id: data.id,
-              employeeId: data.employee_id,
-              date: data.date,
-              startTime: data.start_time,
-              endTime: data.end_time,
-              duration: data.duration,
-              type: data.type
-            }];
-            syncCache(employees, newShifts);
-          }
-        } catch (error) {
-          console.error('Error saving shift:', error);
-        }
+      
+      const upsert = async () => {
+         // Optimistic update could go here
+         try {
+             if (existingShift) {
+                 const { data, error } = await supabase.from('shifts').update(newShiftData).eq('id', existingShift.id).select().single();
+                 if (!error) {
+                    const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
+                    const newShifts = shifts.map(s => s.id === existingShift.id ? mapped : s);
+                    syncCache(employees, newShifts);
+                 }
+             } else {
+                 const { data, error } = await supabase.from('shifts').insert(newShiftData).select().single();
+                 if (!error) {
+                    const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
+                    syncCache(employees, [...shifts, mapped]);
+                 }
+             }
+         } catch (e) { console.error(e); }
       };
-      handleUpsert();
+      upsert();
       return;
     }
-
-    setModalState({
-      isOpen: true,
-      employeeId,
-      date,
-      existingShift: existingShift || null,
-    });
+    setModalState({ isOpen: true, employeeId, date, existingShift: existingShift || null });
   };
 
   const closeModal = () => {
@@ -281,96 +264,62 @@ export const DashboardPage: React.FC = () => {
 
   const handleSaveShift = async (shiftData: Shift | Omit<Shift, 'id'>) => {
     const supabaseData = {
-      employee_id: shiftData.employeeId,
-      date: shiftData.date,
-      start_time: shiftData.startTime,
-      end_time: shiftData.endTime,
-      duration: shiftData.duration,
-      type: shiftData.type
+      employee_id: shiftData.employeeId, date: shiftData.date, start_time: shiftData.startTime,
+      end_time: shiftData.endTime, duration: shiftData.duration, type: shiftData.type
     };
-
     try {
       if ('id' in shiftData) {
-        const { error } = await supabase
-          .from('shifts')
-          .update(supabaseData)
-          .eq('id', shiftData.id);
-        if (error) throw error;
-        const newShifts = shifts.map(s => s.id === shiftData.id ? shiftData as Shift : s);
-        syncCache(employees, newShifts);
+        const { error } = await supabase.from('shifts').update(supabaseData).eq('id', shiftData.id);
+        if (!error) {
+            const newShifts = shifts.map(s => s.id === shiftData.id ? shiftData as Shift : s);
+            syncCache(employees, newShifts);
+        }
       } else {
-        const { data, error } = await supabase
-          .from('shifts')
-          .insert(supabaseData)
-          .select()
-          .single();
-        if (error) throw error;
-        const newShifts = [...shifts, {
-          id: data.id,
-          employeeId: data.employee_id,
-          date: data.date,
-          startTime: data.start_time,
-          endTime: data.end_time,
-          duration: data.duration,
-          type: data.type
-        }];
-        syncCache(employees, newShifts);
+        const { data, error } = await supabase.from('shifts').insert(supabaseData).select().single();
+        if (!error) {
+            const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
+            syncCache(employees, [...shifts, mapped]);
+        }
       }
-    } catch (error) {
-      console.error('Error saving shift:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleDeleteShift = async (id: string) => {
-    try {
-      const { error } = await supabase.from('shifts').delete().eq('id', id);
-      if (error) throw error;
-      const newShifts = shifts.filter(s => s.id !== id);
-      syncCache(employees, newShifts);
-    } catch (error) {
-      console.error('Error deleting shift:', error);
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
+      try {
+          const { error } = await supabase.from('shifts').delete().eq('id', id);
+          if (!error) {
+              const newShifts = shifts.filter(s => s.id !== id);
+              syncCache(employees, newShifts);
+          }
+      } catch (e) { console.error(e); }
   };
 
   const handleSaveEmployee = async (name: string, role: string) => {
-    try {
-      if (editingEmployee) {
-        const { error } = await supabase
-          .from('employees')
-          .update({ name, role })
-          .eq('id', editingEmployee.id);
-        
-        if (error) throw error;
-        
-        const newEmps = employees.map(e => 
-          e.id === editingEmployee.id ? { ...e, name, role } : e
-        );
-        syncCache(newEmps, shifts);
-        setEditingEmployee(null);
-      } else {
-        const newEmpData = { name, role, avatar_color: getRandomColor() };
-        const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
-        if (error) throw error;
-        const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
-        syncCache(newEmps, shifts);
-      }
-    } catch (error) { 
-      console.error('Error saving employee:', error); 
-    }
+      try {
+          if (editingEmployee) {
+              const { error } = await supabase.from('employees').update({ name, role }).eq('id', editingEmployee.id);
+              if (!error) {
+                  const newEmps = employees.map(e => e.id === editingEmployee.id ? { ...e, name, role } : e);
+                  syncCache(newEmps, shifts);
+                  setEditingEmployee(null);
+              }
+          } else {
+              const newEmpData = { name, role, avatar_color: getRandomColor() };
+              const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
+              if (!error) {
+                  const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
+                  syncCache(newEmps, shifts);
+              }
+          }
+      } catch (e) { console.error(e); }
   };
 
-  const getActiveEmployeeName = () => {
-    if (!modalState.employeeId) return '';
-    return employees.find(e => e.id === modalState.employeeId)?.name || '';
-  };
 
   return (
     <MainLayout 
       onAddEmployee={() => setIsSidebarOpen(true)}
+      onOpenInstructions={() => setIsInstructionsOpen(true)}
+      onOpenFeedback={() => setIsFeedbackModalOpen(true)}
       headerLeft={
         <div className="flex items-center gap-1 md:gap-3">
            <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
@@ -386,9 +335,6 @@ export const DashboardPage: React.FC = () => {
                     <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
                  ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
                </h2>
-               <div className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-tighter mt-0">
-                 Dni robocze: <span className="text-emerald-600">{workingDaysCount}</span>
-               </div>
             </div>
            <button onClick={handleNext} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
               <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
@@ -421,6 +367,17 @@ export const DashboardPage: React.FC = () => {
       }
       headerRight={
         <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">
+                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Dni robocze:</span>
+                 <input 
+                    type="number" 
+                    value={workingDaysCount || ''} 
+                    onChange={handleWorkingDaysChange}
+                    className="w-8 text-center bg-transparent border-b border-slate-200 text-emerald-600 font-bold text-xs focus:outline-none focus:border-brand-500 p-0"
+                 />
+                 <span className="text-[10px] text-slate-400 font-bold">dni</span>
+            </div>
+
             <button 
               onClick={() => setIsCompactMode(!isCompactMode)}
               className={cn(
@@ -434,10 +391,11 @@ export const DashboardPage: React.FC = () => {
 
             <button 
               onClick={handlePrint}
-              className="p-2 bg-white border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200 rounded-lg transition-all active:scale-95 shadow-sm"
+              disabled={isPrinting}
+              className="p-2 bg-white border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200 rounded-lg transition-all active:scale-95 shadow-sm disabled:opacity-50"
               title="Drukuj grafik miesiąca"
             >
-                <Printer className="w-3.5 h-3.5" />
+                {isPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Printer className="w-3.5 h-3.5" />}
             </button>
 
             <div className="hidden sm:flex bg-white p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
@@ -447,76 +405,78 @@ export const DashboardPage: React.FC = () => {
         </div>
       }
     >
-    <div className="flex h-full w-full flex-col bg-slate-50 relative overflow-hidden">
-      
-      {/* Print-only Report Container */}
-      <div className="print-container">
-        <PrintReport 
-          currentDate={currentDate} 
-          employees={employees} 
-          shifts={shifts} 
-        />
-      </div>
+        <div className="flex h-full w-full flex-col bg-slate-50 relative overflow-hidden">
+          {/* Print Report */}
+          {isPrinting && (
+            <div className="print-container">
+                <PrintReport 
+                currentDate={currentDate} 
+                employees={employees} 
+                shifts={shifts} 
+                viewMode={viewMode}
+                />
+            </div>
+          )}
 
-      {/* Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)} />
-      )}
+          {/* Sidebar Overlay */}
+          {isSidebarOpen && (
+            <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)} />
+          )}
 
-      {/* Scheduler Sidebar (Employees) */}
-      <div className={cn(
-        "absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out shadow-xl bg-white",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <Sidebar 
-          employees={employees} 
-          shifts={shifts} 
-          currentMonth={currentDate}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          onAddEmployee={() => {
-            setEditingEmployee(null);
-            setIsEmployeeModalOpen(true);
-          }}
-          onEditEmployee={(emp) => {
-            setEditingEmployee(emp);
-            setIsEmployeeModalOpen(true);
-          }}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-      </div>
+          {/* Sidebar */}
+          <div className={cn(
+            "absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out shadow-xl bg-white",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
+            <Sidebar 
+              employees={employees} 
+              shifts={shifts} 
+              currentMonth={currentDate}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              onAddEmployee={() => { setEditingEmployee(null); setIsEmployeeModalOpen(true); }}
+              onEditEmployee={(emp) => { setEditingEmployee(emp); setIsEmployeeModalOpen(true); }}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          </div>
 
-      {/* Grid Content */}
-      <div className="flex-1 overflow-hidden relative">
-          <CalendarGrid 
-            days={daysToDisplay}
-            employees={employees}
-            shifts={shifts}
-            viewMode={viewMode}
-            isCompactMode={isCompactMode}
-            onSlotClick={handleSlotClick}
+          {/* Grid */}
+          <div className="flex-1 overflow-hidden relative">
+              <CalendarGrid 
+                days={daysToDisplay}
+                employees={employees}
+                shifts={shifts}
+                viewMode={viewMode}
+                isCompactMode={isCompactMode}
+                onSlotClick={handleSlotClick}
+                workingDaysCount={workingDaysCount}
+              />
+          </div>
+
+          {/* Modals */}
+          <ShiftModal 
+            isOpen={modalState.isOpen}
+            onClose={closeModal}
+            onSave={handleSaveShift}
+            onDelete={handleDeleteShift}
+            data={modalState}
+            employeeName={activeEmployeeName}
           />
-      </div>
-
-      {/* Modals */}
-      <ShiftModal 
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        onSave={handleSaveShift}
-        onDelete={handleDeleteShift}
-        data={modalState}
-        employeeName={getActiveEmployeeName()}
-      />
-      <EmployeeModal 
-        isOpen={isEmployeeModalOpen}
-        onClose={() => {
-          setIsEmployeeModalOpen(false);
-          setEditingEmployee(null);
-        }}
-        onAdd={handleSaveEmployee}
-        employee={editingEmployee}
-      />
-    </div>
+          <EmployeeModal 
+            isOpen={isEmployeeModalOpen}
+            onClose={() => { setIsEmployeeModalOpen(false); setEditingEmployee(null); }}
+            onAdd={handleSaveEmployee}
+            employee={editingEmployee}
+          />
+          <InstructionsModal 
+            isOpen={isInstructionsOpen} 
+            onClose={() => setIsInstructionsOpen(false)} 
+          />
+          <FeedbackModal 
+            isOpen={isFeedbackModalOpen} 
+            onClose={() => setIsFeedbackModalOpen(false)} 
+          />
+        </div>
     </MainLayout>
   );
 };
