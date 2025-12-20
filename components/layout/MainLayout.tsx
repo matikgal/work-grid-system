@@ -11,6 +11,7 @@ interface MainLayoutProps {
   onAddEmployee?: () => void;
   onOpenInstructions?: () => void;
   onOpenFeedback?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -20,7 +21,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   headerRight,
   onAddEmployee,
   onOpenInstructions,
-  onOpenFeedback
+  onOpenFeedback,
+  onOpenSettings
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -45,7 +47,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const menuItems = [
     { label: 'Grafik', sub: 'Grafik zmian', active: true, icon: Calendar },
     { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
-    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: true, icon: Settings },
+    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: !onOpenSettings, icon: Settings, action: onOpenSettings },
   ];
 
   const infoItems = [
@@ -142,7 +144,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                        <button 
                          key={index}
                          disabled={item.disabled}
-                         onClick={() => !item.disabled && setIsMenuOpen(false)}
+                         onClick={() => {
+                            if (item.disabled) return;
+                            if (item.action) item.action();
+                            setIsMenuOpen(false);
+                         }}
                          className={cn(
                            "w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm flex items-center gap-3",
                            item.active 

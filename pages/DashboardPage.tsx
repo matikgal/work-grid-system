@@ -15,6 +15,7 @@ import EmployeeModal from '../components/EmployeeModal';
 import { PrintReport } from '../components/PrintReport';
 import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
+import { SettingsModal } from '../components/SettingsModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
@@ -48,6 +49,7 @@ export const DashboardPage: React.FC = () => {
   const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -320,6 +322,7 @@ export const DashboardPage: React.FC = () => {
       onAddEmployee={() => setIsSidebarOpen(true)}
       onOpenInstructions={() => setIsInstructionsOpen(true)}
       onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+      onOpenSettings={() => setIsSettingsOpen(true)}
       headerLeft={
         <div className="flex items-center gap-1 md:gap-3">
            <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
@@ -475,6 +478,10 @@ export const DashboardPage: React.FC = () => {
           <FeedbackModal 
             isOpen={isFeedbackModalOpen} 
             onClose={() => setIsFeedbackModalOpen(false)} 
+          />
+          <SettingsModal 
+            isOpen={isSettingsOpen} 
+            onClose={() => setIsSettingsOpen(false)} 
           />
         </div>
     </MainLayout>
