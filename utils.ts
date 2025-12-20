@@ -51,38 +51,82 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
   switch (type) {
     case '6-14':
     case '06:00':
-      return { bg: 'bg-emerald-100', border: 'border-emerald-200', text: 'text-emerald-800' };
+      return { 
+          bg: 'bg-emerald-100 dark:bg-emerald-500/20', 
+          border: 'border-emerald-200 dark:border-emerald-500/30', 
+          text: 'text-emerald-800 dark:text-emerald-300' 
+      };
     
     case '14-22':
     case '14:00':
-      return { bg: 'bg-indigo-100', border: 'border-indigo-200', text: 'text-indigo-800' };
+      return { 
+          bg: 'bg-indigo-100 dark:bg-indigo-500/20', 
+          border: 'border-indigo-200 dark:border-indigo-500/30', 
+          text: 'text-indigo-800 dark:text-indigo-300' 
+      };
 
     case '10-18':
     case '10:00':
-      return { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-800' };
+      return { 
+          bg: 'bg-purple-100 dark:bg-purple-500/20', 
+          border: 'border-purple-200 dark:border-purple-500/30', 
+          text: 'text-purple-800 dark:text-purple-300' 
+      };
 
     case 'Urlop':
-      return { bg: 'bg-orange-100', border: 'border-orange-200', text: 'text-orange-800' };
+      return { 
+          bg: 'bg-orange-100 dark:bg-orange-500/20', 
+          border: 'border-orange-200 dark:border-orange-500/30', 
+          text: 'text-orange-800 dark:text-orange-300' 
+      };
     
     case 'Wolna Sobota':
-      return { bg: 'bg-slate-100', border: 'border-slate-200', text: 'text-slate-500' };
+      return { 
+          bg: 'bg-slate-100 dark:bg-slate-800/40', 
+          border: 'border-slate-200 dark:border-slate-700', 
+          text: 'text-slate-500 dark:text-slate-400' 
+      };
 
     case 'Szkoła':
-      return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' };
+      return { 
+          bg: 'bg-blue-100 dark:bg-blue-500/20', 
+          border: 'border-blue-300 dark:border-blue-500/30', 
+          text: 'text-blue-800 dark:text-blue-300' 
+      };
 
     case 'L4':
     case 'Chorobowe':
-      return { bg: 'bg-rose-100', border: 'border-rose-300', text: 'text-rose-800' };
+      return { 
+          bg: 'bg-rose-100 dark:bg-rose-500/20', 
+          border: 'border-rose-300 dark:border-rose-500/30', 
+          text: 'text-rose-800 dark:text-rose-300' 
+      };
 
     default:
       // Fallback for custom times - try to guess based on hour if type looks like HH:MM
       if (type.includes(':')) {
           const hour = parseInt(type.split(':')[0], 10);
-          if (hour < 10) return { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' };
-          if (hour < 16) return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
-          return { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' };
+          if (hour < 10) return { 
+              bg: 'bg-emerald-100 dark:bg-emerald-500/20', 
+              border: 'border-emerald-300 dark:border-emerald-500/30', 
+              text: 'text-emerald-800 dark:text-emerald-300' 
+          };
+          if (hour < 16) return { 
+              bg: 'bg-indigo-100 dark:bg-indigo-500/20', 
+              border: 'border-indigo-300 dark:border-indigo-500/30', 
+              text: 'text-indigo-800 dark:text-indigo-300' 
+          };
+          return { 
+              bg: 'bg-indigo-100 dark:bg-indigo-500/20', 
+              border: 'border-indigo-300 dark:border-indigo-500/30', 
+              text: 'text-indigo-800 dark:text-indigo-300' 
+          };
       }
-      return { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-700' };
+      return { 
+          bg: 'bg-gray-100 dark:bg-slate-700', 
+          border: 'border-gray-200 dark:border-slate-600', 
+          text: 'text-gray-700 dark:text-slate-300' 
+      };
   }
 };
 

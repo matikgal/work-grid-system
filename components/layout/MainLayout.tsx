@@ -56,19 +56,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#FAFAFA] font-sans text-slate-900">
+    <div className="flex flex-col h-screen w-full bg-[#FAFAFA] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
        {/* Global Header */}
-        <header className="h-16 bg-white grid grid-cols-[auto_1fr_auto] items-center px-6 border-b border-gray-100 z-50 shrink-0 gap-4">
+        <header className="h-16 bg-white dark:bg-slate-900 grid grid-cols-[auto_1fr_auto] items-center px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-4">
            {/* Left Section: Menu + Title + Navigation */}
            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 mr-2">
-                 <button 
+                  <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                    className="p-2 -ml-2 hover:bg-gray-50 rounded-lg transition-all active:scale-95"
+                    className="p-2 -ml-2 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-all active:scale-95 text-slate-600 dark:text-slate-400"
                  >
                      {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                  </button>
-                 <h1 className="text-lg font-bold text-slate-800 tracking-tight hidden md:block">Grafik</h1>
+                 <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden md:block">Grafik</h1>
               </div>
 
               {headerLeft && (
@@ -91,7 +91,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   </div>
               )}
               <div className="flex items-center gap-3 shrink-0">
-                 <span className="hidden sm:inline text-sm font-bold text-slate-700">{userEmail.split('@')[0]}</span>
+                 <span className="hidden sm:inline text-sm font-bold text-slate-700 dark:text-slate-300">{userEmail.split('@')[0]}</span>
                  <div 
                     onClick={() => {
                         const newCount = catClickCount + 1;
@@ -104,7 +104,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                             setTimeout(() => setCatClickCount(0), 1000); // Reset if not clicked quickly enough
                         }
                     }}
-                    className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs cursor-pointer select-none overflow-hidden relative"
+                    className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs cursor-pointer select-none overflow-hidden relative ring-2 ring-white dark:ring-slate-700 hover:scale-105 active:scale-95 transition-all"
                   >
                       {showCat ? (
                           <img src="/bg.webp" alt="Cat" className="absolute inset-0 w-full h-full object-cover" />
@@ -129,12 +129,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        {/* Sidebar Panel - Minimalist Design */}
        <div 
           className={cn(
-            "fixed top-16 bottom-0 left-0 z-40 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-out flex flex-col border-r border-slate-100",
+            "fixed top-16 bottom-0 left-0 z-40 w-72 bg-white dark:bg-slate-900 shadow-xl transform transition-transform duration-300 ease-out flex flex-col border-r border-slate-100 dark:border-slate-800",
             isMenuOpen ? "translate-x-0" : "-translate-x-full"
           )}
        >
            <div className="mt-6 px-6 mb-6">
-               <h2 className="text-xl font-bold text-slate-800 tracking-tight">Nawigacja</h2>
+               <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Nawigacja</h2>
            </div>
            
            <nav className="flex-1 px-3 space-y-6 overflow-y-auto">
@@ -152,12 +152,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                          className={cn(
                            "w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm flex items-center gap-3",
                            item.active 
-                             ? "bg-emerald-50 text-emerald-700 font-bold" 
-                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium",
-                           item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                             ? "bg-emerald-50 text-emerald-700 font-bold dark:bg-emerald-900/20 dark:text-emerald-400" 
+                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+                           item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent"
                          )}
                        >
-                           <item.icon className={cn("w-4 h-4", item.active ? "text-emerald-600" : "text-slate-400")} />
+                           <item.icon className={cn("w-4 h-4", item.active ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-300")} />
                            {item.label}
                        </button>
                    ))}
@@ -168,7 +168,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                              onAddEmployee();
                              setIsMenuOpen(false);
                          }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 font-medium flex items-center gap-2"
+                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 font-medium flex items-center gap-2"
                        >
                            <UsersRound className="w-4 h-4 text-slate-400" />
                            Zarządzaj pracownikami
@@ -181,7 +181,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                              onOpenInstructions();
                              setIsMenuOpen(false);
                          }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 font-medium flex items-center gap-2"
+                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 font-medium flex items-center gap-2"
                        >
                            <BookOpen className="w-4 h-4 text-slate-400" />
                            Instrukcja
@@ -194,7 +194,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                              onOpenFeedback();
                              setIsMenuOpen(false);
                          }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 hover:bg-amber-50 hover:text-amber-700 font-medium flex items-center gap-2"
+                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 font-medium flex items-center gap-2"
                        >
                            <Lightbulb className="w-4 h-4 text-slate-400" />
                            Zgłoś pomysł
@@ -205,10 +205,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
            </nav>
 
            {/* Minimal Footer */}
-           <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+           <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                <button 
                  onClick={handleLogout}
-                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100/80 hover:shadow-md border border-rose-100 rounded-xl transition-all font-semibold text-sm backdrop-blur-sm shadow-sm"
+                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100/80 hover:shadow-md border border-rose-100 rounded-xl transition-all font-semibold text-sm backdrop-blur-sm shadow-sm dark:bg-rose-900/10 dark:text-rose-400 dark:border-rose-900/20 dark:hover:bg-rose-900/20"
                >
                    <LogOut className="w-4 h-4" />
                    Wyloguj się

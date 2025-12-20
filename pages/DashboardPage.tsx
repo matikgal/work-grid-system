@@ -29,9 +29,36 @@ export const DashboardPage: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Initialize state with persistence
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('grafik_viewMode') as ViewMode) || 'week';
+  });
+  
+  const [isCompactMode, setIsCompactMode] = useState(() => {
+    return localStorage.getItem('grafik_isCompactMode') === 'true';
+  });
+
+  const [showWeekends, setShowWeekends] = useState(() => {
+    const stored = localStorage.getItem('grafik_showWeekends');
+    return stored === null ? true : stored === 'true';
+  });
+
   const [activeTemplate, setActiveTemplate] = useState<ShiftTemplate | null>(null);
+
+  // Persistence effects
+  useEffect(() => {
+    localStorage.setItem('grafik_viewMode', viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('grafik_isCompactMode', String(isCompactMode));
+  }, [isCompactMode]);
+
+  useEffect(() => {
+    localStorage.setItem('grafik_showWeekends', String(showWeekends));
+  }, [showWeekends]);
 
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -43,7 +70,7 @@ export const DashboardPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [isCompactMode, setIsCompactMode] = useState(false);
+  // const [isCompactMode, setIsCompactMode] = useState(false); // MOVED UP
   const [isPrinting, setIsPrinting] = useState(false);
   
   const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
@@ -325,21 +352,21 @@ export const DashboardPage: React.FC = () => {
       onOpenSettings={() => setIsSettingsOpen(true)}
       headerLeft={
         <div className="flex items-center gap-1 md:gap-3">
-           <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+           <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
               <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
            </button>
             <div 
-              className="text-center min-w-[100px] md:min-w-[150px] cursor-pointer hover:bg-slate-50 rounded-lg p-1 transition-all active:scale-95 group/today"
+              className="text-center min-w-[100px] md:min-w-[150px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg p-1 transition-all active:scale-95 group/today"
               onClick={() => setCurrentDate(new Date())}
               title="Powrót do dzisiaj"
             >
-               <h2 className="text-sm md:text-lg font-bold text-slate-800 capitalize whitespace-nowrap leading-tight group-hover/today:text-brand-600">
+               <h2 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-100 capitalize whitespace-nowrap leading-tight group-hover/today:text-brand-600 dark:group-hover/today:text-brand-400">
                  {viewMode === 'week' ? (
-                    <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
+                    <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 dark:text-slate-500 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
                  ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
                </h2>
             </div>
-           <button onClick={handleNext} className="p-2 md:p-3 hover:bg-slate-100 rounded-full text-slate-500 active:bg-slate-200 transition-colors">
+           <button onClick={handleNext} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
               <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
            </button>
         </div>
@@ -370,22 +397,22 @@ export const DashboardPage: React.FC = () => {
       }
       headerRight={
         <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">
-                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Dni robocze:</span>
+            <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">
+                 <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">Dni robocze:</span>
                  <input 
                     type="number" 
                     value={workingDaysCount || ''} 
                     onChange={handleWorkingDaysChange}
-                    className="w-8 text-center bg-transparent border-b border-slate-200 text-emerald-600 font-bold text-xs focus:outline-none focus:border-brand-500 p-0"
+                    className="w-8 text-center bg-transparent border-b border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 font-bold text-xs focus:outline-none focus:border-brand-500 p-0"
                  />
-                 <span className="text-[10px] text-slate-400 font-bold">dni</span>
+                 <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">dni</span>
             </div>
 
             <button 
               onClick={() => setIsCompactMode(!isCompactMode)}
               className={cn(
                   "p-2 rounded-lg transition-all border active:scale-95", 
-                  isCompactMode ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200"
+                  isCompactMode ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm dark:bg-emerald-900/20 dark:border-emerald-700/50 dark:text-emerald-400" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-200 dark:hover:border-slate-600"
               )}
               title={isCompactMode ? "Pełny widok" : "Kompaktowo"}
             >
@@ -395,20 +422,20 @@ export const DashboardPage: React.FC = () => {
             <button 
               onClick={handlePrint}
               disabled={isPrinting}
-              className="p-2 bg-white border border-slate-100 text-slate-400 hover:bg-slate-50 hover:text-slate-600 hover:border-slate-200 rounded-lg transition-all active:scale-95 shadow-sm disabled:opacity-50"
+              className="p-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-200 dark:hover:border-slate-600 rounded-lg transition-all active:scale-95 shadow-sm disabled:opacity-50"
               title="Drukuj grafik miesiąca"
             >
                 {isPrinting ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Printer className="w-3.5 h-3.5" />}
             </button>
 
-            <div className="hidden sm:flex bg-white p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
-               <button onClick={() => setViewMode('week')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'week' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Tydzień</button>
-               <button onClick={() => setViewMode('month')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'month' ? "bg-slate-900 text-white shadow-sm" : "text-slate-500 hover:text-slate-800")}>Miesiąc</button>
+            <div className="hidden sm:flex bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-bold">
+               <button onClick={() => setViewMode('week')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'week' ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200")}>Tydzień</button>
+               <button onClick={() => setViewMode('month')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'month' ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200")}>Miesiąc</button>
             </div>
         </div>
       }
     >
-        <div className="flex h-full w-full flex-col bg-slate-50 relative overflow-hidden">
+        <div className="flex h-full w-full flex-col bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
           {/* Print Report */}
           {isPrinting && (
             <div className="print-container">
@@ -482,6 +509,12 @@ export const DashboardPage: React.FC = () => {
           <SettingsModal 
             isOpen={isSettingsOpen} 
             onClose={() => setIsSettingsOpen(false)} 
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            isCompactMode={isCompactMode}
+            onCompactModeChange={setIsCompactMode}
+            showWeekends={showWeekends}
+            onShowWeekendsChange={setShowWeekends}
           />
         </div>
     </MainLayout>

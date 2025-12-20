@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { MainLayout } from './components/layout/MainLayout';
+import { ThemeProvider } from './context/ThemeContext';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -40,24 +41,26 @@ const App: React.FC = () => {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Route: Login */}
-        <Route 
-          path="/login" 
-          element={!session ? <LoginPage /> : <Navigate to="/" replace />} 
-        />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Route: Login */}
+          <Route 
+            path="/login" 
+            element={!session ? <LoginPage /> : <Navigate to="/" replace />} 
+          />
 
-        {/* Protected Routes */}
-        <Route 
-          path="/" 
-          element={session ? <DashboardPage /> : <Navigate to="/login" replace />} 
-        />
+          {/* Protected Routes */}
+          <Route 
+            path="/" 
+            element={session ? <DashboardPage /> : <Navigate to="/login" replace />} 
+          />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 };
 
