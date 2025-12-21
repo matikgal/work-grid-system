@@ -16,6 +16,7 @@ import { PrintReport } from '../components/PrintReport';
 import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
@@ -67,7 +68,7 @@ export const DashboardPage: React.FC = () => {
     existingShift: null,
   });
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isEmployeesManagerOpen, setIsEmployeesManagerOpen] = useState(false);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   // const [isCompactMode, setIsCompactMode] = useState(false); // MOVED UP
@@ -323,17 +324,18 @@ export const DashboardPage: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
-  const handleSaveEmployee = async (name: string, role: string) => {
+  const handleSaveEmployee = async (name: string, role: string, id?: string, avatarColor?: string) => {
       try {
-          if (editingEmployee) {
-              const { error } = await supabase.from('employees').update({ name, role }).eq('id', editingEmployee.id);
+          if (id && employees.some(e => e.id === id)) {
+              // Update existing using the passed ID
+              const { error } = await supabase.from('employees').update({ name, role }).eq('id', id);
               if (!error) {
-                  const newEmps = employees.map(e => e.id === editingEmployee.id ? { ...e, name, role } : e);
+                  const newEmps = employees.map(e => e.id === id ? { ...e, name, role } : e);
                   syncCache(newEmps, shifts);
-                  setEditingEmployee(null);
               }
           } else {
-              const newEmpData = { name, role, avatar_color: getRandomColor() };
+              // Create new
+              const newEmpData = { name, role, avatar_color: avatarColor || getRandomColor() };
               const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
               if (!error) {
                   const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
@@ -344,9 +346,25 @@ export const DashboardPage: React.FC = () => {
   };
 
 
+  const handleDeleteEmployee = async (id: string) => {
+      if (!window.confirm('Czy na pewno chcesz usunąć tego pracownika? Wszystkie jego zmiany zostaną usunięte.')) return;
+      
+      try {
+          // Delete shifts first if no cascade (safe side)
+          await supabase.from('shifts').delete().eq('employee_id', id); 
+          const { error } = await supabase.from('employees').delete().eq('id', id);
+          
+          if (!error) {
+              const newEmps = employees.filter(e => e.id !== id);
+              const newShifts = shifts.filter(s => s.employeeId !== id);
+              syncCache(newEmps, newShifts);
+          }
+      } catch (e) { console.error(e); }
+  };
+
   return (
     <MainLayout 
-      onAddEmployee={() => setIsSidebarOpen(true)}
+      onAddEmployee={() => setIsEmployeesManagerOpen(true)}
       onOpenInstructions={() => setIsInstructionsOpen(true)}
       onOpenFeedback={() => setIsFeedbackModalOpen(true)}
       onOpenSettings={() => setIsSettingsOpen(true)}
@@ -448,27 +466,6 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {/* Sidebar Overlay */}
-          {isSidebarOpen && (
-            <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setIsSidebarOpen(false)} />
-          )}
-
-          {/* Sidebar */}
-          <div className={cn(
-            "absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out shadow-xl bg-white",
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          )}>
-            <Sidebar 
-              employees={employees} 
-              shifts={shifts} 
-              currentMonth={currentDate}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              onAddEmployee={() => { setEditingEmployee(null); setIsEmployeeModalOpen(true); }}
-              onEditEmployee={(emp) => { setEditingEmployee(emp); setIsEmployeeModalOpen(true); }}
-              onClose={() => setIsSidebarOpen(false)}
-            />
-          </div>
 
           {/* Grid */}
           <div className="flex-1 overflow-hidden relative">
@@ -492,11 +489,15 @@ export const DashboardPage: React.FC = () => {
             data={modalState}
             employeeName={activeEmployeeName}
           />
-          <EmployeeModal 
-            isOpen={isEmployeeModalOpen}
-            onClose={() => { setIsEmployeeModalOpen(false); setEditingEmployee(null); }}
-            onAdd={handleSaveEmployee}
-            employee={editingEmployee}
+
+          <EmployeesManagerModal
+            isOpen={isEmployeesManagerOpen}
+            onClose={() => setIsEmployeesManagerOpen(false)}
+            employees={employees}
+            shifts={shifts}
+            currentMonth={currentDate}
+            onSave={(employee) => handleSaveEmployee(employee.name, employee.role, employee.id, employee.avatarColor)}
+            onDelete={handleDeleteEmployee}
           />
           <InstructionsModal 
             isOpen={isInstructionsOpen} 

@@ -46,7 +46,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   const menuItems = [
     { label: 'Grafik', sub: 'Grafik zmian', active: true, icon: Calendar },
+    { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
+    { label: 'Instrukcja', sub: 'Pomoc', disabled: !onOpenInstructions, icon: BookOpen, action: onOpenInstructions },
     { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
+    { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: true, icon: Lightbulb, action: onOpenFeedback },
     { label: 'Ustawienia', sub: 'Konfiguracja', disabled: !onOpenSettings, icon: Settings, action: onOpenSettings },
   ];
 
@@ -154,52 +157,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                            item.active 
                              ? "bg-emerald-50 text-emerald-700 font-bold dark:bg-emerald-900/20 dark:text-emerald-400" 
                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
-                           item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent"
+                           item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent text-slate-400 dark:text-slate-600"
                          )}
                        >
-                           <item.icon className={cn("w-4 h-4", item.active ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-300")} />
+                           <item.icon className={cn("w-4 h-4", item.active ? "text-emerald-600 dark:text-emerald-400" : (item.disabled ? "text-slate-400 dark:text-slate-600" : "text-slate-400 dark:text-slate-300"))} />
                            {item.label}
                        </button>
                    ))}
-                   
-                   {onAddEmployee && (
-                       <button 
-                         onClick={() => {
-                             onAddEmployee();
-                             setIsMenuOpen(false);
-                         }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 font-medium flex items-center gap-2"
-                       >
-                           <UsersRound className="w-4 h-4 text-slate-400" />
-                           Zarządzaj pracownikami
-                       </button>
-                   )}
-
-                   {onOpenInstructions && (
-                       <button 
-                         onClick={() => {
-                             onOpenInstructions();
-                             setIsMenuOpen(false);
-                         }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 font-medium flex items-center gap-2"
-                       >
-                           <BookOpen className="w-4 h-4 text-slate-400" />
-                           Instrukcja
-                       </button>
-                   )}
-
-                   {onOpenFeedback && (
-                       <button 
-                         onClick={() => {
-                             onOpenFeedback();
-                             setIsMenuOpen(false);
-                         }}
-                         className="w-full text-left px-4 py-2.5 rounded-lg transition-all text-sm text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 font-medium flex items-center gap-2"
-                       >
-                           <Lightbulb className="w-4 h-4 text-slate-400" />
-                           Zgłoś pomysł
-                       </button>
-                   )}
                </div>
 
            </nav>
@@ -235,11 +199,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        {showAbout && (
            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAbout(false)} />
-               <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                   <h3 className="text-xl font-bold mb-4">O aplikacji</h3>
-                   <div className="space-y-3 text-slate-600 text-sm">
+               <div className="relative bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                   <h3 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">O aplikacji</h3>
+                   <div className="space-y-3 text-slate-600 dark:text-slate-400 text-sm">
                        <p>System Grafik to nowoczesne narzędzie do zarządzania czasem pracy w małych i średnich przedsiębiorstwach.</p>
-                        <p>Wersja: <strong>2.1.0 (Build 2025)</strong></p>
+                        <p>Wersja: <strong className="text-slate-900 dark:text-slate-200">2.1.0 (Build 2025)</strong></p>
                         {showDollar && (
                             <div className="fixed inset-0 pointer-events-none z-[200] flex items-center justify-center overflow-hidden">
                                 <img src="/dollar.gif" alt="Dollar" className="w-[300px] h-[300px] object-contain opacity-80" />
@@ -257,12 +221,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                               setTimeout(() => setShowDollar(false), 4000);
                           }}
                         >
-                          Created by: <strong>Mateusz Gałuszka</strong>
+                          Created by: <strong className="text-slate-900 dark:text-slate-200">Mateusz Gałuszka</strong>
                         </p>
                        
                        <div className="pt-2">
-                           <p className="font-bold text-slate-800 mb-1">Planowane funkcje:</p>
-                           <ul className="list-disc list-inside text-xs space-y-1 ml-1 text-slate-500">
+                           <p className="font-bold text-slate-800 dark:text-slate-200 mb-1">Planowane funkcje:</p>
+                           <ul className="list-disc list-inside text-xs space-y-1 ml-1 text-slate-500 dark:text-slate-400">
                                <li>Pełna responsywność (Mobile/Tablet)</li>
                                <li>Zaawansowane raporty i statystyki</li>
                                <li>Eksport do PDF/Excel</li>
@@ -270,16 +234,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                        </div>
 
                        <div className="pt-2">
-                           <a href="https://github.com/matikgal" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline font-medium flex items-center gap-1">
+                           <a href="https://github.com/matikgal" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1">
                                github.com/matikgal
                            </a>
                        </div>
 
-                       <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mt-4 text-xs text-slate-500">
+                       <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700 mt-4 text-xs text-slate-500 dark:text-slate-400">
                            Stack technologiczny: React, TailwindCSS, Supabase, Vite.
                        </div>
                    </div>
-                   <button onClick={() => setShowAbout(false)} className="mt-6 w-full py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors">Zamknij</button>
+                   <button onClick={() => setShowAbout(false)} className="mt-6 w-full py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">Zamknij</button>
                </div>
            </div>
        )}
@@ -287,16 +251,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        {showTerms && (
            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowTerms(false)} />
-               <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
-                   <h3 className="text-xl font-bold mb-4 shrink-0">Regulamin</h3>
-                   <div className="space-y-3 text-slate-600 text-sm overflow-y-auto pr-2 custom-scrollbar flex flex-col items-center justify-center min-h-[150px]">
-                       <p className="text-lg  text-slate-500 font-medium text-center">Do uzupełnienia kiedyś może</p>
+               <div className="relative bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
+                   <h3 className="text-xl font-bold mb-4 shrink-0 text-slate-900 dark:text-white">Regulamin</h3>
+                   <div className="space-y-3 text-slate-600 dark:text-slate-400 text-sm overflow-y-auto pr-2 custom-scrollbar flex flex-col items-center justify-center min-h-[150px]">
+                       <p className="text-lg text-slate-500 dark:text-slate-400 font-medium text-center">Do uzupełnienia kiedyś może</p>
                        
                        <div className="mt-2 pt-4 w-full text-center">
-                           <p className="text-xs text-slate-400 font-medium">Właścicielem zdjęć jest Paulinka</p>
+                           <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Właścicielem zdjęć jest Paulinka</p>
                        </div>
                    </div>
-                   <button onClick={() => setShowTerms(false)} className="mt-6 w-full py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors shrink-0">Akceptuję i zamykam</button>
+                   <button onClick={() => setShowTerms(false)} className="mt-6 w-full py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shrink-0">Akceptuję i zamykam</button>
                </div>
            </div>
        )}

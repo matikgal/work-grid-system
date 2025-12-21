@@ -50,10 +50,15 @@ export const LoginPage = () => {
              
              {/* Main Hero Text - Minimalist */}
              <div className="relative z-10 flex-1 flex flex-col justify-center">
-                <h1 className="text-7xl md:text-9xl font-black tracking-tighter uppercase text-white opacity-90 drop-shadow-2xl">
-                    Grafik
+                <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white opacity-90 drop-shadow-2xl leading-none">
+                    System<br/>
+                    <span className="text-emerald-400">Harmonogramów</span>
                 </h1>
-                <div className="h-2 w-32 bg-[#083637] mt-6" />
+                <p className="mt-8 text-xl text-slate-300 max-w-lg font-light leading-relaxed">
+                    Kompleksowe narzędzie do zarządzania czasem pracy.
+                    Planuj, edytuj i optymalizuj grafiki w jednym miejscu.
+                </p>
+                <div className="h-1.5 w-24 bg-emerald-500 mt-10" />
              </div>
 
              {/* Footer Text */}

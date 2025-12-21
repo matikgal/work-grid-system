@@ -185,7 +185,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     isHolidayDay ? "bg-amber-50 dark:bg-amber-900/10" : (isWeekend ? "bg-slate-50 dark:bg-slate-800/50" : "bg-white dark:bg-slate-900"),
                     isToday(day) ? "bg-blue-50/80 dark:bg-brand-900/10" : ""
                   )}
-                  title={holiday ? holiday.name : undefined}
                 >
                   <span className={cn(
                     "uppercase font-bold tracking-wide block truncate",
@@ -210,8 +209,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                   
                   {/* Holiday Indicator Icon */}
                   {isHolidayDay && (
-                      <div className="absolute top-1 right-1 text-amber-500 opacity-70 group-hover/header:opacity-100 transition-opacity" title={holiday?.name}>
-                          <Info size={isCompactMode ? 8 : 12} />
+                      <div className="absolute top-1 right-1 text-amber-500 opacity-70 group-hover/header:opacity-100 transition-opacity">
+                          <Info size={isCompactMode ? 10 : 14} />
+                          {/* Custom Tooltip */}
+                          <div className="absolute top-full right-0 mt-2 w-max max-w-[150px] px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover/header:opacity-100 group-hover/header:visible transition-all duration-200 z-[60] pointer-events-none text-center">
+                                <div className="font-semibold">{holiday?.name}</div>
+                          </div>
                       </div>
                   )}
                 </div>
