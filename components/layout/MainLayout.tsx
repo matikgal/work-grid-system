@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb } from 'lucide-react';
+import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
 
@@ -12,6 +12,7 @@ interface MainLayoutProps {
   onOpenInstructions?: () => void;
   onOpenFeedback?: () => void;
   onOpenSettings?: () => void;
+  onResetSystem?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -22,7 +23,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onAddEmployee,
   onOpenInstructions,
   onOpenFeedback,
-  onOpenSettings
+  onOpenSettings,
+  onResetSystem
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -48,6 +50,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { label: 'Grafik', sub: 'Grafik zmian', active: true, icon: Calendar },
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
     { label: 'Instrukcja', sub: 'Pomoc', disabled: !onOpenInstructions, icon: BookOpen, action: onOpenInstructions },
+    { label: 'Przeładuj system', sub: 'Reset danych', disabled: !onResetSystem, icon: RotateCcw, action: onResetSystem },
     { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
     { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: true, icon: Lightbulb, action: onOpenFeedback },
     { label: 'Ustawienia', sub: 'Konfiguracja', disabled: !onOpenSettings, icon: Settings, action: onOpenSettings },

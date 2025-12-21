@@ -17,6 +17,7 @@ import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { SettingsModal } from '../components/SettingsModal';
 import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
+import { SystemResetModal } from '../components/SystemResetModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
@@ -78,6 +79,7 @@ export const DashboardPage: React.FC = () => {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -362,12 +364,18 @@ export const DashboardPage: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
+  const handleSystemResetConfirm = () => {
+    localStorage.removeItem('grafik_cache');
+    window.location.reload();
+  };
+
   return (
     <MainLayout 
       onAddEmployee={() => setIsEmployeesManagerOpen(true)}
       onOpenInstructions={() => setIsInstructionsOpen(true)}
       onOpenFeedback={() => setIsFeedbackModalOpen(true)}
       onOpenSettings={() => setIsSettingsOpen(true)}
+      onResetSystem={() => setIsSystemResetOpen(true)}
       headerLeft={
         <div className="flex items-center gap-1 md:gap-3">
            <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
@@ -516,6 +524,11 @@ export const DashboardPage: React.FC = () => {
             onCompactModeChange={setIsCompactMode}
             showWeekends={showWeekends}
             onShowWeekendsChange={setShowWeekends}
+          />
+          <SystemResetModal
+            isOpen={isSystemResetOpen}
+            onClose={() => setIsSystemResetOpen(false)}
+            onConfirm={handleSystemResetConfirm}
           />
         </div>
     </MainLayout>
