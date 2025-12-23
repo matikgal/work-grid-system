@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { 
   startOfMonth, endOfMonth, eachDayOfInterval, format, 
   addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks,
@@ -25,7 +26,11 @@ import { SHIFT_TEMPLATES } from '../constants';
 import { getRandomColor, calculateDuration, cn, getShiftStyle } from '../utils';
 import { supabase } from '../lib/supabase';
 
-export const DashboardPage: React.FC = () => {
+interface DashboardPageProps {
+  session: Session;
+}
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   // --- STATE ---
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -84,7 +89,8 @@ export const DashboardPage: React.FC = () => {
   // --- DATA FETCHING ---
   useEffect(() => {
     const fetchData = async () => {
-      const cachedData = localStorage.getItem('grafik_cache');
+      const cacheKey = `grafik_cache_${session.user.id}`;
+      const cachedData = localStorage.getItem(cacheKey);
       let localEmployees: Employee[] = [];
       let localShifts: Shift[] = [];
       let lastUpdateTS = 0;
@@ -119,8 +125,23 @@ export const DashboardPage: React.FC = () => {
         }
 
         if (dbMaxUpdated > lastUpdateTS || !cachedData) {
-          const { data: emps } = await supabase.from('employees').select('id, name, role, avatar_color').order('name');
-          const { data: shfts } = await supabase.from('shifts').select('id, employee_id, date, start_time, end_time, duration, type');
+          const { data: emps } = await supabase
+            .from('employees')
+            .select('id, name, role, avatar_color')
+            .eq('user_id', session.user.id)
+            .order('name');
+            
+          const empIds = (emps || []).map(e => e.id);
+          
+          let shfts: any[] = [];
+          if (empIds.length > 0) {
+            const result = await supabase
+              .from('shifts')
+              .select('id, employee_id, date, start_time, end_time, duration, type')
+              .in('employee_id', empIds);
+            
+            if (result.data) shfts = result.data;
+          }
 
           const mappedEmps = (emps || []).map(e => ({
             id: e.id,
@@ -142,7 +163,7 @@ export const DashboardPage: React.FC = () => {
           setEmployees(mappedEmps);
           setShifts(mappedShfts);
           
-          localStorage.setItem('grafik_cache', JSON.stringify({
+          localStorage.setItem(cacheKey, JSON.stringify({
             employees: mappedEmps,
             shifts: mappedShfts,
             last_updated: dbMaxUpdated
@@ -161,7 +182,8 @@ export const DashboardPage: React.FC = () => {
   const syncCache = (newEmployees: Employee[], newShifts: Shift[]) => {
     setEmployees(newEmployees);
     setShifts(newShifts);
-    localStorage.setItem('grafik_cache', JSON.stringify({
+    const cacheKey = `grafik_cache_${session.user.id}`;
+    localStorage.setItem(cacheKey, JSON.stringify({
       employees: newEmployees,
       shifts: newShifts,
       last_updated: Date.now()
@@ -337,7 +359,12 @@ export const DashboardPage: React.FC = () => {
               }
           } else {
               // Create new
-              const newEmpData = { name, role, avatar_color: avatarColor || getRandomColor() };
+              const newEmpData = { 
+                name, 
+                role, 
+                avatar_color: avatarColor || getRandomColor(),
+                user_id: session.user.id
+              };
               const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
               if (!error) {
                   const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
@@ -365,7 +392,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   const handleSystemResetConfirm = () => {
-    localStorage.removeItem('grafik_cache');
+    localStorage.removeItem(`grafik_cache_${session.user.id}`);
     window.location.reload();
   };
 

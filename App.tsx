@@ -53,7 +53,8 @@ const App: React.FC = () => {
           {/* Protected Routes */}
           <Route 
             path="/" 
-            element={session ? <DashboardPage /> : <Navigate to="/login" replace />} 
+            element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
+
           />
 
           {/* Fallback */}
