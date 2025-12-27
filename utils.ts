@@ -87,6 +87,13 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-slate-500 dark:text-slate-400' 
       };
 
+    case 'Święto':
+      return { 
+          bg: 'bg-red-100 dark:bg-red-900/30', 
+          border: 'border-red-200 dark:border-red-800', 
+          text: 'text-red-700 dark:text-red-400' 
+      };
+
     case 'Szkoła':
       return { 
           bg: 'bg-blue-100 dark:bg-blue-500/20', 

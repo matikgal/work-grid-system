@@ -18,6 +18,7 @@ export const SHIFT_TEMPLATES: ShiftTemplate[] = [
   { id: 't_mid', label: '10-18', startTime: '10:00', endTime: '18:00', colorClass: 'bg-purple-100 border-purple-300 text-purple-800', type: 'work' },
   { id: 't_vacation', label: 'Urlop', startTime: '08:00', endTime: '16:00', colorClass: 'bg-orange-100 border-orange-300 text-orange-800', type: 'vacation' },
   { id: 't_sat', label: 'Wolna Sobota', startTime: '00:00', endTime: '00:00', colorClass: 'bg-slate-100 border-slate-300 text-slate-500', type: 'dayoff' },
+  { id: 't_holiday', label: 'Święto', startTime: '00:00', endTime: '00:00', colorClass: 'bg-rose-100 border-rose-300 text-rose-600', type: 'holiday' },
 ];
 
 // Helper to create a shift relative to today

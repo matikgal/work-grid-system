@@ -3,6 +3,7 @@ export interface Employee {
   name: string;
   role: string;
   avatarColor: string;
+  orderIndex?: number;
 }
 
 export interface Shift {
@@ -28,7 +29,7 @@ export interface ShiftTemplate {
   startTime: string;
   endTime: string;
   colorClass: string;
-  type: 'work' | 'vacation' | 'dayoff';
+  type: 'work' | 'vacation' | 'dayoff' | 'holiday';
 }
 
 export type ViewMode = 'week' | 'month';

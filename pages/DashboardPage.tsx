@@ -7,7 +7,7 @@ import {
 } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ChevronLeft, ChevronRight, Users, X, UserPlus, Minimize2, Maximize2, Printer, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Filter, Printer, Download, Share2, Plus, Minimize2, Maximize2, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 
 import Sidebar from '../components/Sidebar';
 import CalendarGrid from '../components/CalendarGrid';
@@ -79,6 +79,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   // const [isCompactMode, setIsCompactMode] = useState(false); // MOVED UP
   const [isPrinting, setIsPrinting] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   
   const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
@@ -127,9 +128,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
         if (dbMaxUpdated > lastUpdateTS || !cachedData) {
           const { data: emps } = await supabase
             .from('employees')
-            .select('id, name, role, avatar_color')
+            .select('id, name, role, avatar_color, order_index')
             .eq('user_id', session.user.id)
-            .order('name');
+            .order('order_index', { ascending: true })
+            .order('name', { ascending: true });
             
           const empIds = (emps || []).map(e => e.id);
           
@@ -147,7 +149,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
             id: e.id,
             name: e.name,
             role: e.role,
-            avatarColor: e.avatar_color
+            avatarColor: e.avatar_color,
+            orderIndex: e.order_index
           }));
 
           const mappedShfts = (shfts || []).map(s => ({
@@ -396,6 +399,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
     window.location.reload();
   };
 
+  const handleReorderEmployees = async (newOrder: Employee[]) => {
+      // Optimistic update
+      setEmployees(newOrder);
+      
+      const updates = newOrder.map((emp, index) => ({
+          id: emp.id,
+          name: emp.name,
+          role: emp.role,
+          avatar_color: emp.avatarColor,
+          user_id: session.user.id,
+          order_index: index
+      }));
+
+      try {
+          const { error } = await supabase.from('employees').upsert(updates);
+          if (error) console.error("Error updating order:", error);
+          else syncCache(newOrder, shifts);
+      } catch (e) { console.error(e); }
+  };
+
   return (
     <MainLayout 
       onAddEmployee={() => setIsEmployeesManagerOpen(true)}
@@ -404,7 +427,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
       onOpenSettings={() => setIsSettingsOpen(true)}
       onResetSystem={() => setIsSystemResetOpen(true)}
       headerLeft={
-        <div className="flex items-center gap-1 md:gap-3">
+        <div className="flex items-center gap-1 md:gap-3" style={{ zoom: zoomLevel } as any}>
            <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
               <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
            </button>
@@ -425,7 +448,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
         </div>
       }
       headerCenter={
-        <div className="hidden lg:flex items-center gap-1.5 px-4 py-1 max-w-full">
+        <div className="hidden lg:flex items-center gap-1.5 px-4 py-1 max-w-full" style={{ zoom: zoomLevel } as any}>
             {SHIFT_TEMPLATES.map((template, index) => {
                 const style = getShiftStyle(template.label);
                 return (
@@ -449,7 +472,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
         </div>
       }
       headerRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ zoom: zoomLevel } as any}>
             <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">
                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">Dni robocze:</span>
                  <input 
@@ -459,6 +482,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                     className="w-8 text-center bg-transparent border-b border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 font-bold text-xs focus:outline-none focus:border-brand-500 p-0"
                  />
                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">dni</span>
+            </div>
+            
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg p-1 shadow-sm h-[34px]">
+                 <button 
+                    onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))} 
+                    className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors active:scale-95"
+                    disabled={zoomLevel <= 0.5}
+                 >
+                     <ZoomOut className="w-3.5 h-3.5" />
+                 </button>
+                 <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 w-8 text-center tabular-nums">
+                     {Math.round(zoomLevel * 100)}%
+                 </span>
+                 <button 
+                    onClick={() => setZoomLevel(z => Math.min(1.5, z + 0.1))} 
+                    className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors active:scale-95"
+                    disabled={zoomLevel >= 1.5}
+                 >
+                     <ZoomIn className="w-3.5 h-3.5" />
+                 </button>
             </div>
 
             <button 
@@ -503,7 +546,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
 
 
           {/* Grid */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative" style={{ zoom: zoomLevel } as any}>
               <CalendarGrid 
                 days={daysToDisplay}
                 employees={employees}
@@ -512,6 +555,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                 isCompactMode={isCompactMode}
                 onSlotClick={handleSlotClick}
                 workingDaysCount={workingDaysCount}
+                onReorder={handleReorderEmployees}
               />
           </div>
 

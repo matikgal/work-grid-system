@@ -2,9 +2,26 @@ import React, { useMemo, useState } from 'react';
 import { format, getDay, isToday, getMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ArrowDownAZ, Briefcase, Info } from 'lucide-react';
+import { Info, Lock, Unlock } from 'lucide-react';
 import { Employee, Shift, ViewMode } from '../types';
 import { getShiftStyle, cn, stringToColor } from '../utils';
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors, 
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface CalendarGridProps {
   days: Date[];
@@ -14,14 +31,73 @@ interface CalendarGridProps {
   isCompactMode?: boolean;
   onSlotClick: (employeeId: string, date: string, shift?: Shift) => void;
   workingDaysCount?: number;
+  onReorder?: (newOrder: Employee[]) => void;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, viewMode, isCompactMode = false, onSlotClick, workingDaysCount }) => {
-  // Sorting state
-  const [sortBy, setSortBy] = useState<'name' | 'role'>('name');
+interface SortableRowProps {
+  employee: Employee;
+  children: React.ReactNode;
+  isLocked: boolean;
+}
+
+const SortableRow = ({ employee, children, isLocked }: SortableRowProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+      id: employee.id,
+      disabled: isLocked
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    position: 'relative' as const,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+};
+
+const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, viewMode, isCompactMode = false, onSlotClick, workingDaysCount, onReorder }) => {
+  const [isLocked, setIsLocked] = useState(true);
 
   // Initialize holidays for Poland
   const hd = useMemo(() => new Holidays('PL', { languages: ['pl'] }), []);
+  
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+        activationConstraint: {
+            distance: 8,
+        }
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+        const oldIndex = employees.findIndex((e) => e.id === active.id);
+        const newIndex = employees.findIndex((e) => e.id === over.id);
+        
+        if (onReorder) {
+            onReorder(arrayMove(employees, oldIndex, newIndex));
+        }
+    }
+  };
   
   // OPTIMIZATION: pre-calculate holiday info for days
   const daysInfo = useMemo(() => {
@@ -58,39 +134,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
   const getShiftHours = (shift: Shift) => {
     if (shift.type === 'Urlop') return 8;
     if (shift.type === 'Wolna Sobota') return 0;
-    // For other shifts, use stored duration, or default to 8 if duration is missing/0 but it's a work type?
-    // User said "kazda inna zmiana to 8h". Let's assume if duration is 0 and it's not Wolna Sobota, it might be 8.
-    // But safe bet is fallback to duration. 
+    if (shift.type === 'Święto') return 0;
     return shift.duration || 0;
   };
-
-  // OPTIMIZATION: Pre-calculate daily stats
-  const dailyStatsLookup = useMemo(() => {
-    const stats: Record<string, { count: number, hours: number }> = {};
-    days.forEach(d => {
-      stats[format(d, 'yyyy-MM-dd')] = { count: 0, hours: 0 };
-    });
-    shifts.forEach(s => {
-      if (stats[s.date]) {
-        stats[s.date].count += 1;
-        stats[s.date].hours += getShiftHours(s);
-      }
-    });
-    return stats;
-  }, [shifts, days]);
-
-  // Sort employees
-  const sortedEmployees = useMemo(() => {
-    return [...employees].sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      } else {
-        const roleComparison = a.role.localeCompare(b.role);
-        if (roleComparison !== 0) return roleComparison;
-        return a.name.localeCompare(b.name);
-      }
-    });
-  }, [employees, sortBy]);
 
   // OPTIMIZATION: detailed working hours calculation for current view
   const targetMonthlyHours = useMemo(() => {
@@ -102,8 +148,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
     
     return days.reduce((acc, day) => {
       const isWeekend = getDay(day) === 0 || getDay(day) === 6;
-      // We can use the pre-calculated daysInfo for holiday check if indices match, but daysInfo is mapped from days.
-      // Or just check hd here. hd is memoized.
       const isHoliday = hd.isHoliday(day);
       if (!isWeekend && !isHoliday) return acc + 8;
       return acc;
@@ -117,8 +161,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
     
     const stats: Record<string, { totalHours: number, vacationDays: number }> = {};
     
-    // We use the days displayed in the grid to calculate the monthly sum.
-    // This matches the current logic where strict month view passes correct start/end of month.
     employees.forEach(emp => {
       let h = 0;
       let v = 0;
@@ -152,24 +194,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
             <span className="truncate">Pracownik</span>
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
                <button 
-                onClick={() => setSortBy('name')}
+                onClick={() => setIsLocked(!isLocked)}
                 className={cn(
                   "p-1 rounded hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all",
-                  sortBy === 'name' ? "bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm" : "text-slate-400 dark:text-slate-500"
+                  !isLocked ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shadow-sm" : "text-slate-400 dark:text-slate-500"
                 )}
-                title="Sortuj alfabetycznie"
+                title={isLocked ? "Odblokuj edycję kolejności" : "Zablokuj kolejność"}
                >
-                 <ArrowDownAZ size={14} />
-               </button>
-               <button 
-                onClick={() => setSortBy('role')}
-                className={cn(
-                  "p-1 rounded hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all",
-                  sortBy === 'role' ? "bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm" : "text-slate-400 dark:text-slate-500"
-                )}
-                title="Sortuj po stanowisku"
-               >
-                 <Briefcase size={14} />
+                 {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
                </button>
             </div>
           </div>
@@ -207,11 +239,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                     {format(day, 'd')}
                   </span>
                   
-                  {/* Holiday Indicator Icon */}
                   {isHolidayDay && (
                       <div className="absolute top-1 right-1 text-amber-500 opacity-70 group-hover/header:opacity-100 transition-opacity">
                           <Info size={isCompactMode ? 10 : 14} />
-                          {/* Custom Tooltip */}
                           <div className="absolute top-full right-0 mt-2 w-max max-w-[150px] px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover/header:opacity-100 group-hover/header:visible transition-all duration-200 z-[60] pointer-events-none text-center">
                                 <div className="font-semibold">{holiday?.name}</div>
                           </div>
@@ -220,7 +250,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                 </div>
             ))}
             
-            {/* Summary Column Header (ViewMode == Month only) */}
             {viewMode === 'month' && (
                <div className="w-20 md:w-24 sticky right-0 z-30 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-2 font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 text-xs text-center leading-tight">
                    SUMA
@@ -230,13 +259,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
         </div>
 
         {/* Body Rows */}
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {sortedEmployees.map((employee, index) => {
-            // Get employee summary from pre-calculated lookup instead of on-the-fly filtering
-            const stats = employeeSummaryStats[employee.id] || { totalHours: 0, vacationDays: 0 };
-            const { totalHours, vacationDays } = stats;
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+              items={employees.map(e => e.id)}
+              strategy={verticalListSortingStrategy}
+          >
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {employees.map((employee, index) => {
+                const stats = employeeSummaryStats[employee.id] || { totalHours: 0, vacationDays: 0 };
+                const { totalHours, vacationDays } = stats;
 
-                // Determine avatar styling
                 const isTailwindClass = employee.avatarColor?.startsWith('bg-');
                 const avatarStyle = isTailwindClass ? {} : { backgroundColor: employee.avatarColor || stringToColor(employee.name) };
                 const avatarClass = isTailwindClass ? employee.avatarColor : undefined;
@@ -244,156 +280,165 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                 const isEven = index % 2 === 0;
 
                 return (
-                <div key={employee.id} className={cn(
-                  "flex group/row transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50", 
-                  isCompactMode ? "h-10 text-xs" : "h-20",
-                  isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"
-                )}>
-                  {/* Employee Header Cell */}
-                  <div className={cn(
-                      "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
-                      isCompactMode ? "py-1" : "",
-                      isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"
-                  )}>
-                    <div 
-                      className={cn(
-                        "rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-all", 
-                        isCompactMode ? "w-6 h-6 text-[10px]" : "w-10 h-10 text-sm shadow-sm",
-                        avatarClass
-                      )} 
-                      style={avatarStyle}
-                    >
-                      {employee.name.charAt(0)}
-                    </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-slate-900 dark:text-slate-100 truncate">{employee.name}</div>
-                  {!isCompactMode && <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{employee.role}</div>}
-                </div>
-              </div>
-              
-              {/* Shift Cells */}
-              <div className="flex flex-1 w-0">
-                {daysInfo.map(({ day, dateStr, isWeekend, isMonthChange, isHolidayDay }) => {
-                  const shift = shiftsLookup[`${employee.id}-${dateStr}`];
-                  const style = shift ? getShiftStyle(shift.type) : null;
-                  
-                  // Helper for displaying shift content
-                  const getShiftContent = () => {
-                    if (!shift) return null;
+                  <SortableRow key={employee.id} employee={employee} isLocked={isLocked}>
+                    <div className={cn(
+                      "flex group/row transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50", 
+                      isCompactMode ? "h-10 text-xs" : "h-20",
+                      isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50",
+                      // Dragging visual feedback overrides
+                      !isLocked && "cursor-grab active:cursor-grabbing border-b border-transparent"
+                    )}>
+                      {/* Employee Header Cell */}
+                      <div className={cn(
+                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
+                          isCompactMode ? "py-1" : "",
+                          isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"
+                      )}>
+                        <div 
+                          className={cn(
+                            "rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-all", 
+                            isCompactMode ? "w-6 h-6 text-[10px]" : "w-10 h-10 text-sm shadow-sm",
+                            avatarClass
+                          )} 
+                          style={avatarStyle}
+                        >
+                          {employee.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 dark:text-slate-100 truncate">{employee.name}</div>
+                          {!isCompactMode && <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{employee.role}</div>}
+                        </div>
+                      </div>
+                      
+                      {/* Shift Cells */}
+                      <div className="flex flex-1 w-0">
+                        {daysInfo.map(({ day, dateStr, isWeekend, isMonthChange, isHolidayDay }) => {
+                          const shift = shiftsLookup[`${employee.id}-${dateStr}`];
+                          const style = shift ? getShiftStyle(shift.type || 'work') : null;
+                          
+                          const getShiftContent = () => {
+                            if (!shift) return null;
 
-                    if (isCompactMode) {
-                        let abbr = '';
-                        if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                        else if (shift.type === 'Urlop') abbr = 'U';
-                        else {
-                             const start = parseInt(shift.startTime.split(':')[0]);
-                             const end = parseInt(shift.endTime.split(':')[0]);
-                             abbr = `${start}-${end}`;
-                        }
-                        return <span className={cn("font-bold", style?.text)}>{abbr}</span>;
-                    }
+                            if (isCompactMode) {
+                                let abbr = '';
+                                if (shift.type === 'Wolna Sobota') abbr = 'WS';
+                                else if (shift.type === 'Urlop') abbr = 'U';
+                                else if (shift.type === 'Święto') abbr = 'Ś';
+                                else {
+                                     const start = parseInt(shift.startTime.split(':')[0]);
+                                     const end = parseInt(shift.endTime.split(':')[0]);
+                                     abbr = `${start}-${end}`;
+                                }
+                                return <span className={cn("font-bold", style?.text)}>{abbr}</span>;
+                            }
 
-                    if (viewMode === 'month') {
-                        // Compact view for month mode
-                        let abbr = '8';
-                        if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                        if (shift.type === 'Urlop') abbr = 'URL';
+                            if (viewMode === 'month') {
+                                let abbr = '8';
+                                if (shift.type === 'Wolna Sobota') abbr = 'WS';
+                                if (shift.type === 'Urlop') abbr = 'URL';
+                                if (shift.type === 'Święto') abbr = 'ŚW';
 
-                        const startH = shift.startTime.split(':')[0];
-                        const endH = shift.endTime.split(':')[0];
+                                const startH = shift.startTime.split(':')[0];
+                                const endH = shift.endTime.split(':')[0];
 
-                        return (
-                            <div className="flex flex-col items-center justify-center leading-none">
-                                <span className={cn("text-[10px] font-bold uppercase", style?.text)}>
-                                    {abbr}
-                                </span>
-                                {shift.duration > 0 && (
-                                    <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-300 mt-0.5">
-                                        {startH}-{endH}
+                                return (
+                                    <div className="flex flex-col items-center justify-center leading-none">
+                                        <span className={cn("text-[10px] font-bold uppercase", style?.text)}>
+                                            {abbr}
+                                        </span>
+                                        {shift.duration > 0 && (
+                                            <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-300 mt-0.5">
+                                                {startH}-{endH}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <>
+                                    <span className={cn("text-[10px] font-bold uppercase truncate w-full text-center", style?.text)}>
+                                        {shift.type}
                                     </span>
-                                )}
-                            </div>
-                        );
-                    }
+                                    {shift.duration > 0 && (
+                                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-200 mt-0.5">
+                                        {shift.startTime}-{shift.endTime}
+                                        </span>
+                                    )}
+                                    <div className="absolute top-0 right-0 px-1 py-0.5 bg-white/50 text-[8px] font-bold text-slate-500 rounded-bl backdrop-blur-[1px]">
+                                        {shift.duration}h
+                                    </div>
+                                </>
+                            );
+                          };
 
-                    // Default Week View
-                    return (
-                        <>
-                            <span className={cn("text-[10px] font-bold uppercase truncate w-full text-center", style?.text)}>
-                                {shift.type}
-                            </span>
-                            {shift.duration > 0 && (
-                                <span className="text-xs font-semibold text-slate-600 dark:text-slate-200 mt-0.5">
-                                {shift.startTime}-{shift.endTime}
-                                </span>
-                            )}
-                            {/* Duration Badge */}
-                            <div className="absolute top-0 right-0 px-1 py-0.5 bg-white/50 text-[8px] font-bold text-slate-500 rounded-bl backdrop-blur-[1px]">
-                                {shift.duration}h
+                          return (
+                            <div 
+                              key={dateStr}
+                              onPointerDown={(e) => {
+                                  // Prevent auto-drag when interacting with cells if locked or if slot click is intended
+                                  // But DnD kit handles delay/distance.
+                                  // Actually, we might want to stop propagation if Locked is false?
+                                  // If locked=false (unlocked), we want drag.
+                                  // If locked=true, we want click.
+                                  // onSlotClick works on click. DnD works on drag.
+                              }}
+                              onClick={() => onSlotClick(employee.id, dateStr, shift)}
+                              className={cn(
+                                colWidthClass,
+                                "border-r relative transition-all cursor-pointer flex items-center justify-center p-0.5",
+                                isMonthChange ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700" : "border-r-slate-100 dark:border-r-slate-800",
+                                !shift && "group-hover/row:bg-slate-50/50 dark:group-hover/row:bg-slate-800/20 hover:!bg-slate-100 dark:hover:!bg-slate-800/80",
+                                isWeekend && !shift && "bg-slate-50 dark:bg-slate-900",
+                                isHolidayDay && !shift && "bg-amber-50/50 dark:bg-amber-900/10"
+                              )}
+                            >
+                              {shift ? (
+                                <div className={cn(
+                                  "w-full h-full rounded transition-all shadow-sm flex items-center justify-center overflow-hidden relative",
+                                  style?.bg, style?.border, "border",
+                                  isCompactMode ? "" : "flex-col p-1"
+                                )}>
+                                   {getShiftContent()}
+                                </div>
+                              ) : (
+                                 <div className="w-full h-full rounded hover:bg-slate-200/50 transition-colors" />
+                              )}
                             </div>
-                        </>
-                    );
-                  };
-
-                  return (
-                    <div 
-                      key={dateStr}
-                      onClick={() => onSlotClick(employee.id, dateStr, shift)}
-                      className={cn(
-                        colWidthClass,
-                        "border-r relative transition-all cursor-pointer flex items-center justify-center p-0.5",
-                        isMonthChange ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700" : "border-r-slate-100 dark:border-r-slate-800",
-                        !shift && "group-hover/row:bg-slate-50/50 dark:group-hover/row:bg-slate-800/20 hover:!bg-slate-100 dark:hover:!bg-slate-800/80",
-                        isWeekend && !shift && "bg-slate-50 dark:bg-slate-900",
-                        isHolidayDay && !shift && "bg-amber-50/50 dark:bg-amber-900/10"
-                      )}
-                    >
-                      {shift ? (
-                        <div className={cn(
-                          "w-full h-full rounded transition-all shadow-sm flex items-center justify-center overflow-hidden relative",
-                          style?.bg, style?.border, "border",
-                          isCompactMode ? "" : "flex-col p-1"
-                        )}>
-                           {getShiftContent()}
-                        </div>
-                      ) : (
-                         /* Empty slot hover effect */
-                         <div className="w-full h-full rounded hover:bg-slate-200/50 transition-colors" />
-                      )}
-                    </div>
-                  );
-                })}
-                 
-                 {/* Summary Column Logic (Updated for ViewMode==Month) */}
-                {viewMode === 'month' && (
-                  <div className={cn(
-                      "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-colors",
-                      isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1",
-                      // Background logic based on norm
-                      totalHours === targetMonthlyHours ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400"
-                  )}>
-                       <div className="text-center flex flex-col items-center" title={`Norma: ${targetMonthlyHours}h`}>
-                          <div className="font-bold leading-tight">
-                              {totalHours}h
-                              <span className="text-[10px] opacity-75 font-normal ml-1">
-                                  / {parseFloat((totalHours / 8).toFixed(2))}d
-                              </span>
+                          );
+                        })}
+                         
+                        {viewMode === 'month' && (
+                          <div className={cn(
+                              "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-colors",
+                              isCompactMode ? "py-1 text-xs" : "p-2 flex-col gap-1",
+                              totalHours === targetMonthlyHours ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400"
+                          )}>
+                               <div className="text-center flex flex-col items-center" title={`Norma: ${targetMonthlyHours}h`}>
+                                  <div className="font-bold leading-tight">
+                                      {totalHours}h
+                                      <span className="text-[10px] opacity-75 font-normal ml-1">
+                                          / {parseFloat((totalHours / 8).toFixed(2))}d
+                                      </span>
+                                  </div>
+                               </div>
+                               {!isCompactMode && (
+                                <div className="text-center" title="Dni urlopu">
+                                    <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
+                                        {vacationDays}d url.
+                                    </span>
+                                </div>
+                               )}
                           </div>
-                       </div>
-                       {!isCompactMode && (
-                        <div className="text-center" title="Dni urlopu">
-                            <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
-                                {vacationDays}d url.
-                            </span>
-                        </div>
-                       )}
-                  </div>
-                )}
-              </div>
+                        )}
+                      </div>
+                    </div>
+                  </SortableRow>
+                );
+              })}
             </div>
-            );
-          })}
-        </div>
+          </SortableContext>
+        </DndContext>
         
         {/* Footer Row (Totals) */}
         <div className="flex bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-400 sticky bottom-0 z-30 shadow-[0_-4px_8px_-4px_rgba(0,0,0,0.1)] h-10 md:h-12">
@@ -406,7 +451,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
                   const count = shiftsForDay.length;
                   const isFullStaff = count === employees.length && count > 0;
                   
-                  // Count specific shifts
                   const firstShiftCount = shiftsForDay.filter(s => s.startTime === '06:00').length;
                   const secondShiftCount = shiftsForDay.filter(s => s.startTime === '14:00').length;
 

@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { FreeSaturdaysPage } from './pages/FreeSaturdaysPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -54,7 +55,10 @@ const App: React.FC = () => {
           <Route 
             path="/" 
             element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
-
+          />
+          <Route 
+            path="/free-saturdays" 
+            element={session ? <FreeSaturdaysPage session={session} /> : <Navigate to="/login" replace />} 
           />
 
           {/* Fallback */}

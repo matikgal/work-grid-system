@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
 
@@ -42,12 +43,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     });
   }, []);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
   const menuItems = [
-    { label: 'Grafik', sub: 'Grafik zmian', active: true, icon: Calendar },
+    { label: 'Grafik', sub: 'Grafik zmian', active: location.pathname === '/' || location.pathname === '/work-grid-system/' || location.pathname === '/work-grid-system', icon: Calendar, action: () => navigate('/') },
+    { label: 'Wolne Soboty', sub: 'Rozliczenie roczne', active: location.pathname.includes('free-saturdays'), icon: Coffee, action: () => navigate('/free-saturdays') },
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
     { label: 'Instrukcja', sub: 'Pomoc', disabled: !onOpenInstructions, icon: BookOpen, action: onOpenInstructions },
     { label: 'Przeładuj system', sub: 'Reset danych', disabled: !onResetSystem, icon: RotateCcw, action: onResetSystem },
