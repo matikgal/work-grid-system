@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { MainLayout } from '../components/layout/MainLayout';
 import { stringToColor, cn } from '../utils';
+import { SHIFT_TYPES } from '../constants';
+import { shiftService } from '../services/shiftService';
+import { adjustmentService, WsAdjustment } from '../services/adjustmentService';
 
 // Modals
 import { SystemResetModal } from '../components/SystemResetModal';
@@ -17,12 +19,6 @@ import { useEmployees } from '../hooks/useEmployees';
 
 interface FreeSaturdaysPageProps {
   session: Session;
-}
-
-interface WsAdjustment {
-  id: string;
-  employee_id: string;
-  adjustment: number;
 }
 
 export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session }) => {
@@ -61,29 +57,18 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
             const start = `${selectedYear}-01-01`;
             const end = `${selectedYear}-12-31`;
             
-            const { data: shifts } = await supabase
-                .from('shifts')
-                .select('employee_id')
-                .in('employee_id', empIds)
-                .eq('type', 'Wolna Sobota')
-                .gte('date', start)
-                .lte('date', end);
+            // Use shiftService
+            const shifts = await shiftService.getShifts(empIds, start, end, SHIFT_TYPES.FREE_SATURDAY);
             
             const counts: Record<string, number> = {};
-            shifts?.forEach(s => {
-                counts[s.employee_id] = (counts[s.employee_id] || 0) + 1;
+            shifts.forEach(s => {
+                counts[s.employeeId] = (counts[s.employeeId] || 0) + 1;
             });
             setShiftsCount(counts);
 
-            // 3. Fetch Adjustments
-            const { data: adjs } = await supabase
-                .from('ws_adjustments')
-                .select('id, employee_id, adjustment')
-                .eq('user_id', session.user.id)
-                .eq('year', selectedYear)
-                .in('employee_id', empIds);
-                
-            setAdjustments(adjs || []);
+            // 3. Fetch Adjustments via service
+            const adjs = await adjustmentService.getAdjustments(empIds, selectedYear, session.user.id);
+            setAdjustments(adjs);
         }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -93,33 +78,24 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
   };
 
   const updateAdjustment = async (employeeId: string, delta: number) => {
-    const existing = adjustments.find(a => a.employee_id === employeeId);
+    const existing = adjustments.find(a => a.employeeId === employeeId);
     const newVal = (existing?.adjustment || 0) + delta;
     
     // Optimistic update
+    const tempId = 'temp-' + employeeId;
     if (existing) {
         setAdjustments(prev => prev.map(a => a.id === existing.id ? { ...a, adjustment: newVal } : a));
     } else {
-        setAdjustments(prev => [...prev, { id: 'temp-' + employeeId, employee_id: employeeId, adjustment: newVal }]);
+        setAdjustments(prev => [...prev, { id: tempId, employeeId: employeeId, userId: session.user.id, year: selectedYear, adjustment: newVal }]);
     }
 
     try {
-        const { data, error } = await supabase
-            .from('ws_adjustments')
-            .upsert({
-                employee_id: employeeId,
-                user_id: session.user.id,
-                year: selectedYear,
-                adjustment: newVal
-            }, { onConflict: 'employee_id, year' })
-            .select()
-            .single();
-
-        if (error) throw error;
+        const updated = await adjustmentService.upsertAdjustment(employeeId, session.user.id, selectedYear, newVal);
         
         setAdjustments(prev => {
-            const filtered = prev.filter(a => a.employee_id !== employeeId);
-            return [...filtered, { id: data.id, employee_id: data.employee_id, adjustment: data.adjustment }];
+            // Remove optimistic entry and existing entry, replace with confirmed one
+            const filtered = prev.filter(a => a.employeeId !== employeeId); 
+            return [...filtered, updated];
         });
     } catch (e) {
         console.error("Error updating adjustment", e);
@@ -180,7 +156,7 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
                     <div className="space-y-3">
                         {employees.map((emp) => {
                             const fromGrid = shiftsCount[emp.id] || 0;
-                            const adj = adjustments.find(a => a.employee_id === emp.id)?.adjustment || 0;
+                            const adj = adjustments.find(a => a.employeeId === emp.id)?.adjustment || 0;
                             const total = fromGrid + adj;
                             const isTailwindClass = emp.avatarColor?.startsWith('bg-');
 
@@ -256,7 +232,7 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
                                 </tr>
                             ) : employees.map((emp, index) => {
                                 const fromGrid = shiftsCount[emp.id] || 0;
-                                const adj = adjustments.find(a => a.employee_id === emp.id)?.adjustment || 0;
+                                const adj = adjustments.find(a => a.employeeId === emp.id)?.adjustment || 0;
                                 const total = fromGrid + adj;
                                 
                                 const isTailwindClass = emp.avatarColor?.startsWith('bg-');

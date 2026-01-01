@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash2, Clock, Calendar } from 'lucide-react';
 import { ModalState, Shift } from '../types';
 import { calculateDuration } from '../utils';
+import { SHIFT_TYPES } from '../constants';
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, onDele
         startTime,
         endTime,
         duration,
+        // Type preserved
       });
     } else if (data.employeeId && data.date) {
       onSave({
@@ -52,6 +54,8 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, onDele
         startTime,
         endTime,
         duration,
+        // Default type for manual creation via this modal
+        type: SHIFT_TYPES.WORK_OFFICE, 
       });
     }
     onClose();

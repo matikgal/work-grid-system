@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Plus, User, Clock, MoreVertical, Trash2, Edit2, Shield, ShoppingCart, Beef, Croissant, Carrot, ArrowLeft, CircleOff, PenTool } from 'lucide-react';
+import { X, Search, Plus, User, Clock, Trash2, Edit2, ArrowLeft, PenTool } from 'lucide-react';
 import { Employee, Shift } from '../types';
 import { cn, stringToColor } from '../utils';
+import { ROLES } from '../constants';
 
 interface EmployeesManagerModalProps {
   isOpen: boolean;
@@ -12,19 +13,6 @@ interface EmployeesManagerModalProps {
   onDelete?: (id: string) => void;
   currentMonth?: Date;
 }
-
-const ROLES = [
-  { id: 'none', label: 'Brak', icon: CircleOff },
-  { id: 'kierownik', label: 'Kierownik', icon: Shield },
-  { id: 'kasa', label: 'Kasa', icon: ShoppingCart },
-  { id: 'mieso', label: 'Mięso', icon: Beef },
-  { id: 'mieso_kasa', label: 'Mięso/Kasa', icon: Beef },
-  { id: 'pieczywo', label: 'Pieczywo', icon: Croissant },
-  { id: 'pieczywo_kasa', label: 'Pieczywo/Kasa', icon: Croissant },
-  { id: 'warzywa', label: 'Warzywa', icon: Carrot },
-  { id: 'sprzataczka', label: 'Sprzątaczka', icon: Trash2 },
-  { id: 'custom', label: 'Inne', icon: PenTool },
-];
 
 export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
   isOpen,
@@ -93,19 +81,14 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
       const fullName = lastName ? `${firstName} ${lastName}` : firstName;
       
       const newEmployee: Employee = {
-          id: editingEmployee ? editingEmployee.id : crypto.randomUUID(),
+          // If editing, keep ID. If new, use empty string or nullish (parent handles creation)
+          // We set a temporary ID if strictly needed by TS, but logically it's ignored for creation.
+          id: editingEmployee ? editingEmployee.id : '', 
           name: fullName,
           role: selectedRole === 'Inne' ? customRoleInputValue : (selectedRole === 'Brak' ? '' : selectedRole),
-          avatarColor: editingEmployee?.avatarColor, // Persist or generate new elsewhere? Logic usually in parent or here. Assuming update preserves or generates if new.
-          // Note: Parent handles the actual object creation/merge in DashboardPage usually.
-          // But wait, onSave in DashboardPage (handleSaveEmployee) expects just the employee object.
+          avatarColor: editingEmployee?.avatarColor || '', 
       };
 
-      // We need to match the signature expected by DashboardPage's handleSaveEmployee or slightly adapt.
-      // DashboardPage expects: (employee: Employee) => void.
-      // But we need to know if it's new generation logic or not.
-      // Actually handleSaveEmployee in DashboardPage handles both update and create based on ID existence usually.
-      
       onSave(newEmployee, !editingEmployee);
       handleBackToList();
   };

@@ -7,16 +7,23 @@ export const shiftService = {
    * @param employeeIds List of employee IDs to fetch shifts for
    * @param startDate ISO date string (YYYY-MM-DD)
    * @param endDate ISO date string (YYYY-MM-DD)
+   * @param type Optional strict equality filter for shift type
    */
-  async getShifts(employeeIds: string[], startDate: string, endDate: string) {
+  async getShifts(employeeIds: string[], startDate: string, endDate: string, type?: string) {
     if (employeeIds.length === 0) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('shifts')
       .select('id, employee_id, date, start_time, end_time, duration, type')
       .in('employee_id', employeeIds)
       .gte('date', startDate)
       .lte('date', endDate);
+
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 

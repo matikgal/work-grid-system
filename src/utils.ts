@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { SHIFT_TYPES } from './constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -45,11 +46,10 @@ export const getRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-// Determine shift color based on start time
 // Determine shift color based on shift type
 export const getShiftStyle = (type: string): { bg: string; border: string; text: string } => {
   switch (type) {
-    case '6-14':
+    case SHIFT_TYPES.WORK_MORNING:
     case '06:00':
       return { 
           bg: 'bg-emerald-100 dark:bg-emerald-500/20', 
@@ -57,7 +57,7 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-emerald-800 dark:text-emerald-300' 
       };
     
-    case '14-22':
+    case SHIFT_TYPES.WORK_AFTERNOON:
     case '14:00':
       return { 
           bg: 'bg-indigo-100 dark:bg-indigo-500/20', 
@@ -65,7 +65,7 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-indigo-800 dark:text-indigo-300' 
       };
 
-    case '10-18':
+    case SHIFT_TYPES.WORK_OFFICE:
     case '10:00':
       return { 
           bg: 'bg-purple-100 dark:bg-purple-500/20', 
@@ -73,36 +73,36 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-purple-800 dark:text-purple-300' 
       };
 
-    case 'Urlop':
+    case SHIFT_TYPES.VACATION:
       return { 
           bg: 'bg-orange-100 dark:bg-orange-500/20', 
           border: 'border-orange-200 dark:border-orange-500/30', 
           text: 'text-orange-800 dark:text-orange-300' 
       };
     
-    case 'Wolna Sobota':
+    case SHIFT_TYPES.FREE_SATURDAY:
       return { 
           bg: 'bg-slate-100 dark:bg-slate-800/40', 
           border: 'border-slate-200 dark:border-slate-700', 
           text: 'text-slate-500 dark:text-slate-400' 
       };
 
-    case 'Święto':
+    case SHIFT_TYPES.HOLIDAY:
       return { 
           bg: 'bg-red-100 dark:bg-red-900/30', 
           border: 'border-red-200 dark:border-red-800', 
           text: 'text-red-700 dark:text-red-400' 
       };
 
-    case 'Szkoła':
+    case SHIFT_TYPES.SCHOOL:
       return { 
           bg: 'bg-blue-100 dark:bg-blue-500/20', 
           border: 'border-blue-300 dark:border-blue-500/30', 
           text: 'text-blue-800 dark:text-blue-300' 
       };
 
-    case 'L4':
-    case 'Chorobowe':
+    case SHIFT_TYPES.SICK_LEAVE_L4:
+    case SHIFT_TYPES.SICK_LEAVE:
       return { 
           bg: 'bg-rose-100 dark:bg-rose-500/20', 
           border: 'border-rose-300 dark:border-rose-500/30', 

@@ -5,6 +5,7 @@ import Holidays from 'date-holidays';
 import { Info, Lock, Unlock } from 'lucide-react';
 import { Employee, Shift, ViewMode } from '../types';
 import { getShiftStyle, cn, stringToColor } from '../utils';
+import { SHIFT_TYPES } from '../constants';
 import {
   DndContext, 
   closestCenter,
@@ -132,9 +133,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
 
   // OPTIMIZATION: Shift hours calculation helper
   const getShiftHours = (shift: Shift) => {
-    if (shift.type === 'Urlop') return 8;
-    if (shift.type === 'Wolna Sobota') return 0;
-    if (shift.type === 'Święto') return 0;
+    if (shift.type === SHIFT_TYPES.VACATION) return 8;
+    if (shift.type === SHIFT_TYPES.FREE_SATURDAY) return 0;
+    if (shift.type === SHIFT_TYPES.HOLIDAY) return 0;
     return shift.duration || 0;
   };
 
@@ -169,7 +170,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
         const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
         if (shift) {
             h += getShiftHours(shift);
-            if (shift.type === 'Urlop') v++;
+            if (shift.type === SHIFT_TYPES.VACATION) v++;
         }
       });
       
@@ -321,9 +322,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
 
                             if (isCompactMode) {
                                 let abbr = '';
-                                if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                                else if (shift.type === 'Urlop') abbr = 'U';
-                                else if (shift.type === 'Święto') abbr = 'Ś';
+                                if (shift.type === SHIFT_TYPES.FREE_SATURDAY) abbr = 'WS';
+                                else if (shift.type === SHIFT_TYPES.VACATION) abbr = 'U';
+                                else if (shift.type === SHIFT_TYPES.HOLIDAY) abbr = 'Ś';
                                 else {
                                      const start = parseInt(shift.startTime.split(':')[0]);
                                      const end = parseInt(shift.endTime.split(':')[0]);
@@ -334,9 +335,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ days, employees, shifts, vi
 
                             if (viewMode === 'month') {
                                 let abbr = '8';
-                                if (shift.type === 'Wolna Sobota') abbr = 'WS';
-                                if (shift.type === 'Urlop') abbr = 'URL';
-                                if (shift.type === 'Święto') abbr = 'ŚW';
+                                if (shift.type === SHIFT_TYPES.FREE_SATURDAY) abbr = 'WS';
+                                if (shift.type === SHIFT_TYPES.VACATION) abbr = 'URL';
+                                if (shift.type === SHIFT_TYPES.HOLIDAY) abbr = 'ŚW';
 
                                 const startH = shift.startTime.split(':')[0];
                                 const endH = shift.endTime.split(':')[0];

@@ -22,7 +22,7 @@ import { SystemResetModal } from '../components/SystemResetModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
-import { SHIFT_TEMPLATES } from '../constants';
+import { SHIFT_TEMPLATES, SHIFT_TYPES } from '../constants';
 import { calculateDuration, cn, getShiftStyle } from '../utils';
 
 // Hooks
@@ -203,7 +203,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
         type: activeTemplate.label
       };
       
-      // If existing, use its ID for update logic in hook (though hook uses upsert usually or split logic)
       if (existingShift) {
         saveShift({ ...newShiftData, id: existingShift.id });
       } else {
@@ -228,7 +227,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
 
   // Employee Operations
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
-      // EmployeesManagerModal passes a crafted object, potentially with existing ID
       if (isNew) {
          addEmployee(employee.name, employee.role, employee.avatarColor);
       } else {

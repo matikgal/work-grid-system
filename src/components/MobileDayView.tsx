@@ -3,7 +3,7 @@ import { format, addDays, subDays, isSameDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Share2, Plus, Clock, User } from 'lucide-react';
 import { Employee, Shift } from '../types';
-import { cn, stringToColor } from '../utils';
+import { cn, stringToColor, getShiftStyle } from '../utils';
 
 interface MobileDayViewProps {
   currentDate: Date;
@@ -89,14 +89,11 @@ export const MobileDayView: React.FC<MobileDayViewProps> = ({
               const shift = getShiftForEmployee(employee.id);
               
               // Shift Styles
-              let shiftStyle = "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500";
+              let shiftStyleClasses = "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700";
+              
               if (shift) {
-                  if (shift.type === '6-14') shiftStyle = "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300";
-                  else if (shift.type === '14-22') shiftStyle = "bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300";
-                  else if (shift.type === 'Wolne') shiftStyle = "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400";
-                  else if (shift.type === 'Urlop') shiftStyle = "bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300";
-                  else if (shift.type === 'Wolna Sobota') shiftStyle = "bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300";
-                  else shiftStyle = "bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300";
+                  const style = getShiftStyle(shift.type || '');
+                  shiftStyleClasses = `${style.bg} ${style.border} ${style.text}`;
               }
 
               return (
@@ -105,7 +102,7 @@ export const MobileDayView: React.FC<MobileDayViewProps> = ({
                       onClick={() => onSlotClick(employee.id, dateKey, shift)}
                       className={cn(
                           "relative rounded-2xl p-4 border transition-all active:scale-[0.98] shadow-sm flex items-center justify-between gap-4",
-                          shift ? shiftStyle : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700"
+                          shiftStyleClasses
                       )}
                   >
                       <div className="flex items-center gap-3">
