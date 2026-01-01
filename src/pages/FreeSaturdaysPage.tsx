@@ -1,12 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { format, startOfYear, endOfYear } from 'date-fns';
-import { pl } from 'date-fns/locale';
-import { Lock, Unlock, ChevronLeft, ChevronRight, Calculator, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Employee } from '../types';
 import { MainLayout } from '../components/layout/MainLayout';
-import { stringToColor, cn, getRandomColor } from '../utils';
+import { stringToColor, cn } from '../utils';
 
 // Modals
 import { SystemResetModal } from '../components/SystemResetModal';
@@ -14,8 +11,9 @@ import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
 import { SettingsModal } from '../components/SettingsModal';
 import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
-import { ViewMode } from '../types';
+import { ViewMode, Employee } from '../types';
 import { useMobile } from '../hooks/useMobile';
+import { useEmployees } from '../hooks/useEmployees';
 
 interface FreeSaturdaysPageProps {
   session: Session;
@@ -28,7 +26,7 @@ interface WsAdjustment {
 }
 
 export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session }) => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees(session);
   const [adjustments, setAdjustments] = useState<WsAdjustment[]>([]);
   const [shiftsCount, setShiftsCount] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -47,43 +45,16 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
   // Settings State (Stub for now, or local)
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [isCompactMode, setIsCompactMode] = useState(false);
-  const [workingDaysCount, setWorkingDaysCount] = useState(20);
 
-  const handleSystemResetConfirm = () => {
-    localStorage.removeItem(`grafik_cache_${session.user.id}`);
-    window.location.reload();
-  };
-  
-  // Pending changes for batch save or instant save? User said "z potwierdzeniem".
-  // Let's do instant save on change if unlocked, or local state + save button?
-  // "odania odjecia recznego ws ale z potwierdzeniem ale z odblokoaienm cos akeigo"
-  // Unlocking acts as the "enable edit".
-  
   useEffect(() => {
     fetchData();
-  }, [session.user.id, selectedYear]);
+  }, [session.user.id, selectedYear, employees]); // Depend on employees to refresh counts when employees load
 
   const fetchData = async () => {
+    if (employees.length === 0) return;
     setLoading(true);
     try {
-      // 1. Fetch Employees
-      const { data: emps } = await supabase
-        .from('employees')
-        .select('id, name, role, avatar_color, order_index')
-        .eq('user_id', session.user.id)
-        .order('order_index')
-        .order('name');
-        
-      if (emps) {
-        setEmployees(emps.map(e => ({
-            id: e.id,
-            name: e.name,
-            role: e.role,
-            avatarColor: e.avatar_color,
-            orderIndex: e.order_index
-        })));
-
-        const empIds = emps.map(e => e.id);
+        const empIds = employees.map(e => e.id);
         
         if (empIds.length > 0) {
             // 2. Fetch Shifts (Wolna Sobota only) for the year
@@ -114,7 +85,6 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
                 
             setAdjustments(adjs || []);
         }
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -123,7 +93,6 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
   };
 
   const updateAdjustment = async (employeeId: string, delta: number) => {
-    // Find existing adjustment
     const existing = adjustments.find(a => a.employee_id === employeeId);
     const newVal = (existing?.adjustment || 0) + delta;
     
@@ -131,7 +100,6 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
     if (existing) {
         setAdjustments(prev => prev.map(a => a.id === existing.id ? { ...a, adjustment: newVal } : a));
     } else {
-        // Create temp placeholder
         setAdjustments(prev => [...prev, { id: 'temp-' + employeeId, employee_id: employeeId, adjustment: newVal }]);
     }
 
@@ -149,59 +117,22 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
 
         if (error) throw error;
         
-        // Update real state
         setAdjustments(prev => {
             const filtered = prev.filter(a => a.employee_id !== employeeId);
             return [...filtered, { id: data.id, employee_id: data.employee_id, adjustment: data.adjustment }];
         });
     } catch (e) {
         console.error("Error updating adjustment", e);
-        fetchData(); // revert on error
+        fetchData(); // revert
     }
   };
 
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
-      try {
-          if (!isNew) {
-              // Update existing
-              const { error } = await supabase.from('employees').update({ name: employee.name, role: employee.role }).eq('id', employee.id);
-              if (!error) {
-                  setEmployees(prev => prev.map(e => e.id === employee.id ? { ...e, name: employee.name, role: employee.role } : e));
-              }
-          } else {
-              // Create new
-              const newEmpData = { 
-                id: employee.id, // Use ID from modal
-                name: employee.name, 
-                role: employee.role, 
-                avatar_color: employee.avatarColor || getRandomColor(),
-                user_id: session.user.id
-              };
-              const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
-              if (!error) {
-                  setEmployees(prev => [...prev, { 
-                      id: data.id, 
-                      name: data.name, 
-                      role: data.role, 
-                      avatarColor: data.avatar_color,
-                      orderIndex: data.order_index
-                  }]);
-              }
-          }
-      } catch (e) { console.error(e); }
-  };
-
-  const handleDeleteEmployee = async (id: string) => {
-      if (!window.confirm('Czy na pewno chcesz usunąć tego pracownika? Wszystkie jego zmiany zostaną usunięte.')) return;
-      
-      try {
-          await supabase.from('shifts').delete().eq('employee_id', id); 
-          const { error } = await supabase.from('employees').delete().eq('id', id);
-          
-          if (!error) {
-              setEmployees(prev => prev.filter(e => e.id !== id));
-          }
-      } catch (e) { console.error(e); }
+      if (isNew) {
+        addEmployee(employee.name, employee.role, employee.avatarColor);
+      } else {
+        updateEmployee(employee.id, { name: employee.name, role: employee.role });
+      }
   };
 
   return (
@@ -309,7 +240,6 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
                 ) : (
                     // Desktop Table View
                     <div className="max-w-5xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        {/* Existing Table Code */}
                         <table className="w-full text-left">
                         <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
                             <tr>
@@ -399,7 +329,7 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
       <SystemResetModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
-        onConfirm={handleSystemResetConfirm}
+        onConfirm={() => window.location.reload()}
       />
       
       <InstructionsModal
@@ -429,7 +359,7 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
         employees={employees}
         shifts={[]}
         onSave={handleSaveEmployee}
-        onDelete={handleDeleteEmployee}
+        onDelete={deleteEmployee}
       />
     </MainLayout>
   );

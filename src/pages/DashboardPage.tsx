@@ -7,13 +7,12 @@ import {
 } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { ChevronLeft, ChevronRight, Filter, Printer, Download, Share2, Plus, Minimize2, Maximize2, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Printer, Minimize2, Maximize2, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { MobileDayView } from '../components/MobileDayView';
 import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
 import { useMobile } from '../hooks/useMobile';
-import EmployeeModal from '../components/EmployeeModal';
 import { PrintReport } from '../components/PrintReport';
 import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
@@ -24,8 +23,11 @@ import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
 import { SHIFT_TEMPLATES } from '../constants';
-import { getRandomColor, calculateDuration, cn, getShiftStyle } from '../utils';
-import { supabase } from '../lib/supabase';
+import { calculateDuration, cn, getShiftStyle } from '../utils';
+
+// Hooks
+import { useEmployees } from '../hooks/useEmployees';
+import { useShifts } from '../hooks/useShifts';
 
 interface DashboardPageProps {
   session: Session;
@@ -33,13 +35,28 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   // --- STATE ---
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Initialize state with persistence
   const [currentDate, setCurrentDate] = useState(new Date());
   
+  // Custom Hooks
+  const { 
+    employees, 
+    loading: employeesLoading, 
+    addEmployee, 
+    updateEmployee, 
+    deleteEmployee, 
+    reorderEmployees 
+  } = useEmployees(session);
+
+  const { 
+    shifts, 
+    loading: shiftsLoading, 
+    saveShift, 
+    deleteShift 
+  } = useShifts(employees, currentDate);
+
+  const loading = employeesLoading || (shiftsLoading && employees.length > 0);
+
+  // View Settings Persistence
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('grafik_viewMode') as ViewMode) || 'week';
   });
@@ -76,9 +93,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   });
 
   const [isEmployeesManagerOpen, setIsEmployeesManagerOpen] = useState(false);
-  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  // const [isCompactMode, setIsCompactMode] = useState(false); // MOVED UP
   const [isPrinting, setIsPrinting] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const isMobile = useMobile();
@@ -88,112 +102,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
-
-  // --- DATA FETCHING ---
-  useEffect(() => {
-    const fetchData = async () => {
-      const cacheKey = `grafik_cache_${session.user.id}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      let localEmployees: Employee[] = [];
-      let localShifts: Shift[] = [];
-      let lastUpdateTS = 0;
-
-      if (cachedData) {
-        try {
-          const parsed = JSON.parse(cachedData);
-          localEmployees = parsed.employees || [];
-          localShifts = parsed.shifts || [];
-          lastUpdateTS = parsed.last_updated || 0;
-          setEmployees(localEmployees);
-          setShifts(localShifts);
-          setLoading(false);
-        } catch (e) {
-          console.error("Cache corrupted");
-        }
-      }
-
-      try {
-        const { data: updateCheck, error: updateError } = await supabase.rpc('get_max_updated_at'); 
-
-        let dbMaxUpdated = 0;
-        if (updateError) {
-          const { data: maxEmp } = await supabase.from('employees').select('updated_at').order('updated_at', { ascending: false }).limit(1).single();
-          const { data: maxShift } = await supabase.from('shifts').select('updated_at').order('updated_at', { ascending: false }).limit(1).single();
-          dbMaxUpdated = Math.max(
-            new Date(maxEmp?.updated_at || 0).getTime(),
-            new Date(maxShift?.updated_at || 0).getTime()
-          );
-        } else {
-          dbMaxUpdated = new Date(updateCheck).getTime();
-        }
-
-        if (dbMaxUpdated > lastUpdateTS || !cachedData) {
-          const { data: emps } = await supabase
-            .from('employees')
-            .select('id, name, role, avatar_color, order_index')
-            .eq('user_id', session.user.id)
-            .order('order_index', { ascending: true })
-            .order('name', { ascending: true });
-            
-          const empIds = (emps || []).map(e => e.id);
-          
-          let shfts: any[] = [];
-          if (empIds.length > 0) {
-            const result = await supabase
-              .from('shifts')
-              .select('id, employee_id, date, start_time, end_time, duration, type')
-              .in('employee_id', empIds);
-            
-            if (result.data) shfts = result.data;
-          }
-
-          const mappedEmps = (emps || []).map(e => ({
-            id: e.id,
-            name: e.name,
-            role: e.role,
-            avatarColor: e.avatar_color,
-            orderIndex: e.order_index
-          }));
-
-          const mappedShfts = (shfts || []).map(s => ({
-            id: s.id,
-            employeeId: s.employee_id,
-            date: s.date,
-            startTime: s.start_time,
-            endTime: s.end_time,
-            duration: s.duration,
-            type: s.type
-          }));
-
-          setEmployees(mappedEmps);
-          setShifts(mappedShfts);
-          
-          localStorage.setItem(cacheKey, JSON.stringify({
-            employees: mappedEmps,
-            shifts: mappedShfts,
-            last_updated: dbMaxUpdated
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const syncCache = (newEmployees: Employee[], newShifts: Shift[]) => {
-    setEmployees(newEmployees);
-    setShifts(newShifts);
-    const cacheKey = `grafik_cache_${session.user.id}`;
-    localStorage.setItem(cacheKey, JSON.stringify({
-      employees: newEmployees,
-      shifts: newShifts,
-      last_updated: Date.now()
-    }));
-  };
 
   // --- HELPERS ---
   const daysToDisplay = useMemo(() => {
@@ -283,35 +191,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
 
   const handlePrint = () => setIsPrinting(true);
 
-  // DB Operations
+  // Shift Operations
   const handleSlotClick = (employeeId: string, date: string, existingShift?: Shift) => {
     if (activeTemplate) {
       const newShiftData = {
-        employee_id: employeeId, date, start_time: activeTemplate.startTime,
-        end_time: activeTemplate.endTime, duration: calculateDuration(activeTemplate.startTime, activeTemplate.endTime),
+        employeeId: employeeId,
+        date,
+        startTime: activeTemplate.startTime,
+        endTime: activeTemplate.endTime,
+        duration: calculateDuration(activeTemplate.startTime, activeTemplate.endTime),
         type: activeTemplate.label
       };
       
-      const upsert = async () => {
-         // Optimistic update could go here
-         try {
-             if (existingShift) {
-                 const { data, error } = await supabase.from('shifts').update(newShiftData).eq('id', existingShift.id).select().single();
-                 if (!error) {
-                    const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
-                    const newShifts = shifts.map(s => s.id === existingShift.id ? mapped : s);
-                    syncCache(employees, newShifts);
-                 }
-             } else {
-                 const { data, error } = await supabase.from('shifts').insert(newShiftData).select().single();
-                 if (!error) {
-                    const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
-                    syncCache(employees, [...shifts, mapped]);
-                 }
-             }
-         } catch (e) { console.error(e); }
-      };
-      upsert();
+      // If existing, use its ID for update logic in hook (though hook uses upsert usually or split logic)
+      if (existingShift) {
+        saveShift({ ...newShiftData, id: existingShift.id });
+      } else {
+        saveShift(newShiftData);
+      }
       return;
     }
     setModalState({ isOpen: true, employeeId, date, existingShift: existingShift || null });
@@ -321,104 +218,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
     setModalState(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleSaveShift = async (shiftData: Shift | Omit<Shift, 'id'>) => {
-    const supabaseData = {
-      employee_id: shiftData.employeeId, date: shiftData.date, start_time: shiftData.startTime,
-      end_time: shiftData.endTime, duration: shiftData.duration, type: shiftData.type
-    };
-    try {
-      if ('id' in shiftData) {
-        const { error } = await supabase.from('shifts').update(supabaseData).eq('id', shiftData.id);
-        if (!error) {
-            const newShifts = shifts.map(s => s.id === shiftData.id ? shiftData as Shift : s);
-            syncCache(employees, newShifts);
-        }
+  const handleManualSaveShift = (shiftData: Shift | Omit<Shift, 'id'>) => {
+    saveShift(shiftData);
+  };
+
+  const handleManualDeleteShift = (id: string) => {
+    deleteShift(id);
+  };
+
+  // Employee Operations
+  const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
+      // EmployeesManagerModal passes a crafted object, potentially with existing ID
+      if (isNew) {
+         addEmployee(employee.name, employee.role, employee.avatarColor);
       } else {
-        const { data, error } = await supabase.from('shifts').insert(supabaseData).select().single();
-        if (!error) {
-            const mapped = { id: data.id, employeeId: data.employee_id, date: data.date, startTime: data.start_time, endTime: data.end_time, duration: data.duration, type: data.type };
-            syncCache(employees, [...shifts, mapped]);
-        }
+         updateEmployee(employee.id, { name: employee.name, role: employee.role });
       }
-    } catch (e) { console.error(e); }
-  };
-
-  const handleDeleteShift = async (id: string) => {
-      try {
-          const { error } = await supabase.from('shifts').delete().eq('id', id);
-          if (!error) {
-              const newShifts = shifts.filter(s => s.id !== id);
-              syncCache(employees, newShifts);
-          }
-      } catch (e) { console.error(e); }
-  };
-
-  const handleSaveEmployee = async (name: string, role: string, id?: string, avatarColor?: string) => {
-      try {
-          if (id && employees.some(e => e.id === id)) {
-              // Update existing using the passed ID
-              const { error } = await supabase.from('employees').update({ name, role }).eq('id', id);
-              if (!error) {
-                  const newEmps = employees.map(e => e.id === id ? { ...e, name, role } : e);
-                  syncCache(newEmps, shifts);
-              }
-          } else {
-              // Create new
-              const newEmpData = { 
-                name, 
-                role, 
-                avatar_color: avatarColor || getRandomColor(),
-                user_id: session.user.id
-              };
-              const { data, error } = await supabase.from('employees').insert(newEmpData).select().single();
-              if (!error) {
-                  const newEmps = [...employees, { id: data.id, name: data.name, role: data.role, avatarColor: data.avatar_color }];
-                  syncCache(newEmps, shifts);
-              }
-          }
-      } catch (e) { console.error(e); }
-  };
-
-
-  const handleDeleteEmployee = async (id: string) => {
-      if (!window.confirm('Czy na pewno chcesz usunąć tego pracownika? Wszystkie jego zmiany zostaną usunięte.')) return;
-      
-      try {
-          // Delete shifts first if no cascade (safe side)
-          await supabase.from('shifts').delete().eq('employee_id', id); 
-          const { error } = await supabase.from('employees').delete().eq('id', id);
-          
-          if (!error) {
-              const newEmps = employees.filter(e => e.id !== id);
-              const newShifts = shifts.filter(s => s.employeeId !== id);
-              syncCache(newEmps, newShifts);
-          }
-      } catch (e) { console.error(e); }
-  };
-
-  const handleSystemResetConfirm = () => {
-    localStorage.removeItem(`grafik_cache_${session.user.id}`);
-    window.location.reload();
-  };
-
-  const handleReorderEmployees = async (newOrder: Employee[]) => {
-      // Optimistic update
-      setEmployees(newOrder);
-      
-      const updates = newOrder.map((emp, index) => ({
-          id: emp.id,
-          name: emp.name,
-          role: emp.role,
-          avatar_color: emp.avatarColor,
-          user_id: session.user.id,
-          order_index: index
-      }));
-
-      try {
-          const { error } = await supabase.from('employees').upsert(updates);
-          if (error) console.error("Error updating order:", error);
-          else syncCache(newOrder, shifts);
-      } catch (e) { console.error(e); }
   };
 
   return (
@@ -573,7 +388,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                     isCompactMode={isCompactMode}
                     onSlotClick={handleSlotClick}
                     workingDaysCount={workingDaysCount}
-                    onReorder={handleReorderEmployees}
+                    onReorder={reorderEmployees}
                   />
               )}
           </div>
@@ -582,8 +397,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
           <ShiftModal 
             isOpen={modalState.isOpen}
             onClose={closeModal}
-            onSave={handleSaveShift}
-            onDelete={handleDeleteShift}
+            onSave={handleManualSaveShift}
+            onDelete={handleManualDeleteShift}
             data={modalState}
             employeeName={activeEmployeeName}
           />
@@ -594,8 +409,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
             employees={employees}
             shifts={shifts}
             currentMonth={currentDate}
-            onSave={(employee) => handleSaveEmployee(employee.name, employee.role, employee.id, employee.avatarColor)}
-            onDelete={handleDeleteEmployee}
+            onSave={handleSaveEmployee}
+            onDelete={deleteEmployee}
           />
           <InstructionsModal 
             isOpen={isInstructionsOpen} 
@@ -618,7 +433,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
           <SystemResetModal
             isOpen={isSystemResetOpen}
             onClose={() => setIsSystemResetOpen(false)}
-            onConfirm={handleSystemResetConfirm}
+            onConfirm={() => window.location.reload()}
           />
         </div>
     </MainLayout>
