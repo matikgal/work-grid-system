@@ -31,9 +31,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [userEmail, setUserEmail] = useState<string>('');
   const [showAbout, setShowAbout] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [catClickCount, setCatClickCount] = useState(0);
-  const [showCat, setShowCat] = useState(false);
-  const [showDollar, setShowDollar] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -101,27 +98,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                       {headerRight}
                   </div>
               )}
-              <div className="flex items-center gap-3 shrink-0">
+               <div className="flex items-center gap-3 shrink-0">
                  <span className="hidden sm:inline text-sm font-bold text-slate-700 dark:text-slate-300">{userEmail.split('@')[0]}</span>
                  <div 
-                    onClick={() => {
-                        const newCount = catClickCount + 1;
-                        if (newCount >= 3) {
-                            setShowCat(true);
-                            setCatClickCount(0);
-                            setTimeout(() => setShowCat(false), 3000);
-                        } else {
-                            setCatClickCount(newCount);
-                            setTimeout(() => setCatClickCount(0), 1000); // Reset if not clicked quickly enough
-                        }
-                    }}
-                    className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs cursor-pointer select-none overflow-hidden relative ring-2 ring-white dark:ring-slate-700 hover:scale-105 active:scale-95 transition-all"
+                    className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs select-none overflow-hidden relative ring-2 ring-white dark:ring-slate-700 hover:scale-105 active:scale-95 transition-all"
                   >
-                      {showCat ? (
-                          <img src="/bg.webp" alt="Cat" className="absolute inset-0 w-full h-full object-cover" />
-                      ) : (
-                          userEmail.charAt(0).toUpperCase()
-                      )}
+                      {userEmail.charAt(0).toUpperCase()}
                   </div>
                </div>
            </div>
@@ -212,23 +194,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                    <div className="space-y-3 text-slate-600 dark:text-slate-400 text-sm">
                        <p>System Grafik to nowoczesne narzędzie do zarządzania czasem pracy w małych i średnich przedsiębiorstwach.</p>
                         <p>Wersja: <strong className="text-slate-900 dark:text-slate-200">2.1.0 (Build 2025)</strong></p>
-                        {showDollar && (
-                            <div className="fixed inset-0 pointer-events-none z-[200] flex items-center justify-center overflow-hidden">
-                                <img src="/dollar.gif" alt="Dollar" className="w-[300px] h-[300px] object-contain opacity-80" />
-                                <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 opacity-40">
-                                    {[...Array(16)].map((_, i) => (
-                                        <img key={i} src="/dollar.gif" alt="Dollar" className="w-20 h-20" style={{ transform: `rotate(${i * 45}deg)` }} />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        <p 
-                          className="cursor-pointer select-none"
-                          onClick={() => {
-                              setShowDollar(true);
-                              setTimeout(() => setShowDollar(false), 4000);
-                          }}
-                        >
+                        <p className="select-none">
                           Created by: <strong className="text-slate-900 dark:text-slate-200">Mateusz Gałuszka</strong>
                         </p>
                        

@@ -133,7 +133,7 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
+        <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-3">
             {view === 'form' && (
                 <button 
@@ -243,7 +243,7 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
         )}
 
         {view === 'form' && (
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto bg-white dark:bg-slate-900">
+            <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-6 overflow-y-auto bg-white dark:bg-slate-900">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Imię</label>

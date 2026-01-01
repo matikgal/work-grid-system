@@ -9,9 +9,10 @@ import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
 import { ChevronLeft, ChevronRight, Filter, Printer, Download, Share2, Plus, Minimize2, Maximize2, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 
-import Sidebar from '../components/Sidebar';
+import { MobileDayView } from '../components/MobileDayView';
 import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
+import { useMobile } from '../hooks/useMobile';
 import EmployeeModal from '../components/EmployeeModal';
 import { PrintReport } from '../components/PrintReport';
 import { InstructionsModal } from '../components/InstructionsModal';
@@ -80,6 +81,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   // const [isCompactMode, setIsCompactMode] = useState(false); // MOVED UP
   const [isPrinting, setIsPrinting] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const isMobile = useMobile();
   
   const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
@@ -427,6 +429,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
       onOpenSettings={() => setIsSettingsOpen(true)}
       onResetSystem={() => setIsSystemResetOpen(true)}
       headerLeft={
+        !isMobile ? (
         <div className="flex items-center gap-1 md:gap-3" style={{ zoom: zoomLevel } as any}>
            <button onClick={handlePrev} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
               <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
@@ -446,8 +449,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
               <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
            </button>
         </div>
+        ) : null
       }
       headerCenter={
+        !isMobile ? (
         <div className="hidden lg:flex items-center gap-1.5 px-4 py-1 max-w-full" style={{ zoom: zoomLevel } as any}>
             {SHIFT_TEMPLATES.map((template, index) => {
                 const style = getShiftStyle(template.label);
@@ -470,8 +475,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                 );
             })}
         </div>
+        ) : null
       }
       headerRight={
+        !isMobile ? (
         <div className="flex items-center gap-2" style={{ zoom: zoomLevel } as any}>
             <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">
                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tight">Dni robocze:</span>
@@ -529,6 +536,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                <button onClick={() => setViewMode('month')} className={cn("px-2.5 py-1.5 rounded-md transition-all", viewMode === 'month' ? "bg-slate-900 text-white shadow-sm dark:bg-slate-700" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200")}>Miesiąc</button>
             </div>
         </div>
+        ) : null
       }
     >
         <div className="flex h-full w-full flex-col bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
@@ -546,17 +554,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
 
 
           {/* Grid */}
-          <div className="flex-1 overflow-hidden relative" style={{ zoom: zoomLevel } as any}>
-              <CalendarGrid 
-                days={daysToDisplay}
-                employees={employees}
-                shifts={shifts}
-                viewMode={viewMode}
-                isCompactMode={isCompactMode}
-                onSlotClick={handleSlotClick}
-                workingDaysCount={workingDaysCount}
-                onReorder={handleReorderEmployees}
-              />
+          <div className="flex-1 overflow-hidden relative" style={!isMobile ? { zoom: zoomLevel } as any : {}}>
+              {isMobile ? (
+                  <MobileDayView
+                    currentDate={currentDate}
+                    onDateChange={setCurrentDate}
+                    employees={employees}
+                    shifts={shifts}
+                    onSlotClick={handleSlotClick}
+                    workingDaysCount={workingDaysCount}
+                  />
+              ) : (
+                  <CalendarGrid 
+                    days={daysToDisplay}
+                    employees={employees}
+                    shifts={shifts}
+                    viewMode={viewMode}
+                    isCompactMode={isCompactMode}
+                    onSlotClick={handleSlotClick}
+                    workingDaysCount={workingDaysCount}
+                    onReorder={handleReorderEmployees}
+                  />
+              )}
           </div>
 
           {/* Modals */}

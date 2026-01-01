@@ -62,7 +62,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, onDele
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h3 className="text-lg font-bold text-slate-800">
               {data.existingShift ? 'Edytuj Zmianę' : 'Nowa Zmiana'}
@@ -75,7 +75,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, onDele
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           <div className="flex items-center gap-3 text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
             <Calendar className="w-5 h-5 text-blue-500" />
             <span className="font-medium">{data.date}</span>
@@ -117,7 +117,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ isOpen, onClose, onSave, onDele
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <div className="px-4 md:px-6 py-3 md:py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
           {data.existingShift && (
             <button
               onClick={() => {
