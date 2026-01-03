@@ -54,10 +54,34 @@ export function useShifts(employees: Employee[], currentDate: Date) {
       }
   };
 
+
+  const saveMultipleShifts = async (shiftsData: (Shift | Omit<Shift, 'id'>)[]) => {
+      try {
+          const promises = shiftsData.map(s => shiftService.upsert(s));
+          const savedShifts = await Promise.all(promises);
+          
+          setShifts(prev => {
+              let newShifts = [...prev];
+              savedShifts.forEach(saved => {
+                  const index = newShifts.findIndex(s => s.id === saved.id);
+                  if (index >= 0) {
+                      newShifts[index] = saved;
+                  } else {
+                      newShifts.push(saved);
+                  }
+              });
+              return newShifts;
+          });
+      } catch (e) {
+          console.error("Error saving multiple shifts:", e);
+      }
+  };
+
   return {
       shifts,
       loading,
       saveShift,
+      saveMultipleShifts,
       deleteShift,
       refreshShifts: fetchShifts
   };

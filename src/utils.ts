@@ -104,9 +104,9 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
     case SHIFT_TYPES.SICK_LEAVE_L4:
     case SHIFT_TYPES.SICK_LEAVE:
       return { 
-          bg: 'bg-rose-100 dark:bg-rose-500/20', 
-          border: 'border-rose-300 dark:border-rose-500/30', 
-          text: 'text-rose-800 dark:text-rose-300' 
+          bg: 'bg-yellow-100 dark:bg-yellow-500/20', 
+          border: 'border-yellow-300 dark:border-yellow-500/30', 
+          text: 'text-yellow-800 dark:text-yellow-300' 
       };
 
     default:

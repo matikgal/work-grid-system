@@ -29,7 +29,7 @@ export interface ShiftTemplate {
   startTime: string;
   endTime: string;
   colorClass: string;
-  type: 'work' | 'vacation' | 'dayoff' | 'holiday';
+  type: 'work' | 'vacation' | 'dayoff' | 'holiday' | 'sick';
 }
 
 export type ViewMode = 'week' | 'month';

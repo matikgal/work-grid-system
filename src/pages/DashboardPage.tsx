@@ -19,6 +19,7 @@ import { FeedbackModal } from '../components/FeedbackModal';
 import { SettingsModal } from '../components/SettingsModal';
 import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
 import { SystemResetModal } from '../components/SystemResetModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { MainLayout } from '../components/layout/MainLayout';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
@@ -51,6 +52,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
     shifts, 
     loading: shiftsLoading, 
     saveShift, 
+    saveMultipleShifts,
     deleteShift 
   } = useShifts(employees, currentDate);
 
@@ -102,6 +104,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
+  const [bulkConfirmState, setBulkConfirmState] = useState<{
+    isOpen: boolean;
+    date: string | null;
+    template: ShiftTemplate | null;
+    count: number;
+  }>({
+    isOpen: false,
+    date: null,
+    template: null,
+    count: 0
+  });
 
   // --- HELPERS ---
   const daysToDisplay = useMemo(() => {
@@ -225,6 +238,46 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
     deleteShift(id);
   };
 
+  const handleDayHeaderClick = (date: Date) => {
+    if (!activeTemplate || employees.length === 0) return;
+
+    const dateStr = format(date, 'yyyy-MM-dd');
+    
+    setBulkConfirmState({
+      isOpen: true,
+      date: dateStr,
+      template: activeTemplate,
+      count: employees.length
+    });
+  };
+
+  const handleBulkConfirm = async () => {
+    if (!bulkConfirmState.date || !bulkConfirmState.template) return;
+
+    const { date, template } = bulkConfirmState;
+    const newShifts: (Shift | Omit<Shift, 'id'>)[] = [];
+
+    employees.forEach(emp => {
+      const existingShift = shifts.find(s => s.employeeId === emp.id && s.date === date);
+      
+      const shiftData = {
+        employeeId: emp.id,
+        date,
+        startTime: template.startTime,
+        endTime: template.endTime,
+        duration: calculateDuration(template.startTime, template.endTime),
+        type: template.label,
+        id: existingShift?.id // Include ID if updating
+      };
+      
+      newShifts.push(shiftData);
+    });
+
+    await saveMultipleShifts(newShifts);
+    setBulkConfirmState(prev => ({ ...prev, isOpen: false }));
+    setActiveTemplate(null); // Optional: clear selection after action
+  };
+
   // Employee Operations
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
       if (isNew) {
@@ -276,7 +329,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all active:scale-95 text-center min-w-[85px] relative group",
                       style.bg, 
-                      activeTemplate?.id === template.id ? "border-slate-800 shadow-sm" : cn(style.border, "border-opacity-50 shadow-sm opacity-90 hover:opacity-100 hover:border-opacity-100"),
+                      activeTemplate?.id === template.id ? "border-slate-950 dark:border-white ring-2 ring-slate-900/20 dark:ring-white/40 shadow-md scale-105 z-10" : cn(style.border, "border-opacity-50 shadow-sm opacity-90 hover:opacity-100 hover:border-opacity-100"),
                       style.text
                     )}
                   >
@@ -385,6 +438,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                     viewMode={viewMode}
                     isCompactMode={isCompactMode}
                     onSlotClick={handleSlotClick}
+                    onDayClick={handleDayHeaderClick}
                     workingDaysCount={workingDaysCount}
                     onReorder={reorderEmployees}
                   />
@@ -432,6 +486,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
             isOpen={isSystemResetOpen}
             onClose={() => setIsSystemResetOpen(false)}
             onConfirm={() => window.location.reload()}
+          />
+
+          <ConfirmModal
+            isOpen={bulkConfirmState.isOpen}
+            onClose={() => setBulkConfirmState(prev => ({ ...prev, isOpen: false }))}
+            onConfirm={handleBulkConfirm}
+            title="Potwierdź zmianę zbiorczą"
+            message={
+              <div>
+                Czy na pewno chcesz przypisać zmianę <strong className="text-slate-900 dark:text-white">{bulkConfirmState.template?.label}</strong> dla <strong className="text-slate-900 dark:text-white">{bulkConfirmState.count} pracowników</strong> w dniu {bulkConfirmState.date}?
+                <div className="mt-2 text-sm text-slate-500">
+                  Ta operacja nadpisze istniejące zmiany w tym dniu.
+                </div>
+              </div>
+            }
+            confirmLabel="Przypisz wszystkim"
+            variant="warning"
           />
         </div>
     </MainLayout>

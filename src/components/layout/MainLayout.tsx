@@ -110,7 +110,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </header>
 
        {/* Sidebar Overlay */}
-       {/* Sidebar Overlay */}
        <div 
           className={cn(
             "fixed inset-0 top-16 z-40 bg-zinc-900/10 backdrop-blur-[1px] transition-opacity duration-300",
