@@ -198,15 +198,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   // Dynamic column width based on view mode
   const colWidthClass =
     viewMode === "week"
-      ? "min-w-[140px] flex-1"
-      : "flex-1 min-w-0 overflow-hidden";
+      ? "flex-1 min-w-0" // Week view: Fit to screen, no scroll
+      : isCompactMode
+      ? "min-w-[28px] flex-1"
+      : "min-w-[40px] flex-1";
 
   return (
-    <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900/50 relative custom-scrollbar h-full calendar-grid">
+    <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900/50 relative custom-scrollbar h-full calendar-grid overscroll-contain">
       <div
-        className={cn(
-          viewMode === "week" ? "min-w-max w-full" : "w-full min-w-0"
-        )}
+        className={cn(viewMode === "week" ? "min-w-0 w-full" : "min-w-full w-max")}
       >
         {/* Header Row */}
         <div className="flex sticky top-0 z-20 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800">
@@ -371,11 +371,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       {/* Employee Header Cell */}
                       <div
                         className={cn(
-                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
+                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all bg-white dark:bg-slate-900",
                           isCompactMode ? "py-1" : "",
-                          isEven
-                            ? "bg-white dark:bg-slate-900"
-                            : "bg-slate-50/50 dark:bg-slate-900/50",
                           "group-hover/row:bg-blue-50 dark:group-hover/row:bg-blue-900/20 transition-colors group-hover/row:shadow-[inset_4px_0_0_0_#3b82f6]"
                         )}
                       >

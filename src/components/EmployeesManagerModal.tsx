@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Plus, User, Clock, Trash2, Edit2, ArrowLeft, PenTool } from 'lucide-react';
+import { X, Search, Plus, User, Clock, Trash2, Edit2, ArrowLeft, PenTool, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, TouchSensor } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Employee, Shift } from '../types';
 import { cn, stringToColor } from '../utils';
 import { ROLES } from '../constants';
@@ -11,8 +14,85 @@ interface EmployeesManagerModalProps {
   shifts: Shift[];
   onSave: (employee: Employee, isNew: boolean) => void;
   onDelete?: (id: string) => void;
+  onReorder?: (employees: Employee[]) => void;
   currentMonth?: Date;
 }
+
+interface SortableEmployeeRowProps {
+  employee: Employee;
+  hours: number;
+  onEdit: (emp: Employee) => void;
+}
+
+const SortableEmployeeRow = ({ employee, hours, onEdit }: SortableEmployeeRowProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: employee.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all relative overflow-hidden touch-manipulation",
+        isDragging && "shadow-xl border-brand-500 ring-2 ring-brand-500/20 z-50 bg-white dark:bg-slate-800"
+      )}
+    >
+       {/* Drag Handle */}
+       <div 
+         {...attributes} 
+         {...listeners} 
+         className="p-2 cursor-grab touch-none text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 active:cursor-grabbing shrink-0"
+         title="Przesuń, aby zmienić kolejność"
+       >
+          <GripVertical className="w-5 h-5" />
+       </div>
+
+       {/* Content Wrapper - Click to edit */}
+       <div 
+         className="flex-1 flex items-center justify-between cursor-pointer min-w-0"
+         onClick={() => onEdit(employee)}
+       >
+          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+               <div 
+                 className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0", employee.avatarColor)}
+                 style={!employee.avatarColor?.startsWith('bg-') ? { backgroundColor: employee.avatarColor || stringToColor(employee.name) } : {}}
+               >
+                   <span className="text-white drop-shadow-md">{employee.name.charAt(0).toUpperCase()}</span>
+               </div>
+               <div className="min-w-0">
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 truncate">{employee.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full w-fit mt-0.5 border border-slate-200 dark:border-slate-600/50 truncate max-w-full">{employee.role}</p>
+               </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:gap-6 ml-2 shrink-0">
+              <div className="text-right hidden sm:block">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400" title="Godzin w bieżącym miesiącu">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">{hours}h</span>
+                  </div>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:text-brand-600 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 dark:group-hover:text-brand-400 transition-colors">
+                 <Edit2 className="w-4 h-4" />
+              </div>
+          </div>
+       </div>
+    </div>
+  );
+};
 
 export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
   isOpen,
@@ -21,6 +101,7 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
   shifts,
   onSave,
   onDelete,
+  onReorder,
   currentMonth = new Date()
 }) => {
   const [view, setView] = useState<'list' | 'form'>('list');
@@ -32,6 +113,25 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
   const [lastName, setLastName] = useState('');
   const [selectedRole, setSelectedRole] = useState(ROLES[2].label); // Default to Kasa (index 2 now)
   const [customRoleInputValue, setCustomRoleInputValue] = useState('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+    useSensor(TouchSensor)
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (active.id !== over?.id && onReorder) {
+       const oldIndex = employees.findIndex((e) => e.id === active.id);
+       const newIndex = employees.findIndex((e) => e.id === over?.id);
+       if (oldIndex !== -1 && newIndex !== -1) {
+           onReorder(arrayMove(employees, oldIndex, newIndex));
+       }
+    }
+  };
 
   useEffect(() => {
     if (isOpen && view === 'list') {
@@ -172,49 +272,68 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
                 {/* List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar bg-slate-50/30 dark:bg-slate-900/30">
                 {filteredEmployees.length > 0 ? (
-                    filteredEmployees.map((emp) => {
-                    const hours = getMonthlyHours(emp.id);
-                    return (
-                        <div 
-                        key={emp.id}
-                        onClick={() => handleStartEdit(emp)}
-                        className="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                    !searchTerm && onReorder ? (
+                        <DndContext 
+                            sensors={sensors} 
+                            collisionDetection={closestCenter} 
+                            onDragEnd={handleDragEnd}
                         >
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div 
-                                className={cn(
-                                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm",
-                                    emp.avatarColor
-                                )}
-                                style={!emp.avatarColor?.startsWith('bg-') ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
-                                >
-                                    <span className="text-white drop-shadow-md">
-                                        {emp.name.charAt(0).toUpperCase()}
-                                    </span>
+                            <SortableContext 
+                                items={filteredEmployees.map(e => e.id)} 
+                                strategy={verticalListSortingStrategy}
+                            >
+                                {filteredEmployees.map((emp) => (
+                                    <SortableEmployeeRow 
+                                        key={emp.id} 
+                                        employee={emp} 
+                                        hours={getMonthlyHours(emp.id)} 
+                                        onEdit={handleStartEdit} 
+                                    />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
+                    ) : (
+                        filteredEmployees.map((emp) => (
+                            <div 
+                            key={emp.id}
+                            onClick={() => handleStartEdit(emp)}
+                            className="group flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                            >
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div 
+                                    className={cn(
+                                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm",
+                                        emp.avatarColor
+                                    )}
+                                    style={!emp.avatarColor?.startsWith('bg-') ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
+                                    >
+                                        <span className="text-white drop-shadow-md">
+                                            {emp.name.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-slate-200">{emp.name}</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full w-fit mt-0.5 border border-slate-200 dark:border-slate-600/50">
+                                        {emp.role}
+                                    </p>
+                                    </div>
                                 </div>
-                                <div>
-                                <h3 className="font-bold text-slate-800 dark:text-slate-200">{emp.name}</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-700/50 px-2 py-0.5 rounded-full w-fit mt-0.5 border border-slate-200 dark:border-slate-600/50">
-                                    {emp.role}
-                                </p>
-                                </div>
-                            </div>
 
-                            <div className="flex items-center gap-6 relative z-10">
-                                <div className="text-right hidden sm:block">
-                                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400" title="Godzin w bieżącym miesiącu">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    <span className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">{hours}h</span>
-                                </div>
-                                </div>
-                                
-                                <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:text-brand-600 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 dark:group-hover:text-brand-400 transition-colors">
-                                <Edit2 className="w-4 h-4" />
+                                <div className="flex items-center gap-6 relative z-10">
+                                    <div className="text-right hidden sm:block">
+                                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400" title="Godzin w bieżącym miesiącu">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        <span className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">{getMonthlyHours(emp.id)}h</span>
+                                    </div>
+                                    </div>
+                                    
+                                    <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:text-brand-600 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 dark:group-hover:text-brand-400 transition-colors">
+                                    <Edit2 className="w-4 h-4" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    );
-                    })
+                        ))
+                    )
                 ) : (
                     <div className="flex flex-col items-center justify-center h-40 text-slate-400">
                     <User className="w-12 h-12 mb-2 opacity-20" />

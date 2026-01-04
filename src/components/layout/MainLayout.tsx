@@ -64,11 +64,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#FAFAFA] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
+    <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full bg-[#FAFAFA] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
        {/* Global Header */}
-        <header className="h-16 bg-white dark:bg-slate-900 grid grid-cols-[auto_1fr_auto] items-center px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-4">
+       {/* Global Header */}
+       {/* Global Header */}
+        <header className="min-h-16 h-auto py-2 2xl:py-0 bg-white dark:bg-slate-900 flex flex-wrap 2xl:flex-nowrap items-center justify-between px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-x-4 gap-y-2">
            {/* Left Section: Menu + Title + Navigation */}
-           <div className="flex items-center gap-4">
+           <div className="flex items-center gap-4 shrink-0 order-1">
               <div className="flex items-center gap-2 mr-2">
                   <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -86,19 +88,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               )}
            </div>
 
-           {/* Center Section: Templates */}
-           <div className="flex justify-center items-center h-full py-1">
+           {/* Center Section: Templates - Responsive wrapping */}
+           {/* On mobile/tablet/laptop: order-3 (new line), w-full (centered), with separator line */}
+           {/* On large desktop (2xl): order-2 (middle), w-auto, no separator */}
+           <div className="order-3 2xl:order-2 w-full 2xl:w-auto flex justify-center items-center min-w-0 mx-2 mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-800 2xl:mt-0 2xl:pt-0 2xl:border-0">
                {headerCenter}
            </div>
            
            {/* Right Section: View Controls + User */}
-           <div className="flex items-center gap-4">
+           <div className="flex items-center gap-4 shrink-0 order-2 2xl:order-3 ml-auto 2xl:ml-0">
               {headerRight && (
                   <div className="flex items-center border-r border-gray-100 pr-4 h-8 gap-2">
                       {headerRight}
                   </div>
               )}
-               <div className="flex items-center gap-3 shrink-0">
+               <div className="hidden 2xl:flex items-center gap-3 shrink-0">
                  <span className="hidden sm:inline text-sm font-bold text-slate-700 dark:text-slate-300">{userEmail.split('@')[0]}</span>
                  <div 
                     className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs select-none overflow-hidden relative ring-2 ring-white dark:ring-slate-700 hover:scale-105 active:scale-95 transition-all"

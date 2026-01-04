@@ -5,7 +5,7 @@ export const useMobile = () => {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+      setIsMobile(window.innerWidth < 768); // md breakpoint - Tablets get full grid
     };
 
     checkMobile();
