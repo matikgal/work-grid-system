@@ -358,7 +358,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   >
                     <div
                       className={cn(
-                        "flex group/row transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50",
+                        "flex group/row transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 duration-75",
                         isCompactMode ? "h-10 text-xs" : "h-20",
                         isEven
                           ? "bg-white dark:bg-slate-900"
@@ -375,7 +375,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           isCompactMode ? "py-1" : "",
                           isEven
                             ? "bg-white dark:bg-slate-900"
-                            : "bg-slate-50/50 dark:bg-slate-900/50"
+                            : "bg-slate-50/50 dark:bg-slate-900/50",
+                          "group-hover/row:bg-blue-50 dark:group-hover/row:bg-blue-900/20 transition-colors group-hover/row:shadow-[inset_4px_0_0_0_#3b82f6]"
                         )}
                       >
                         <div
@@ -391,7 +392,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           {employee.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                          <div className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover/row:text-blue-700 dark:group-hover/row:text-blue-400 transition-colors">
                             {employee.name}
                           </div>
                           {!isCompactMode && (
@@ -525,7 +526,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
                                     : "border-r-slate-100 dark:border-r-slate-800",
                                   !shift &&
-                                    "group-hover/row:bg-slate-50/50 dark:group-hover/row:bg-slate-800/20 hover:!bg-slate-100 dark:hover:!bg-slate-800/80",
+                                    "group-hover/row:bg-blue-50/30 dark:group-hover/row:bg-blue-900/10 hover:!bg-blue-100 dark:hover:!bg-blue-800/40",
                                   isWeekend &&
                                     !shift &&
                                     "bg-slate-50 dark:bg-slate-900",
@@ -562,8 +563,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 ? "py-1 text-xs"
                                 : "p-2 flex-col gap-1",
                               totalHours === targetMonthlyHours
-                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                                : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400"
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
+                                : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
                             )}
                           >
                             <div
