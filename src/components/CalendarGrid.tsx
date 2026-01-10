@@ -203,6 +203,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
       ? "min-w-[28px] flex-1"
       : "min-w-[40px] flex-1";
 
+  const activeEmployeesCount = employees.filter(e => !e.isSeparator).length;
+
   return (
     <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900/50 relative custom-scrollbar h-full calendar-grid overscroll-contain">
       <div
@@ -366,13 +368,13 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   >
                     <div
                       className={cn(
-                        "flex group/row transition-colors duration-75",
+                        "flex group/row transition-all duration-75 relative",
                         isCompactMode ? "h-10 text-xs" : "h-20",
                         employee.isSeparator 
                              ? "bg-slate-100/50 dark:bg-slate-800/50" 
                              : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"),
                         !isLocked && "cursor-grab active:cursor-grabbing border-b border-transparent",
-                         !employee.isSeparator && "hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
+                         !employee.isSeparator && "hover:z-20 hover:ring-1 hover:ring-blue-600 dark:hover:ring-blue-400 hover:shadow-lg"
                       )}
                     >
                       {/* Employee Header Cell */}
@@ -381,7 +383,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                           "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
                           rowBgClass,
                           isCompactMode ? "py-1" : "",
-                          !employee.isSeparator && "group-hover/row:bg-blue-50 dark:group-hover/row:bg-blue-900/20 transition-colors group-hover/row:shadow-[inset_4px_0_0_0_#3b82f6]"
+                          // FIX: Use brightness filter instead of background override to preserve rowColor
+                          !employee.isSeparator && "group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
                         )}
                       >
                        {employee.isSeparator ? (
@@ -550,7 +553,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
                                     : "border-r-slate-100 dark:border-r-slate-800",
                                   !shift &&
-                                    "group-hover/row:bg-blue-50/30 dark:group-hover/row:bg-blue-900/10 hover:!bg-blue-100 dark:hover:!bg-blue-800/40",
+                                    "group-hover/row:bg-blue-50/50 dark:group-hover/row:bg-blue-900/20 hover:!bg-blue-100 dark:hover:!bg-blue-800/40",
                                   isWeekend &&
                                     !shift &&
                                     "bg-slate-50 dark:bg-slate-900",
@@ -636,8 +639,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           <div className="flex flex-1 w-0">
             {daysInfo.map(({ dateStr, isMonthChange }) => {
               const shiftsForDay = shifts.filter((s) => s.date === dateStr);
-              const count = shiftsForDay.length;
-              const isFullStaff = count === employees.length && count > 0;
+              const count = shiftsForDay.length; // Separators don't have shifts so this count essentially excludes them unless data is dirty
+              const isFullStaff = count === activeEmployeesCount && count > 0;
 
               const firstShiftCount = shiftsForDay.filter(
                 (s) => s.startTime === "06:00"
@@ -689,7 +692,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             : ""
                         )}
                       >
-                        {count}/{employees.length}
+                        {count}/{activeEmployeesCount}
                       </span>
                     </div>
                   ) : (
@@ -701,7 +704,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
             {viewMode === "month" && (
               <div className="w-20 md:w-24 sticky right-0 z-30 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex-shrink-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
-                {employees.length} os.
+                {activeEmployeesCount} os.
               </div>
             )}
           </div>
