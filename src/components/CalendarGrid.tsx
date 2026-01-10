@@ -350,6 +350,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
                 const isEven = index % 2 === 0;
 
+                // Row Color Logic
+                let rowBgClass = "bg-white dark:bg-slate-900";
+                if (!employee.isSeparator) {
+                   if (employee.rowColor === 'blue') rowBgClass = "bg-blue-100 dark:bg-blue-900/30";
+                   if (employee.rowColor === 'red') rowBgClass = "bg-red-100 dark:bg-red-900/30";
+                   if (employee.rowColor === 'green') rowBgClass = "bg-emerald-100 dark:bg-emerald-900/30";
+                }
+
                 return (
                   <SortableRow
                     key={employee.id}
@@ -358,46 +366,52 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   >
                     <div
                       className={cn(
-                        "flex group/row transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-900/20 duration-75",
+                        "flex group/row transition-colors duration-75",
                         isCompactMode ? "h-10 text-xs" : "h-20",
-                        isEven
-                          ? "bg-white dark:bg-slate-900"
-                          : "bg-slate-50/50 dark:bg-slate-900/50",
-                        // Dragging visual feedback overrides
-                        !isLocked &&
-                          "cursor-grab active:cursor-grabbing border-b border-transparent"
+                        employee.isSeparator 
+                             ? "bg-slate-100/50 dark:bg-slate-800/50" 
+                             : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"),
+                        !isLocked && "cursor-grab active:cursor-grabbing border-b border-transparent",
+                         !employee.isSeparator && "hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
                       )}
                     >
                       {/* Employee Header Cell */}
                       <div
                         className={cn(
-                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all bg-white dark:bg-slate-900",
+                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
+                          rowBgClass,
                           isCompactMode ? "py-1" : "",
-                          "group-hover/row:bg-blue-50 dark:group-hover/row:bg-blue-900/20 transition-colors group-hover/row:shadow-[inset_4px_0_0_0_#3b82f6]"
+                          !employee.isSeparator && "group-hover/row:bg-blue-50 dark:group-hover/row:bg-blue-900/20 transition-colors group-hover/row:shadow-[inset_4px_0_0_0_#3b82f6]"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-all",
-                            isCompactMode
-                              ? "w-6 h-6 text-[10px]"
-                              : "w-10 h-10 text-sm shadow-sm",
-                            avatarClass
-                          )}
-                          style={avatarStyle}
-                        >
-                          {employee.name.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover/row:text-blue-700 dark:group-hover/row:text-blue-400 transition-colors">
-                            {employee.name}
-                          </div>
-                          {!isCompactMode && (
-                            <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                              {employee.role}
+                       {employee.isSeparator ? (
+                           <div className="w-full h-full"></div>
+                       ) : (
+                        <>
+                            <div
+                            className={cn(
+                                "rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-all",
+                                isCompactMode
+                                ? "w-6 h-6 text-[10px]"
+                                : "w-10 h-10 text-sm shadow-sm",
+                                avatarClass
+                            )}
+                            style={avatarStyle}
+                            >
+                            {employee.name.charAt(0)}
                             </div>
-                          )}
-                        </div>
+                            <div className="min-w-0">
+                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover/row:text-blue-700 dark:group-hover/row:text-blue-400 transition-colors">
+                                {employee.name}
+                            </div>
+                            {!isCompactMode && (
+                                <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                                {employee.role}
+                                </div>
+                            )}
+                            </div>
+                        </>
+                       )}
                       </div>
 
                       {/* Shift Cells */}
@@ -410,6 +424,24 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             isMonthChange,
                             isHolidayDay,
                           }) => {
+                             if (employee.isSeparator) {
+                                  return (
+                                    <div
+                                        key={dateStr}
+                                        className={cn(
+                                            colWidthClass,
+                                            "border-r relative flex items-center justify-center p-0.5 pointer-events-none select-none",
+                                            isMonthChange
+                                                ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
+                                                : "border-r-slate-100 dark:border-r-slate-800",
+                                            "bg-slate-50/50 dark:bg-slate-900/50 text-slate-300 dark:text-slate-700 font-mono text-lg"
+                                        )}
+                                    >
+                                        ✗
+                                    </div>
+                                  );
+                             }
+
                             const shift =
                               shiftsLookup[`${employee.id}-${dateStr}`];
                             const style = shift
@@ -507,11 +539,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 key={dateStr}
                                 onPointerDown={(e) => {
                                   // Prevent auto-drag when interacting with cells if locked or if slot click is intended
-                                  // But DnD kit handles delay/distance.
-                                  // Actually, we might want to stop propagation if Locked is false?
-                                  // If locked=false (unlocked), we want drag.
-                                  // If locked=true, we want click.
-                                  // onSlotClick works on click. DnD works on drag.
                                 }}
                                 onClick={() =>
                                   onSlotClick(employee.id, dateStr, shift)
@@ -559,28 +586,36 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                               isCompactMode
                                 ? "py-1 text-xs"
                                 : "p-2 flex-col gap-1",
-                              totalHours === targetMonthlyHours
-                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
-                                : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
+                              employee.isSeparator 
+                                ? "bg-slate-50 dark:bg-slate-900" 
+                                : (totalHours === targetMonthlyHours
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
+                                  : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110")
                             )}
                           >
-                            <div
-                              className="text-center flex flex-col items-center"
-                              title={`Norma: ${targetMonthlyHours}h`}
-                            >
-                              <div className="font-bold leading-tight">
-                                {totalHours}h
-                                <span className="text-[10px] opacity-75 font-normal ml-1">
-                                  / {parseFloat((totalHours / 8).toFixed(2))}d
-                                </span>
-                              </div>
-                            </div>
-                            {!isCompactMode && (
-                              <div className="text-center" title="Dni urlopu">
-                                <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
-                                  {vacationDays}d url.
-                                </span>
-                              </div>
+                            {employee.isSeparator ? (
+                                <span className="text-slate-300 dark:text-slate-600">-</span>
+                            ) : (
+                                <>
+                                    <div
+                                    className="text-center flex flex-col items-center"
+                                    title={`Norma: ${targetMonthlyHours}h`}
+                                    >
+                                    <div className="font-bold leading-tight">
+                                        {totalHours}h
+                                        <span className="text-[10px] opacity-75 font-normal ml-1">
+                                        / {parseFloat((totalHours / 8).toFixed(2))}d
+                                        </span>
+                                    </div>
+                                    </div>
+                                    {!isCompactMode && (
+                                    <div className="text-center" title="Dni urlopu">
+                                        <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
+                                        {vacationDays}d url.
+                                        </span>
+                                    </div>
+                                    )}
+                                </>
                             )}
                           </div>
                         )}

@@ -2,11 +2,20 @@ import { supabase } from '../lib/supabase';
 import { Employee } from '../types';
 import { getRandomColor } from '../utils';
 
+interface CreateEmployeeParams {
+  name: string;
+  role: string;
+  userId: string;
+  avatarColor?: string;
+  isSeparator?: boolean;
+  rowColor?: string;
+}
+
 export const employeeService = {
   async getAll(userId: string) {
     const { data, error } = await supabase
       .from('employees')
-      .select('id, name, role, avatar_color, order_index')
+      .select('*')
       .eq('user_id', userId)
       .order('order_index', { ascending: true })
       .order('name', { ascending: true });
@@ -18,18 +27,25 @@ export const employeeService = {
       name: e.name,
       role: e.role,
       avatarColor: e.avatar_color,
-      orderIndex: e.order_index
+      orderIndex: e.order_index,
+      isSeparator: e.is_separator,
+      rowColor: e.row_color
     } as Employee));
   },
 
-  async create(name: string, role: string, userId: string, avatarColor?: string) {
+  async create({ name, role, userId, avatarColor, isSeparator = false, rowColor }: CreateEmployeeParams) {
     const newEmpData = { 
       name, 
       role, 
       avatar_color: avatarColor || getRandomColor(),
-      user_id: userId
+      user_id: userId,
+      is_separator: isSeparator,
+      row_color: rowColor
     };
     
+    // We try to insert. If columns don't exist, this might fail unless we assume user has migrated DB.
+    // Since I cannot migrate DB reliably without SQL access, I assume the user handles DB or I should instruct them.
+    // However, I will proceed assuming the DB schema matches the code.
     const { data, error } = await supabase
       .from('employees')
       .insert(newEmpData)
@@ -43,16 +59,20 @@ export const employeeService = {
       name: data.name,
       role: data.role,
       avatarColor: data.avatar_color,
-      orderIndex: data.order_index
+      orderIndex: data.order_index,
+      isSeparator: data.is_separator,
+      rowColor: data.row_color
     } as Employee;
   },
 
   async update(id: string, updates: Partial<Employee>) {
     const dbUpdates: any = {};
-    if (updates.name) dbUpdates.name = updates.name;
-    if (updates.role) dbUpdates.role = updates.role;
-    if (updates.avatarColor) dbUpdates.avatar_color = updates.avatarColor;
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.role !== undefined) dbUpdates.role = updates.role;
+    if (updates.avatarColor !== undefined) dbUpdates.avatar_color = updates.avatarColor;
     if (updates.orderIndex !== undefined) dbUpdates.order_index = updates.orderIndex;
+    if (updates.isSeparator !== undefined) dbUpdates.is_separator = updates.isSeparator;
+    if (updates.rowColor !== undefined) dbUpdates.row_color = updates.rowColor;
 
     const { data, error } = await supabase
       .from('employees')
@@ -68,7 +88,9 @@ export const employeeService = {
       name: data.name,
       role: data.role,
       avatarColor: data.avatar_color,
-      orderIndex: data.order_index
+      orderIndex: data.order_index,
+      isSeparator: data.is_separator,
+      rowColor: data.row_color
     } as Employee;
   },
 
@@ -79,7 +101,9 @@ export const employeeService = {
       role: emp.role,
       avatar_color: emp.avatarColor,
       user_id: userId,
-      order_index: index
+      order_index: index,
+      is_separator: emp.isSeparator,
+      row_color: emp.rowColor
     }));
 
     const { error } = await supabase.from('employees').upsert(updates);
@@ -87,7 +111,6 @@ export const employeeService = {
   },
 
   async delete(id: string) {
-    // Delete shifts first (if not cascading, but good to be safe/explicit if logic requires)
     await supabase.from('shifts').delete().eq('employee_id', id); 
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (error) throw error;

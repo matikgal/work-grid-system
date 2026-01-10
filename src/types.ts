@@ -4,6 +4,8 @@ export interface Employee {
   role: string;
   avatarColor: string;
   orderIndex?: number;
+  isSeparator?: boolean;
+  rowColor?: string;
 }
 
 export interface Shift {

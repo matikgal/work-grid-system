@@ -22,9 +22,16 @@ export function useEmployees(session: Session) {
     }
   }, [session.user.id]);
 
-  const addEmployee = async (name: string, role: string, avatarColor?: string) => {
+  const addEmployee = async (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string) => {
     try {
-      const newEmp = await employeeService.create(name, role, session.user.id, avatarColor);
+      const newEmp = await employeeService.create({
+        name, 
+        role, 
+        userId: session.user.id, 
+        avatarColor,
+        isSeparator,
+        rowColor
+      });
       setEmployees(prev => [...prev, newEmp]);
       return newEmp;
     } catch (err) {
@@ -61,7 +68,6 @@ export function useEmployees(session: Session) {
           await employeeService.updateOrder(newOrder, session.user.id);
       } catch (err) {
           console.error("Error reordering employees:", err);
-          // Revert on error? For now just log.
           fetchEmployees(); 
       }
   };

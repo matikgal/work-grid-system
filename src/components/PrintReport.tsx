@@ -274,8 +274,52 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
           <tbody>
             {employees.map((emp, idx) => {
               const isZebraRow = idx % 2 !== 0;
-              const borderY = isZebraRow ? '2px solid #1e293b' : '1px solid #64748b';
               const zStyle = isZebraRow ? { borderTop: '2px solid #1e293b', borderBottom: '2px solid #1e293b' } : {};
+              
+              // Row Color Logic for Employee Name Cell
+              let nameCellBg = '#ffffff';
+              if (emp.rowColor === 'blue') nameCellBg = '#dbeafe';
+              if (emp.rowColor === 'red') nameCellBg = '#fee2e2';
+              if (emp.rowColor === 'green') nameCellBg = '#d1fae5';
+              
+              // Separator overrides
+              if (emp.isSeparator) {
+                  return (
+                    <tr key={emp.id} style={{ height: `${100 / employees.length}%`, backgroundColor: '#f8fafc' }}>
+                        <td style={{ 
+                            border: '1px solid #64748b',
+                            ...zStyle,
+                            padding: '0 4px', 
+                            backgroundColor: '#e2e8f0', // Darker gray for header
+                            color: '#94a3b8',
+                        }}>
+                        </td>
+                        {daysInfo.map(info => (
+                            <td key={info.dateStr} style={{ 
+                                border: '1px solid #cbd5e1', 
+                                ...zStyle,
+                                textAlign: 'center', 
+                                fontWeight: 700, 
+                                backgroundColor: '#f8fafc', 
+                                color: '#cbd5e1', // Light gray text
+                                padding: 0,
+                                fontSize: '10px'
+                            }}>
+                                X
+                            </td>
+                        ))}
+                        <td style={{ 
+                            border: '1px solid #64748b', 
+                            ...zStyle,
+                            textAlign: 'center', 
+                            backgroundColor: '#e2e8f0', 
+                            color: '#94a3b8' 
+                        }}>
+                            -
+                        </td>
+                    </tr>
+                  );
+              }
 
               return (
                 <tr key={emp.id} style={{ height: `${100 / employees.length}%` }}>
@@ -287,7 +331,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                     whiteSpace: 'nowrap', 
                     overflow: 'hidden', 
                     textOverflow: 'ellipsis', 
-                    backgroundColor: '#ffffff', 
+                    backgroundColor: nameCellBg, 
                     color: 'black' 
                   }}>
                     {emp.name}

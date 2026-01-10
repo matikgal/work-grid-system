@@ -282,9 +282,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   // Employee Operations
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
       if (isNew) {
-         addEmployee(employee.name, employee.role, employee.avatarColor);
+         addEmployee(
+            employee.name, 
+            employee.role, 
+            employee.avatarColor,
+            employee.isSeparator,
+            employee.rowColor
+         );
       } else {
-         updateEmployee(employee.id, { name: employee.name, role: employee.role });
+         updateEmployee(employee.id, { 
+            name: employee.name, 
+            role: employee.role,
+            isSeparator: employee.isSeparator,
+            rowColor: employee.rowColor
+         });
       }
   };
 
