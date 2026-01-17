@@ -1,7 +1,8 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, getDay, getYear, getMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import Holidays from 'date-holidays';
 import { Employee, Shift, ViewMode } from '../types';
 import { SHIFT_TYPES } from '../constants';
 
@@ -10,6 +11,7 @@ interface PrintReportProps {
   employees: Employee[];
   shifts: Shift[];
   viewMode: ViewMode;
+  workingDaysCount?: number;
 }
 
 type ShiftDisplayInfo = {
@@ -50,6 +52,22 @@ const getShiftDisplayInfo = (
         textColor: '#475569',
         isSpecial: true,
         hoursToAdd: 0,
+      };
+    case SHIFT_TYPES.WS:
+      return {
+        displayVal: 'WS',
+        bgColor: '#a3e635',
+        textColor: '#1a2e05',
+        isSpecial: true,
+        hoursToAdd: 0,
+      };
+    case SHIFT_TYPES.WORK_8:
+      return {
+        displayVal: '8',
+        bgColor: '#a3e635',
+        textColor: '#1a2e05',
+        isSpecial: true,
+        hoursToAdd: 8,
       };
     case SHIFT_TYPES.HOLIDAY:
       return {
@@ -96,7 +114,7 @@ const getShiftDisplayInfo = (
   }
 };
 
-export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate, employees, shifts, viewMode }) => {
+export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate, employees, shifts, viewMode, workingDaysCount }) => {
   // Use a state for the portal target to ensure it exists
   const [portalNode] = useState(() => {
     const el = document.createElement('div');
@@ -138,6 +156,34 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
         isWeekend: isSunday || isSaturday,
       };
     });
+  }, [currentDate, viewMode]);
+
+  const normHours = useMemo(() => {
+    if (viewMode !== 'month') return 0;
+    
+    if (workingDaysCount !== undefined && workingDaysCount > 0) {
+        return workingDaysCount * 8;
+    }
+
+    const hd = new Holidays('PL');
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    const days = eachDayOfInterval({ start, end });
+    let hours = 0;
+    days.forEach(day => {
+        const dayOfWeek = getDay(day); // 0 = Sun, 6 = Sat
+        const isWorkingDay = dayOfWeek !== 0 && dayOfWeek !== 6; // Mon-Fri
+
+        if (isWorkingDay) {
+            hours += 8;
+        }
+
+        const isHoliday = hd.isHoliday(day);
+        if (isHoliday && dayOfWeek !== 0) { // Holiday not on Sunday reduces dimension
+             hours -= 8;
+        }
+    });
+    return Math.max(0, hours);
   }, [currentDate, viewMode]);
 
   const shiftsLookup = useMemo(() => {
@@ -268,7 +314,13 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                   <div style={{ fontSize: `${fontSize}px`, fontWeight: 800, lineHeight: 1 }}>{info.label}</div>
                 </th>
               ))}
-              <th style={{ border: '1.5px solid #334155', padding: '0', textAlign: 'center', backgroundColor: '#1e293b', color: 'white', fontSize: `${headerFontSize}px`, width: viewMode === 'week' ? '6%' : '5%' }}>Σ</th>
+              <th style={{ border: '1.5px solid #334155', padding: '0', textAlign: 'center', backgroundColor: '#1e293b', color: 'white', fontSize: `${headerFontSize}px`, width: viewMode === 'week' ? '6%' : '4%' }}>Σ</th>
+              {viewMode === 'month' && (
+                <>
+                  <th style={{ border: '1.5px solid #334155', padding: '0', textAlign: 'center', backgroundColor: '#1e293b', color: 'white', fontSize: `${headerFontSize - 2}px`, width: '2%' }}>+</th>
+                  <th style={{ border: '1.5px solid #334155', padding: '0', textAlign: 'center', backgroundColor: '#1e293b', color: 'white', fontSize: `${headerFontSize - 2}px`, width: '2%' }}>-</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -317,6 +369,12 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                         }}>
                             -
                         </td>
+                        {viewMode === 'month' && (
+                          <>
+                            <td style={{ border: '1px solid #64748b', ...zStyle, backgroundColor: '#e2e8f0' }}></td>
+                            <td style={{ border: '1px solid #64748b', ...zStyle, backgroundColor: '#e2e8f0' }}></td>
+                          </>
+                        )}
                     </tr>
                   );
               }
@@ -353,7 +411,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                       </td>
                     );
                   })}
-                  <td style={{ 
+                   <td style={{ 
                     border: '1px solid #64748b', 
                     ...zStyle,
                     textAlign: 'center', 
@@ -363,6 +421,21 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                   }}>
                     {shifts.filter(s => s.employeeId === emp.id).reduce((acc, s) => acc + (s.duration || 0), 0)}
                   </td>
+                  {viewMode === 'month' && (() => {
+                      const total = shifts.filter(s => s.employeeId === emp.id).reduce((acc, s) => acc + (s.duration || 0), 0);
+                      const diff = total - normHours;
+                      const daysDiff = diff / 8;
+                      return (
+                        <>
+                          <td style={{ border: '1px solid #64748b', ...zStyle, textAlign: 'center', fontWeight: 700, fontSize: '9px', color: 'green', backgroundColor: daysDiff > 0 ? '#dcfce7' : 'white' }}>
+                            {daysDiff > 0 ? `+${daysDiff}` : ''}
+                          </td>
+                          <td style={{ border: '1px solid #64748b', ...zStyle, textAlign: 'center', fontWeight: 700, fontSize: '9px', color: 'red', backgroundColor: daysDiff < 0 ? '#fee2e2' : 'white' }}>
+                            {daysDiff < 0 ? daysDiff : ''}
+                          </td>
+                        </>
+                      );
+                  })()}
                 </tr>
               );
             })}
@@ -375,6 +448,8 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
         <span><b style={{ padding: '0 4px', backgroundColor: '#fef08a' }}>L4</b> Zwolnienie</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#fecaca' }}>ŚW</b> Święto</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#e2e8f0' }}>WS</b> Wolna Sob.</span>
+        <span><b style={{ padding: '0 4px', backgroundColor: '#a3e635' }}>WS/8</b> Oddaje</span>
+        <span style={{ marginLeft: '10px' }}>Dodatkowe dni: <b style={{ color: 'green' }}>+1</b> / Zaległe: <b style={{ color: 'red' }}>-1</b></span>
       </div>
     </>,
     portalNode

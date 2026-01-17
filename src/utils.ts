@@ -87,6 +87,20 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-slate-500 dark:text-slate-400' 
       };
 
+    case SHIFT_TYPES.WS:
+      return { 
+          bg: 'bg-lime-400 dark:bg-lime-600', 
+          border: 'border-lime-600 dark:border-lime-400', 
+          text: 'text-lime-950 dark:text-white' 
+      };
+
+    case SHIFT_TYPES.WORK_8:
+      return { 
+          bg: 'bg-lime-400 dark:bg-lime-600', 
+          border: 'border-lime-600 dark:border-lime-400', 
+          text: 'text-lime-950 dark:text-white' 
+      };
+
     case SHIFT_TYPES.HOLIDAY:
       return { 
           bg: 'bg-red-100 dark:bg-red-900/30', 

@@ -162,10 +162,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
 
     return days.reduce((acc, day) => {
-      const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+      const dayOfWeek = getDay(day);
+      const isWorkingDay = dayOfWeek !== 0 && dayOfWeek !== 6;
+      let hours = isWorkingDay ? 8 : 0;
+      
       const isHoliday = hd.isHoliday(day);
-      if (!isWeekend && !isHoliday) return acc + 8;
-      return acc;
+      if (isHoliday && dayOfWeek !== 0) {
+          hours -= 8;
+      }
+      return acc + hours;
     }, 0);
   }, [days, hd, viewMode, workingDaysCount]);
 
@@ -464,6 +469,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   abbr = "Ś";
                                 else if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4)
                                   abbr = "L4";
+                                else if (shift.type === SHIFT_TYPES.WS)
+                                  abbr = "WS";
+                                else if (shift.type === SHIFT_TYPES.WORK_8)
+                                  abbr = "8";
                                 else {
                                   const start = parseInt(
                                     shift.startTime.split(":")[0]
@@ -492,6 +501,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   abbr = "ŚW";
                                 if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4)
                                   abbr = "L4";
+                                if (shift.type === SHIFT_TYPES.WS)
+                                  abbr = "WS";
+                                if (shift.type === SHIFT_TYPES.WORK_8)
+                                  abbr = "8";
 
                                 const startH = shift.startTime.split(":")[0];
                                 const endH = shift.endTime.split(":")[0];
@@ -506,7 +519,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     >
                                       {abbr}
                                     </span>
-                                    {shift.duration > 0 && (
+                                    {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WORK_8 && (
                                       <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-300 mt-0.5">
                                         {startH}-{endH}
                                       </span>
@@ -525,7 +538,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   >
                                     {shift.type}
                                   </span>
-                                  {shift.duration > 0 && (
+                                  {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WORK_8 && (
                                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-200 mt-0.5">
                                       {shift.startTime}-{shift.endTime}
                                     </span>

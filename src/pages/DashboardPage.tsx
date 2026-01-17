@@ -491,6 +491,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                 employees={employees} 
                 shifts={shifts} 
                 viewMode={viewMode}
+                workingDaysCount={workingDaysCount}
                 />
             </div>
           )}
