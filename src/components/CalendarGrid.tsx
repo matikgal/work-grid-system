@@ -150,6 +150,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     if (shift.type === SHIFT_TYPES.FREE_SATURDAY) return 0;
     if (shift.type === SHIFT_TYPES.HOLIDAY) return 0;
     if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return 8;
+    if (shift.type === SHIFT_TYPES.WS) return 0;
+    if (shift.type === SHIFT_TYPES.WORK_8) return 0;
     return shift.duration || 0;
   };
 

@@ -67,7 +67,7 @@ const getShiftDisplayInfo = (
         bgColor: '#a3e635',
         textColor: '#1a2e05',
         isSpecial: true,
-        hoursToAdd: 8,
+        hoursToAdd: 0,
       };
     case SHIFT_TYPES.HOLIDAY:
       return {
