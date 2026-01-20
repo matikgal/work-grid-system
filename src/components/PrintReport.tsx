@@ -67,7 +67,7 @@ const getShiftDisplayInfo = (
         bgColor: '#a3e635',
         textColor: '#1a2e05',
         isSpecial: true,
-        hoursToAdd: 0,
+        hoursToAdd: 8,
       };
     case SHIFT_TYPES.HOLIDAY:
       return {
@@ -205,8 +205,14 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
 
   const employeeCount = employees.length;
   // Dynamic font size logic scale
-  const fontSize = employeeCount > 25 ? 9 : employeeCount > 20 ? 10 : 11;
-  const headerFontSize = fontSize + 1;
+  let fontSize = employeeCount > 25 ? 9 : employeeCount > 20 ? 10 : 11;
+
+  if (viewMode === 'week') {
+    // Extensive font size boost for week view
+    fontSize = employeeCount > 30 ? 13 : employeeCount > 15 ? 15 : 18;
+  }
+
+  const headerFontSize = fontSize + 4;
 
   // Render content into the portal
   return createPortal(
@@ -385,7 +391,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                     border: '1px solid #64748b',
                     ...zStyle,
                     padding: '0 4px', 
-                    fontWeight: 700, 
+                    fontWeight: viewMode === 'week' ? 800 : 700, 
                     whiteSpace: 'nowrap', 
                     overflow: 'hidden', 
                     textOverflow: 'ellipsis', 
@@ -402,7 +408,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                         border: '1px solid #94a3b8', 
                         ...zStyle,
                         textAlign: 'center', 
-                        fontWeight: 700, 
+                        fontWeight: viewMode === 'week' ? 800 : 700, 
                         backgroundColor: bgColor, 
                         color: textColor, 
                         padding: 0 
@@ -411,7 +417,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                       </td>
                     );
                   })}
-                   <td style={{ 
+                  <td style={{ 
                     border: '1px solid #64748b', 
                     ...zStyle,
                     textAlign: 'center', 
@@ -419,19 +425,42 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                     backgroundColor: '#e2e8f0', 
                     color: 'black' 
                   }}>
-                    {shifts.filter(s => s.employeeId === emp.id).reduce((acc, s) => acc + (s.duration || 0), 0)}
+                    {daysInfo.reduce((acc, info) => {
+                        const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
+                        if (!shift) return acc;
+                        
+                        // Same logic as CalendarGrid
+                        if (shift.type === SHIFT_TYPES.VACATION) return acc + 8;
+                        if (shift.type === SHIFT_TYPES.FREE_SATURDAY) return acc;
+                        if (shift.type === SHIFT_TYPES.HOLIDAY) return acc;
+                        if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return acc + 8;
+                        if (shift.type === SHIFT_TYPES.WS) return acc;
+                        if (shift.type === SHIFT_TYPES.WORK_8) return acc + 8;
+                        return acc + (shift.duration || 0);
+                    }, 0)}
                   </td>
                   {viewMode === 'month' && (() => {
-                      const total = shifts.filter(s => s.employeeId === emp.id).reduce((acc, s) => acc + (s.duration || 0), 0);
+                      const total = daysInfo.reduce((acc, info) => {
+                        const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
+                        if (!shift) return acc;
+                        
+                        if (shift.type === SHIFT_TYPES.VACATION) return acc + 8;
+                        if (shift.type === SHIFT_TYPES.FREE_SATURDAY) return acc;
+                        if (shift.type === SHIFT_TYPES.HOLIDAY) return acc;
+                        if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return acc + 8;
+                        if (shift.type === SHIFT_TYPES.WS) return acc;
+                        if (shift.type === SHIFT_TYPES.WORK_8) return acc + 8;
+                        return acc + (shift.duration || 0);
+                      }, 0);
                       const diff = total - normHours;
                       const daysDiff = diff / 8;
                       return (
                         <>
                           <td style={{ border: '1px solid #64748b', ...zStyle, textAlign: 'center', fontWeight: 700, fontSize: '9px', color: 'green', backgroundColor: daysDiff > 0 ? '#dcfce7' : 'white' }}>
-                            {daysDiff > 0 ? `+${daysDiff}` : ''}
+                            {daysDiff > 0 ? `+${parseFloat(daysDiff.toFixed(2))}` : ''}
                           </td>
                           <td style={{ border: '1px solid #64748b', ...zStyle, textAlign: 'center', fontWeight: 700, fontSize: '9px', color: 'red', backgroundColor: daysDiff < 0 ? '#fee2e2' : 'white' }}>
-                            {daysDiff < 0 ? daysDiff : ''}
+                            {daysDiff < 0 ? parseFloat(daysDiff.toFixed(2)) : ''}
                           </td>
                         </>
                       );

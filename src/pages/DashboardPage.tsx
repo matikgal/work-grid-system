@@ -29,6 +29,7 @@ import { calculateDuration, cn, getShiftStyle } from '../utils';
 // Hooks
 import { useEmployees } from '../hooks/useEmployees';
 import { useShifts } from '../hooks/useShifts';
+import { useMonthlyConfigs } from '../hooks/useMonthlyConfigs';
 
 interface DashboardPageProps {
   session: Session;
@@ -100,7 +101,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const isMobile = useMobile();
   
-  const [manualWorkingDays, setManualWorkingDays] = useState<Record<string, number>>({});
+  const { manualWorkingDays, saveConfig } = useMonthlyConfigs(session);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -142,9 +143,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
     const hd = new Holidays('PL');
     
     return daysInMonth.filter(day => {
-      const isSunday = getDay(day) === 0;
+      const dayOfWeek = getDay(day);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = hd.isHoliday(day);
-      return !isSunday && !isHoliday;
+      return !isWeekend && !isHoliday;
     }).length;
   }, [currentDate, manualWorkingDays]);
 
@@ -154,12 +156,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
       const monthKey = format(currentDate, 'yyyy-MM');
       
       if (isNaN(val)) {
-        setManualWorkingDays(prev => ({ ...prev, [monthKey]: 0 }));
+        saveConfig(monthKey, 0);
         return;
       }
       
       if (val >= 0 && val <= 31) {
-          setManualWorkingDays(prev => ({ ...prev, [monthKey]: val }));
+          saveConfig(monthKey, val);
       }
   };
 
