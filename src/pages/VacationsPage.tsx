@@ -5,6 +5,7 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { stringToColor, cn } from '../utils';
 import { SHIFT_TYPES } from '../constants';
 import { shiftService } from '../services/shiftService';
+import { vacationService } from '../services/vacationService';
 
 // Modals
 import { SystemResetModal } from '../components/SystemResetModal';
@@ -29,6 +30,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees(session);
   // employeeId -> [countJan, countFeb, ..., countDec]
   const [vacationCounts, setVacationCounts] = useState<Record<string, number[]>>({});
+  const [vacationBalances, setVacationBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -59,12 +61,10 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
             const start = `${selectedYear}-01-01`;
             const end = `${selectedYear}-12-31`;
             
-            // Fetch only VACATION type shifts
+            // Fetch 1: Shifts
             const shifts = await shiftService.getShifts(empIds, start, end, SHIFT_TYPES.VACATION);
             
             const counts: Record<string, number[]> = {};
-            
-            // Initialize counts
             empIds.forEach(id => {
                 counts[id] = Array(12).fill(0);
             });
@@ -78,12 +78,33 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
             });
 
             setVacationCounts(counts);
+
+            // Fetch 2: External Balances (Notepad)
+            const balances = await vacationService.getBalances(empIds, selectedYear, session.user.id);
+            const balMap: Record<string, number> = {};
+            balances.forEach(b => {
+                balMap[b.employeeId] = b.days;
+            });
+            setVacationBalances(balMap);
         }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateBalance = async (employeeId: string, value: string) => {
+      const days = parseInt(value) || 0;
+      
+      // Optimistic update
+      setVacationBalances(prev => ({ ...prev, [employeeId]: days }));
+
+      try {
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, days);
+      } catch(e) {
+          console.error("Failed to save balance", e);
+      }
   };
 
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
@@ -134,6 +155,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                         {employees.map((emp) => {
                             const counts = vacationCounts[emp.id] || Array(12).fill(0);
                             const total = calculateTotal(counts);
+                            const balance = vacationBalances[emp.id] ?? ''; // undefined shows placeholder
                             const isTailwindClass = emp.avatarColor?.startsWith('bg-');
 
                             return (
@@ -145,12 +167,21 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                         >
                                             {emp.name.charAt(0).toUpperCase()}
                                         </div>
-                                        <div>
+                                        <div className="flex-1">
                                             <h3 className="font-bold text-slate-800 dark:text-white">{emp.name}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">{emp.role}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs text-slate-400">Zeszły rok/Inne:</span>
+                                                <input 
+                                                    type="number" 
+                                                    className="w-16 px-1.5 py-0.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-orange-500"
+                                                    value={balance}
+                                                    onChange={(e) => updateBalance(emp.id, e.target.value)}
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="ml-auto">
-                                            <span className="text-xs font-bold uppercase text-slate-400 mr-2">Razem:</span>
+                                        <div className="ml-auto text-right">
+                                            <span className="text-xs font-bold uppercase text-slate-400 block">Razem</span>
                                             <span className="text-xl font-black text-orange-600 dark:text-orange-400">{total}</span>
                                         </div>
                                     </div>
@@ -175,7 +206,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                         <table className="w-full text-left">
                         <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-3 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">Pracownik</th>
+                                <th className="p-3 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider w-[250px]">Pracownik</th>
                                 {MONTHS.map(month => (
                                     <th key={month} className="p-3 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-center">{month.substring(0, 3)}</th>
                                 ))}
@@ -190,6 +221,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                             ) : employees.map((emp, index) => {
                                 const counts = vacationCounts[emp.id] || Array(12).fill(0);
                                 const total = calculateTotal(counts);
+                                const balance = vacationBalances[emp.id] ?? '';
                                 
                                 const isTailwindClass = emp.avatarColor?.startsWith('bg-');
                                 const avatarStyle = isTailwindClass ? {} : { backgroundColor: emp.avatarColor || stringToColor(emp.name) };
@@ -203,19 +235,33 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                         "hover:bg-slate-50 hover:dark:bg-slate-800/50"
                                     )}>
                                         <td className="p-3 border-r border-slate-100 dark:border-slate-800">
-                                            <div className="flex items-center gap-3">
-                                                 <div 
-                                                    className={cn(
-                                                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white shadow-sm",
-                                                        emp.avatarColor
-                                                    )}
-                                                    style={avatarStyle}
-                                                >
-                                                    {emp.name.charAt(0).toUpperCase()}
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div 
+                                                        className={cn(
+                                                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white shadow-sm",
+                                                            emp.avatarColor
+                                                        )}
+                                                        style={avatarStyle}
+                                                    >
+                                                        {emp.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{emp.name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider truncate">{emp.role}</div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
-                                                    <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{emp.role}</div>
+                                                
+                                                <div className="flex flex-col items-end shrink-0">
+                                                    <span className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Zaległe/Inne</span>
+                                                    <input 
+                                                        type="number" 
+                                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-slate-300"
+                                                        value={balance}
+                                                        onChange={(e) => updateBalance(emp.id, e.target.value)}
+                                                        placeholder="0"
+                                                        title="Dni zaległe lub przeniesione"
+                                                    />
                                                 </div>
                                             </div>
                                         </td>

@@ -8,6 +8,8 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { FreeSaturdaysPage } from './pages/FreeSaturdaysPage';
 import { VacationsPage } from './pages/VacationsPage';
+import { OrdersPage } from './pages/OrdersPage';
+import { PublicOrderPage } from './pages/PublicOrderPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -64,6 +66,14 @@ const App: React.FC = () => {
           <Route 
             path="/vacations" 
             element={session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/orders" 
+            element={session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/order/:token" 
+            element={<PublicOrderPage />} 
           />
 
           {/* Fallback */}

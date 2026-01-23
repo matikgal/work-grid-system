@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee, Palmtree } from 'lucide-react';
+import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee, Palmtree, ShoppingCart } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
 
@@ -51,6 +51,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { label: 'Grafik', sub: 'Grafik zmian', active: location.pathname === '/' || location.pathname === '/work-grid-system/' || location.pathname === '/work-grid-system', icon: Calendar, action: () => navigate('/') },
     { label: 'Wolne Soboty', sub: 'Rozliczenie roczne', active: location.pathname.includes('free-saturdays'), icon: Coffee, action: () => navigate('/free-saturdays') },
     { label: 'Urlopy', sub: 'Wykorzystane dni', active: location.pathname.includes('vacations'), icon: Palmtree, action: () => navigate('/vacations') },
+    { label: 'Zamówienia', sub: 'Lista braków', active: location.pathname.includes('orders'), icon: ShoppingCart, action: () => navigate('/orders') },
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
     { label: 'Instrukcja', sub: 'Pomoc', disabled: !onOpenInstructions, icon: BookOpen, action: onOpenInstructions },
     { label: 'Przeładuj system', sub: 'Reset danych', disabled: !onResetSystem, icon: RotateCcw, action: onResetSystem },
