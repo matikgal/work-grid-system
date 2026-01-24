@@ -14,13 +14,10 @@ import CalendarGrid from '../components/CalendarGrid';
 import ShiftModal from '../components/ShiftModal';
 import { useMobile } from '../hooks/useMobile';
 import { PrintReport } from '../components/PrintReport';
-import { InstructionsModal } from '../components/InstructionsModal';
-import { FeedbackModal } from '../components/FeedbackModal';
-import { SettingsModal } from '../components/SettingsModal';
 import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
-import { SystemResetModal } from '../components/SystemResetModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { MainLayout } from '../components/layout/MainLayout';
+import { useAppContext } from '../context/AppContext';
 
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
 import { SHIFT_TEMPLATES, SHIFT_TYPES } from '../constants';
@@ -59,34 +56,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
 
   const loading = employeesLoading || (shiftsLoading && employees.length > 0);
 
-  // View Settings Persistence
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('grafik_viewMode') as ViewMode) || 'week';
-  });
-  
-  const [isCompactMode, setIsCompactMode] = useState(() => {
-    return localStorage.getItem('grafik_isCompactMode') === 'true';
-  });
-
-  const [showWeekends, setShowWeekends] = useState(() => {
-    const stored = localStorage.getItem('grafik_showWeekends');
-    return stored === null ? true : stored === 'true';
-  });
+  // View Settings from Context
+  const { 
+      viewMode, setViewMode, 
+      isCompactMode, setIsCompactMode, 
+      showWeekends, setShowWeekends 
+  } = useAppContext();
 
   const [activeTemplate, setActiveTemplate] = useState<ShiftTemplate | null>(null);
-
-  // Persistence effects
-  useEffect(() => {
-    localStorage.setItem('grafik_viewMode', viewMode);
-  }, [viewMode]);
-
-  useEffect(() => {
-    localStorage.setItem('grafik_isCompactMode', String(isCompactMode));
-  }, [isCompactMode]);
-
-  useEffect(() => {
-    localStorage.setItem('grafik_showWeekends', String(showWeekends));
-  }, [showWeekends]);
 
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
@@ -102,10 +79,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   const isMobile = useMobile();
   
   const { manualWorkingDays, saveConfig } = useMonthlyConfigs(session);
-  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
   const [bulkConfirmState, setBulkConfirmState] = useState<{
     isOpen: boolean;
     date: string | null;
@@ -304,10 +277,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   return (
     <MainLayout 
       onAddEmployee={() => setIsEmployeesManagerOpen(true)}
-      onOpenInstructions={() => setIsInstructionsOpen(true)}
-      onOpenFeedback={() => setIsFeedbackModalOpen(true)}
-      onOpenSettings={() => setIsSettingsOpen(true)}
-      onResetSystem={() => setIsSystemResetOpen(true)}
       headerLeft={
         !isMobile ? (
         <div className="flex items-center gap-1 md:gap-3" style={{ zoom: zoomLevel } as any}>
@@ -545,29 +514,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
             onDelete={deleteEmployee}
             onReorder={reorderEmployees}
           />
-          <InstructionsModal 
-            isOpen={isInstructionsOpen} 
-            onClose={() => setIsInstructionsOpen(false)} 
-          />
-          <FeedbackModal 
-            isOpen={isFeedbackModalOpen} 
-            onClose={() => setIsFeedbackModalOpen(false)} 
-          />
-          <SettingsModal 
-            isOpen={isSettingsOpen} 
-            onClose={() => setIsSettingsOpen(false)} 
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            isCompactMode={isCompactMode}
-            onCompactModeChange={setIsCompactMode}
-            showWeekends={showWeekends}
-            onShowWeekendsChange={setShowWeekends}
-          />
-          <SystemResetModal
-            isOpen={isSystemResetOpen}
-            onClose={() => setIsSystemResetOpen(false)}
-            onConfirm={() => window.location.reload()}
-          />
+          {/* Note: Global modals (Instructions, Settings, etc.) are now in MainLayout */}
 
           <ConfirmModal
             isOpen={bulkConfirmState.isOpen}

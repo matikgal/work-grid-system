@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, LogOut, Calendar, Home, Settings, X, ChevronRight, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee, Palmtree, ShoppingCart } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { cn } from '../../utils'; // Assuming cn is available in utils, or inline it if simple
+import { cn } from '../../utils';
+import { useAppContext } from '../../context/AppContext';
+
+// Modals
+import { InstructionsModal } from '../InstructionsModal';
+import { FeedbackModal } from '../FeedbackModal';
+import { SettingsModal } from '../SettingsModal';
+import { SystemResetModal } from '../SystemResetModal';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -10,10 +17,6 @@ interface MainLayoutProps {
   headerCenter?: React.ReactNode;
   headerRight?: React.ReactNode;
   onAddEmployee?: () => void;
-  onOpenInstructions?: () => void;
-  onOpenFeedback?: () => void;
-  onOpenSettings?: () => void;
-  onResetSystem?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -22,15 +25,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   headerCenter,
   headerRight,
   onAddEmployee,
-  onOpenInstructions,
-  onOpenFeedback,
-  onOpenSettings,
-  onResetSystem
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [showAbout, setShowAbout] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+
+  // Internal Modal States
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
+
+  // App Context
+  const { 
+      viewMode, setViewMode, 
+      isCompactMode, setIsCompactMode, 
+      showWeekends, setShowWeekends 
+  } = useAppContext();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -53,11 +65,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { label: 'Urlopy', sub: 'Wykorzystane dni', active: location.pathname.includes('vacations'), icon: Palmtree, action: () => navigate('/vacations') },
     { label: 'Zamówienia', sub: 'Lista braków', active: location.pathname.includes('orders'), icon: ShoppingCart, action: () => navigate('/orders') },
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
-    { label: 'Instrukcja', sub: 'Pomoc', disabled: !onOpenInstructions, icon: BookOpen, action: onOpenInstructions },
-    { label: 'Przeładuj system', sub: 'Reset danych', disabled: !onResetSystem, icon: RotateCcw, action: onResetSystem },
+    { label: 'Instrukcja', sub: 'Pomoc', disabled: false, icon: BookOpen, action: () => setIsInstructionsOpen(true) },
+    { label: 'Przeładuj system', sub: 'Reset danych', disabled: false, icon: RotateCcw, action: () => setIsSystemResetOpen(true) },
     { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
-    { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: true, icon: Lightbulb, action: onOpenFeedback },
-    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: !onOpenSettings, icon: Settings, action: onOpenSettings },
+    { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: false, icon: Lightbulb, action: () => setIsFeedbackModalOpen(true) },
+    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: false, icon: Settings, action: () => setIsSettingsOpen(true) },
   ];
 
   const infoItems = [
@@ -67,8 +79,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full bg-[#FAFAFA] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
-       {/* Global Header */}
-       {/* Global Header */}
        {/* Global Header */}
         <header className="min-h-16 h-auto py-2 2xl:py-0 bg-white dark:bg-slate-900 flex flex-wrap 2xl:flex-nowrap items-center justify-between px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-x-4 gap-y-2">
            {/* Left Section: Menu + Title + Navigation */}
@@ -189,6 +199,31 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        <main className="flex-1 overflow-hidden relative flex flex-col">
           {children}
        </main>
+
+       {/* Global Modals */}
+       <InstructionsModal 
+         isOpen={isInstructionsOpen} 
+         onClose={() => setIsInstructionsOpen(false)} 
+       />
+       <FeedbackModal 
+         isOpen={isFeedbackModalOpen} 
+         onClose={() => setIsFeedbackModalOpen(false)} 
+       />
+       <SettingsModal 
+         isOpen={isSettingsOpen} 
+         onClose={() => setIsSettingsOpen(false)} 
+         viewMode={viewMode}
+         onViewModeChange={setViewMode}
+         isCompactMode={isCompactMode}
+         onCompactModeChange={setIsCompactMode}
+         showWeekends={showWeekends}
+         onShowWeekendsChange={setShowWeekends}
+       />
+       <SystemResetModal
+         isOpen={isSystemResetOpen}
+         onClose={() => setIsSystemResetOpen(false)}
+         onConfirm={() => window.location.reload()}
+       />
 
        {/* Modals for About/Terms */}
        {showAbout && (

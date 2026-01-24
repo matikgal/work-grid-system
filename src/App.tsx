@@ -11,9 +11,8 @@ import { VacationsPage } from './pages/VacationsPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
-import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './context/ThemeContext';
-
+import { AppProvider } from './context/AppContext';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -49,45 +48,47 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <Toaster richColors position="bottom-right" />
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
-          {/* Public Route: Login */}
-          <Route 
-            path="/login" 
-            element={!session ? <LoginPage /> : <Navigate to="/" replace />} 
-          />
+      <AppProvider>
+        <Toaster richColors position="bottom-right" />
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
+            <Routes>
+              {/* Public Route: Login */}
+              <Route 
+                path="/login" 
+                element={!session ? <LoginPage /> : <Navigate to="/" replace />} 
+              />
 
-          {/* Protected Routes */}
-          <Route 
-            path="/" 
-            element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/free-saturdays" 
-            element={session ? <FreeSaturdaysPage session={session} /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/vacations" 
-            element={session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/orders" 
-            element={session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/orders/:id" 
-            element={session ? <AdminOrderPage /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/order/:token" 
-            element={<PublicOrderPage />} 
-          />
+              {/* Protected Routes */}
+              <Route 
+                path="/" 
+                element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/free-saturdays" 
+                element={session ? <FreeSaturdaysPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/vacations" 
+                element={session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/orders" 
+                element={session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/orders/:id" 
+                element={session ? <AdminOrderPage /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/order/:token" 
+                element={<PublicOrderPage />} 
+              />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </BrowserRouter>
+      </AppProvider>
     </ThemeProvider>
   );
 };
