@@ -1,19 +1,51 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ShoppingCart, Save, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { orderService, Order, OrderItem } from '../services/orderService';
+import { supabase } from '../lib/supabase';
 import { cn } from '../utils';
+import { toast } from 'sonner';
 
 export const PublicOrderPage: React.FC = () => {
     const { token } = useParams<{ token: string }>(); // token is the orderId
     const [order, setOrder] = useState<Order | null>(null);
     const [items, setItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const [addingRow, setAddingRow] = useState(false);
 
     useEffect(() => {
-        if (token) fetchData(token);
+        if (token) {
+            fetchData(token);
+
+            // Subscribe to realtime updates for this order's lock status
+            const channel = supabase
+                .channel(`public:orders:${token}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'orders',
+                        filter: `id=eq.${token}`,
+                    },
+                    (payload) => {
+                        console.log('Order update received:', payload);
+                        const newOrder = payload.new as any; 
+                        if (newOrder) {
+                            setOrder((prev) => prev ? { ...prev, isLocked: newOrder.is_locked } : null);
+                            if (newOrder.is_locked) {
+                                toast.info("Zamówienie zostało właśnie zablokowane przez administratora");
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
     }, [token]);
 
     const fetchData = async (id: string) => {
@@ -28,74 +60,74 @@ export const PublicOrderPage: React.FC = () => {
         } catch (e) {
             console.error(e);
             setError("Nie znaleziono zamówienia lub wystąpił błąd.");
+            toast.error("Nie znaleziono zamówienia");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddItem = async () => {
-        if (!token) return;
-        setAddingRow(true);
+    const handleBlur = async (id: string, field: keyof OrderItem, value: string) => {
+        if (!token || order?.isLocked) return;
+        
+        setSaving(true);
         try {
-            const newItem = await orderService.addItem(token, "Nowy produkt");
-            // Refresh explicitly or just push to state. 
-            // Since we need the full object with defaults (nulls), easier to refresh or construct.
-            // But Supabase insert returns the object. We need to map it to CamelCase if not auto.
-            // orderService.addItem returns the raw DB object or mapped?
-            // Checking service... "return data". It's raw.
-            // We need to fetch again to be safe with types or map manually.
-            await fetchData(token); 
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setAddingRow(false);
-        }
-    };
-
-    const handleUpdateItem = async (id: string, field: string, value: string) => {
-        // Optimistic update
-        setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
-
-        try {
-            // Debounce could be good here, but for now simple onBlur or similar logic.
-            // This function is intended to be called onBlur or periodic save.
             await orderService.updateItem(id, { [field]: value });
-        } catch (e) {
+            // For auto-save, we don't spam toasts, maybe just the indicator is enough OR a very subtle toast.
+            // But user asked to remove "alerts".
+            // Let's rely on the "Zapisywanie..." indicator which is cleaner for auto-save.
+        } catch (e: any) {
             console.error("Failed to save", e);
+            if (e.message?.includes("zablokowanego") || e.message?.includes("locked")) {
+                 setError("Błąd: Zamówienie zostało zablokowane.");
+                 toast.error("Błąd: Zamówienie zablokowane!");
+                 // Force update local state if not already done by realtime
+                 setOrder(prev => prev ? { ...prev, isLocked: true } : null);
+            } else {
+                 setError("Błąd zapisu");
+                 toast.error("Nie udało się zapisać zmian");
+            }
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDeleteItem = async (id: string) => {
-        if (!confirm("Usunąć ten wiersz?")) return;
-        try {
-            await orderService.deleteItem(id);
-            setItems(prev => prev.filter(i => i.id !== id));
-        } catch (e) {
-            console.error("Failed to delete", e);
-        }
-    };
+    // Update local state immediately for responsiveness
+    const handleLocalChange = (id: string, field: keyof OrderItem, value: string) => {
+        if (order?.isLocked) return; // Prevent typing if locked
+        setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+        if (error) setError('');
+    }
 
     if (loading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">Ładowanie zamówienia...</div>;
-    if (error || !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">{error || "Błąd"}</div>;
+    if (error && !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">{error || "Błąd"}</div>;
 
-    const shops = Array.from({ length: 12 }, (_, i) => i + 1);
+    const shops = Array.from({ length: 13 }, (_, i) => i + 1);
+    const isLocked = order?.isLocked || false;
 
     return (
         <div className="min-h-screen bg-white">
             <div className="max-w-[1920px] mx-auto p-4 md:p-8">
-                {/* Minimal Header */}
-                <div className="mb-6 border-b border-gray-200 pb-4 flex items-baseline justify-between">
+                {/* Header */}
+                <div className="mb-6 border-b border-gray-200 pb-4 flex items-center justify-between sticky top-0 bg-white z-20 py-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{order.name}</h1>
-                        <p className="text-gray-500 mt-1">Lista zamówień - Sklepy 1-12</p>
+                        <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            {order?.name}
+                            {isLocked && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full border border-red-200 flex items-center gap-1 animate-in zoom-in"><Lock className="w-3 h-3"/> ZAKOŃCZONE</span>}
+                        </h1>
+                        <p className="text-gray-500 text-sm mt-1">
+                            {isLocked 
+                                ? "Edycja została zablokowana. To zamówienie jest zakończone." 
+                                : "Uzupełnij dane. Zmiany są zapisywane automatycznie."}
+                        </p>
                     </div>
-                    <div className="text-xs text-gray-400">
-                        Stan: Online
+                    <div className="flex items-center gap-4">
+                        {saving && <span className="text-blue-600 font-medium text-sm animate-pulse">Zapisywanie...</span>}
+                        {error && <span className="text-red-600 font-medium text-sm">{error}</span>}
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">
@@ -103,55 +135,63 @@ export const PublicOrderPage: React.FC = () => {
                                     Nazwa Produktu
                                 </th>
                                 {shops.map(n => (
-                                    <th key={n} className="p-3 min-w-[80px] text-xs font-bold uppercase text-center text-gray-600 border-r border-gray-200 last:border-0">
+                                    <th key={n} className="p-3 min-w-[100px] text-xs font-bold uppercase text-center text-gray-600 border-r border-gray-200 last:border-0">
                                         Sklep {n}
                                     </th>
                                 ))}
-                                <th className="p-3 w-10 bg-gray-50"></th>
+                                <th className="p-3 bg-gray-50 text-center font-bold text-xs uppercase text-gray-800 border-l border-gray-200">
+                                    Suma
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {items.map((item) => (
-                                <tr key={item.id} className="group hover:bg-gray-50">
-                                    <td className="sticky left-0 z-10 bg-white p-0 border-r border-gray-200 group-hover:bg-gray-50 transition-colors">
-                                        <input 
-                                            type="text" 
-                                            defaultValue={item.name}
-                                            onBlur={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
-                                            className="w-full h-full p-3 bg-transparent focus:outline-none focus:bg-blue-50 font-medium text-gray-900"
-                                            placeholder="Nazwa produktu..."
-                                        />
-                                    </td>
-                                    {shops.map(n => {
-                                        const key = `shop${n}` as keyof OrderItem;
-                                        return (
-                                            <td key={n} className="p-0 border-r border-gray-200 last:border-0">
-                                                <input 
-                                                    type="text" 
-                                                    defaultValue={item[key] || ''}
-                                                    onBlur={(e) => handleUpdateItem(item.id, key, e.target.value)}
-                                                    className="w-full h-full p-3 text-center bg-transparent focus:outline-none focus:bg-blue-50 text-gray-800"
-                                                    placeholder="-"
-                                                />
-                                            </td>
-                                        );
-                                    })}
-                                    <td className="p-0 text-center bg-white">
-                                        <button 
-                                            onClick={() => handleDeleteItem(item.id)}
-                                            className="p-3 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                            title="Usuń wiersz"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {/* Empty State / Add Row helper if empty */}
+                            {items.map(item => {
+                                // Calculate Sum
+                                let sum = 0;
+                                shops.forEach(n => {
+                                    const val = item[`shop${n}` as keyof OrderItem] as string;
+                                    // Try to parse number, handle kommas if user types 1,5
+                                    const num = parseFloat(val?.replace(',', '.') || '0');
+                                    if (!isNaN(num)) sum += num;
+                                });
+
+                                return (
+                                    <tr key={item.id} className="group hover:bg-gray-50">
+                                        {/* Name Column - Read Only */}
+                                        <td className="sticky left-0 z-10 bg-white p-3 border-r border-gray-200 font-bold text-gray-900 border-b border-gray-100">
+                                            {item.name}
+                                        </td>
+                                        
+                                        {/* Shop Columns - Editable */}
+                                        {shops.map(n => {
+                                            const key = `shop${n}` as keyof OrderItem;
+                                            return (
+                                                <td key={n} className="p-0 border-r border-gray-200 last:border-0">
+                                                    <input 
+                                                        type="text" 
+                                                        value={item[key] || ''}
+                                                        onChange={(e) => handleLocalChange(item.id, key, e.target.value)}
+                                                        onBlur={(e) => handleBlur(item.id, key, e.target.value)}
+                                                        className="w-full h-full p-3 text-center bg-transparent focus:outline-none focus:bg-blue-50 text-gray-800 disabled:text-gray-500 disabled:bg-gray-50/50"
+                                                        placeholder="-"
+                                                        disabled={isLocked}
+                                                    />
+                                                </td>
+                                            );
+                                        })}
+                                        
+                                        {/* Sum Column */}
+                                        <td className="p-3 text-center font-bold text-blue-600 bg-gray-50 border-l border-gray-200">
+                                            {sum > 0 ? Number(sum.toFixed(2)) : '-'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            
                             {items.length === 0 && (
                                 <tr>
-                                    <td colSpan={14} className="p-8 text-center text-gray-400">
-                                        Brak pozycji. Kliknij "Dodaj produkt" poniżej.
+                                    <td colSpan={15} className="p-8 text-center text-gray-400">
+                                        Brak danych zamówienia.
                                     </td>
                                 </tr>
                             )}
@@ -159,15 +199,71 @@ export const PublicOrderPage: React.FC = () => {
                     </table>
                 </div>
 
-                <div className="mt-4">
-                     <button 
-                        onClick={handleAddItem}
-                        disabled={addingRow}
-                        className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Dodaj produkt
-                    </button>
+                {/* Mobile View: Cards/Grid */}
+                <div className="md:hidden space-y-8">
+                    {items.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400 bg-white rounded-xl border border-gray-200">
+                            Brak danych zamówienia.
+                        </div>
+                    ) : (
+                        items.map((item, index) => {
+                             let sum = 0;
+                             shops.forEach(n => {
+                                 const val = item[`shop${n}` as keyof OrderItem] as string;
+                                 const num = parseFloat(val?.replace(',', '.') || '0');
+                                 if (!isNaN(num)) sum += num;
+                             });
+
+                            return (
+                                <div key={item.id} className="relative">
+                                    {/* Product Name Card */}
+                                    <div className="bg-white p-4 rounded-t-xl shadow-sm border border-gray-200 border-b-0 flex items-center justify-between">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 block mb-1 tracking-wider">
+                                                Produkt {index + 1}
+                                            </label>
+                                            <div className="text-lg font-bold text-gray-900 break-words">
+                                                {item.name}
+                                            </div>
+                                        </div>
+                                         <div className="text-right">
+                                            <label className="text-xs font-bold uppercase text-gray-400 block mb-1">
+                                                Suma
+                                            </label>
+                                            <div className="text-lg font-bold text-blue-600">
+                                                 {sum > 0 ? Number(sum.toFixed(2)) : '-'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Shops Grid */}
+                                    <div className="bg-gray-50/50 p-4 rounded-b-xl border border-gray-200 shadow-sm">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {shops.map(n => {
+                                                const key = `shop${n}` as keyof OrderItem;
+                                                return (
+                                                    <div key={n} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+                                                        <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1 text-center">
+                                                            Sklep {n}
+                                                        </label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item[key] || ''}
+                                                            onChange={(e) => handleLocalChange(item.id, key, e.target.value)}
+                                                            onBlur={(e) => handleBlur(item.id, key, e.target.value)}
+                                                            className="w-full p-2 text-center bg-gray-50 rounded-md font-medium text-gray-900 focus:outline-none focus:bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                            placeholder="-"
+                                                            disabled={isLocked}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>

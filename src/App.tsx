@@ -9,9 +9,12 @@ import { DashboardPage } from './pages/DashboardPage';
 import { FreeSaturdaysPage } from './pages/FreeSaturdaysPage';
 import { VacationsPage } from './pages/VacationsPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './context/ThemeContext';
+
+import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -46,6 +49,7 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
+      <Toaster richColors position="bottom-right" />
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           {/* Public Route: Login */}
@@ -70,6 +74,10 @@ const App: React.FC = () => {
           <Route 
             path="/orders" 
             element={session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/orders/:id" 
+            element={session ? <AdminOrderPage /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/order/:token" 
