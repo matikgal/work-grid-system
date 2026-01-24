@@ -3,6 +3,9 @@ import { X, Settings, Palette, Type, Monitor, Moon, Sun, LayoutGrid, Calendar, B
 import { cn } from '../utils';
 import { useTheme } from '../context/ThemeContext';
 
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,6 +16,10 @@ interface SettingsModalProps {
   showWeekends: boolean;
   onShowWeekendsChange: (show: boolean) => void;
 }
+
+const formatDate = (date: Date) => {
+    return date.toISOString().replace(/[:.]/g, '-');
+};
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
     isOpen, 
@@ -30,6 +37,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [emailNotifs, setEmailNotifs] = useState(false);
   const [browserNotifs, setBrowserNotifs] = useState(true);
   const [isViewSelectOpen, setIsViewSelectOpen] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+
+  // Backup functionality
+  const handleBackup = async () => {
+      try {
+          setIsBackingUp(true);
+          toast.info('Rozpoczynam tworzenie kopii zapasowej...');
+
+          // 1. Fetch data from key tables concurrently
+          const [
+              { data: employees },
+              { data: shifts },
+              { data: orders },
+              { data: orderItems },
+              { data: configs }
+          ] = await Promise.all([
+              supabase.from('employees').select('*'),
+              supabase.from('shifts').select('*'),
+              supabase.from('orders').select('*'),
+              supabase.from('order_items').select('*'),
+              supabase.from('monthly_configs').select('*')
+          ]);
+
+          // 2. Prepare JSON object
+          const backupData = {
+              timestamp: new Date().toISOString(),
+              appName: 'WorkGrid System',
+              version: '1.0.0',
+              data: {
+                  employees: employees || [],
+                  shifts: shifts || [],
+                  orders: orders || [],
+                  order_items: orderItems || [],
+                  monthly_configs: configs || []
+              }
+          };
+
+          // 3. Trigger download
+          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `backup-workgrid-${formatDate(new Date())}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          toast.success('Kopia zapasowa pobrana pomyślnie!');
+      } catch (error) {
+          console.error('Backup failed:', error);
+          toast.error('Błąd podczas tworzenia kopii zapasowej.');
+      } finally {
+          setIsBackingUp(false);
+      }
+  };
 
   if (!isOpen) return null;
 
@@ -210,13 +273,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                     </button>
                     
-                     <button className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left group opacity-60 cursor-not-allowed bg-white dark:bg-slate-800/20" title="Funkcja niedostępna">
+                     <button className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left group bg-white dark:bg-slate-800/20" title="Funkcja niedostępna">
                         <div className="bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 p-2 rounded-lg shrink-0">
                             <LayoutGrid className="w-5 h-5" />
                         </div>
                         <div>
                             <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">Eksport do Excel</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">Pobierz dane w formacie .xlsx (Wkrótce).</span>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={handleBackup}
+                        disabled={isBackingUp}
+                        className={cn(
+                            "flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left group bg-white dark:bg-slate-800/20 col-span-1 sm:col-span-2",
+                            isBackingUp && "opacity-70 cursor-wait"
+                        )}
+                    >
+                        <div className="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 p-2 rounded-lg shrink-0 group-hover:bg-amber-200 dark:group-hover:bg-amber-500/30 transition-colors">
+                            <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">
+                                {isBackingUp ? 'Pobieranie danych...' : 'Pełna Kopia Zapasowa (JSON)'}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
+                                Pobierz wszystkie dane systemu (pracownicy, grafiki, zamówienia) jako jeden plik JSON.
+                            </span>
                         </div>
                     </button>
                 </div>
