@@ -18,9 +18,9 @@ export const PublicOrderPage: React.FC = () => {
         if (token) {
             fetchData(token);
 
-            // Subscribe to realtime updates for this order's lock status
+            // 1. Realtime Subscription (Fastest)
             const channel = supabase
-                .channel(`public:orders:${token}`)
+                .channel(`order_updates_${token}`)
                 .on(
                     'postgres_changes',
                     {
@@ -30,20 +30,40 @@ export const PublicOrderPage: React.FC = () => {
                         filter: `id=eq.${token}`,
                     },
                     (payload) => {
-                        console.log('Order update received:', payload);
                         const newOrder = payload.new as any; 
                         if (newOrder) {
-                            setOrder((prev) => prev ? { ...prev, isLocked: newOrder.is_locked } : null);
-                            if (newOrder.is_locked) {
-                                toast.info("Zamówienie zostało właśnie zablokowane przez administratora");
-                            }
+                            setOrder((prev) => {
+                                if (prev?.isLocked !== newOrder.is_locked) {
+                                    if (newOrder.is_locked) toast.info("Zamówienie zostało zablokowane przez administratora");
+                                    return prev ? { ...prev, isLocked: newOrder.is_locked } : null;
+                                }
+                                return prev;
+                            });
                         }
                     }
                 )
                 .subscribe();
 
+            // 2. Polling Fallback (Reliable)
+            // Checks every 2 seconds to ensure state is synced even if Realtime fails
+            const intervalId = setInterval(async () => {
+                try {
+                    const isLocked = await orderService.getOrderLockStatus(token);
+                    setOrder(prev => {
+                        if (prev && prev.isLocked !== isLocked) {
+                            if (isLocked) toast.info("Zamówienie zostało zablokowane.");
+                            return { ...prev, isLocked };
+                        }
+                        return prev;
+                    });
+                } catch (error) {
+                    console.error("Error polling order status", error);
+                }
+            }, 2000);
+
             return () => {
                 supabase.removeChannel(channel);
+                clearInterval(intervalId);
             };
         }
     }, [token]);

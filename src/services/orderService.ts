@@ -27,6 +27,7 @@ export interface OrderItem {
   shop10: string;
   shop11: string;
   shop12: string;
+  shop13: string;
 }
 
 export const orderService = {
@@ -212,5 +213,16 @@ export const orderService = {
   async deleteItem(id: string) {
       const { error } = await supabase.from('order_items').delete().eq('id', id);
       if (error) throw error;
+  },
+
+  async getOrderLockStatus(id: string) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('is_locked')
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
+      return data.is_locked;
   }
 };

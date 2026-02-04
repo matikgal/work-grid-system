@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Home } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Home, Clipboard } from 'lucide-react';
 import { orderService, Order, OrderItem } from '../services/orderService';
 import { MainLayout } from '../components/layout/MainLayout';
 
@@ -118,6 +118,53 @@ export const AdminOrderPage: React.FC = () => {
                         </p>
                     </div>
                      <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => {
+                                const tableHtml = `
+                                    <table border="1" style="border-collapse: collapse; width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th style="background-color: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #d1d5db;">Nazwa Produktu</th>
+                                                ${shops.map(n => `<th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Sklep ${n}</th>`).join('')}
+                                                <th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Suma</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${items.map(item => {
+                                                let sum = 0;
+                                                shops.forEach(n => {
+                                                    const val = item[`shop${n}` as keyof OrderItem] as string;
+                                                    const num = parseFloat(val?.replace(',', '.') || '0');
+                                                    if (!isNaN(num)) sum += num;
+                                                });
+                                                return `
+                                                    <tr>
+                                                        <td style="padding: 8px; border: 1px solid #d1d5db;">${item.name}</td>
+                                                        ${shops.map(n => `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${item[`shop${n}` as keyof OrderItem] || ''}</td>`).join('')}
+                                                        <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold;">${sum > 0 ? sum : ''}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                `;
+                                
+                                const blobHtml = new Blob([tableHtml], { type: 'text/html' });
+                                const blobText = new Blob([items.map(i => i.name).join('\n')], { type: 'text/plain' });
+                                const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+                                
+                                navigator.clipboard.write(data).then(() => {
+                                    toast.success('Tabela skopiowana do schowka! Możesz wkleić do Outlooka/Excela.');
+                                }).catch(err => {
+                                    console.error('Failed to copy: ', err);
+                                    toast.error('Błąd kopiowania');
+                                });
+                            }}
+                            className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
+                        >
+                            <Clipboard className="w-4 h-4" />
+                            Kopiuj tabelę
+                        </button>
                         {saving && <span className="text-blue-600 font-medium text-sm animate-pulse">Zapisywanie...</span>}
                     </div>
                 </div>
