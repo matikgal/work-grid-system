@@ -130,6 +130,8 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
   const [customRoleInputValue, setCustomRoleInputValue] = useState('');
   const [isSeparatorMode, setIsSeparatorMode] = useState(false);
   const [rowColor, setRowColor] = useState<string>('');
+  const [isVisibleInSchedule, setIsVisibleInSchedule] = useState(true);
+  const [isVisibleInVacations, setIsVisibleInVacations] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -165,6 +167,8 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
           setLastName(names.slice(1).join(' ') || '');
           setIsSeparatorMode(!!employee.isSeparator);
           setRowColor(employee.rowColor || '');
+          setIsVisibleInSchedule(employee.isVisibleInSchedule !== false);
+          setIsVisibleInVacations(employee.isVisibleInVacations !== false);
           
           if (!employee.role) {
             setSelectedRole('Brak');
@@ -186,6 +190,8 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
           setCustomRoleInputValue('');
           setIsSeparatorMode(asSeparator);
           setRowColor('');
+          setIsVisibleInSchedule(true);
+          setIsVisibleInVacations(!asSeparator);
       }
       setView('form');
   };
@@ -212,7 +218,9 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
           role: isSeparatorMode ? '' : (selectedRole === 'Inne' ? customRoleInputValue : (selectedRole === 'Brak' ? '' : selectedRole)),
           avatarColor: editingEmployee?.avatarColor || '', 
           isSeparator: isSeparatorMode,
-          rowColor: rowColor
+          rowColor: rowColor,
+          isVisibleInSchedule,
+          isVisibleInVacations
       };
 
       onSave(newEmployee, !editingEmployee);
@@ -481,6 +489,37 @@ export const EmployeesManagerModal: React.FC<EmployeesManagerModalProps> = ({
                                     <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{color.label}</span>
                                 </button>
                             ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Widoczność pracownika</label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <input 
+                                    type="checkbox"
+                                    checked={isVisibleInSchedule}
+                                    onChange={(e) => setIsVisibleInSchedule(e.target.checked)}
+                                    className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all"
+                                />
+                                <div>
+                                    <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">Grafik Pracy</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">Widoczny w głównym grafiku</div>
+                                </div>
+                            </label>
+                            
+                            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <input 
+                                    type="checkbox"
+                                    checked={isVisibleInVacations}
+                                    onChange={(e) => setIsVisibleInVacations(e.target.checked)}
+                                    className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-all"
+                                />
+                                <div>
+                                    <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">Urlopy</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">Widoczny w module urlopowym</div>
+                                </div>
+                            </label>
                         </div>
                     </div>
                   </>

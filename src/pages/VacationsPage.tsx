@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { ChevronLeft, ChevronRight, Palmtree } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Palmtree, Lock, Unlock } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { stringToColor, cn } from '../utils';
 import { SHIFT_TYPES } from '../constants';
@@ -23,7 +23,13 @@ const MONTHS = [
 ];
 
 export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
-  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees(session);
+  const { employees: allEmployees, addEmployee, updateEmployee, deleteEmployee } = useEmployees(session);
+  
+  const employees = React.useMemo(() => {
+    return allEmployees
+      .filter(e => e.isVisibleInVacations !== false)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEmployees]);
   // employeeId -> [countJan, countFeb, ..., countDec]
   const [vacationCounts, setVacationCounts] = useState<Record<string, number[]>>({});
   const [vacationBalances, setVacationBalances] = useState<Record<string, number>>({});
@@ -33,6 +39,8 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
   // Modal states
   const [isEmployeesManagerOpen, setIsEmployeesManagerOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
+  const [highlightedEmployees, setHighlightedEmployees] = useState<Set<string>>(new Set());
   const isMobile = useMobile();
 
   useEffect(() => {
@@ -67,13 +75,19 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
             setVacationCounts(counts);
 
-            // Fetch 2: External Balances (Notepad)
+            // Fetch 2: External Balances (Notepad) and Highlights
             const balances = await vacationService.getBalances(empIds, selectedYear, session.user.id);
             const balMap: Record<string, number> = {};
+            const highlightSet = new Set<string>();
+            
             balances.forEach(b => {
                 balMap[b.employeeId] = b.days;
+                if (b.isHighlighted) {
+                    highlightSet.add(b.employeeId);
+                }
             });
             setVacationBalances(balMap);
+            setHighlightedEmployees(highlightSet);
         }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -89,17 +103,56 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       setVacationBalances(prev => ({ ...prev, [employeeId]: days }));
 
       try {
-          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, days);
+          // We pass current highlight status to ensure it's preserved if upsert replaces row (though we hope partial update works)
+          // To be safe, let's pass both if we have them.
+          const isHighlighted = highlightedEmployees.has(employeeId);
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted });
       } catch(e) {
           console.error("Failed to save balance", e);
       }
   };
 
+  const toggleHighlight = async (employeeId: string) => {
+      const isHighlighted = highlightedEmployees.has(employeeId);
+      const newStatus = !isHighlighted;
+
+      // Optimistic update
+      const newSet = new Set(highlightedEmployees);
+      if (newStatus) {
+          newSet.add(employeeId);
+      } else {
+          newSet.delete(employeeId);
+      }
+      setHighlightedEmployees(newSet);
+
+      try {
+          const days = vacationBalances[employeeId] || 0;
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted: newStatus });
+      } catch (e) {
+          console.error("Failed to save highlight", e);
+          // Revert on error
+          setHighlightedEmployees(new Set(highlightedEmployees));
+      }
+  };
+
   const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
       if (isNew) {
-        addEmployee(employee.name, employee.role, employee.avatarColor);
+        addEmployee(
+          employee.name, 
+          employee.role, 
+          employee.avatarColor,
+          employee.isSeparator,
+          employee.rowColor,
+          employee.isVisibleInSchedule,
+          employee.isVisibleInVacations
+        );
       } else {
-        updateEmployee(employee.id, { name: employee.name, role: employee.role });
+        updateEmployee(employee.id, { 
+          name: employee.name, 
+          role: employee.role,
+          isVisibleInSchedule: employee.isVisibleInSchedule,
+          isVisibleInVacations: employee.isVisibleInVacations
+        });
       }
   };
 
@@ -123,6 +176,20 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                     <button
+                        onClick={() => setIsLocked(!isLocked)}
+                        className={cn(
+                            "p-2 rounded-lg transition-all border flex items-center gap-2 text-sm font-bold shadow-sm",
+                            isLocked 
+                                ? "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                : "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800 ring-1 ring-orange-200 dark:ring-orange-800"
+                        )}
+                        title={isLocked ? "Odblokuj edycję" : "Zablokuj edycję"}
+                     >
+                        {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                        <span className="hidden md:inline">{isLocked ? "Zablokowane" : "Edycja"}</span>
+                     </button>
+
                      <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
                         <button onClick={() => setSelectedYear(y => y - 1)} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-all shadow-sm"><ChevronLeft className="w-4 h-4" /></button>
                         <span className="px-4 font-bold text-slate-700 dark:text-slate-200 text-sm md:text-base">{selectedYear}</span>
@@ -142,25 +209,39 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                             const balance = vacationBalances[emp.id] ?? ''; // undefined shows placeholder
                             const isTailwindClass = emp.avatarColor?.startsWith('bg-');
 
+                            const isHighlighted = highlightedEmployees.has(emp.id);
+
                             return (
-                                <div key={emp.id} className="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800">
+                                <div key={emp.id} className={cn(
+                                    "rounded-xl p-4 shadow-sm border transition-all",
+                                    isHighlighted 
+                                        ? "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
+                                        : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                )}>
                                     <div className="flex items-center gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
-                                        <div 
-                                            className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white shadow-sm", emp.avatarColor)}
+                                        <button 
+                                            disabled={isLocked}
+                                            onClick={() => toggleHighlight(emp.id)}
+                                            className={cn(
+                                                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm transition-all",
+                                                isLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-110 active:scale-95",
+                                                emp.avatarColor
+                                            )}
                                             style={!isTailwindClass ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
                                         >
-                                            {emp.name.charAt(0).toUpperCase()}
-                                        </div>
+                                            {isHighlighted ? <Palmtree className="w-5 h-5 text-white" /> : emp.name.charAt(0).toUpperCase()}
+                                        </button>
                                         <div className="flex-1">
                                             <h3 className="font-bold text-slate-800 dark:text-white">{emp.name}</h3>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className="text-xs text-slate-400">Zeszły rok/Inne:</span>
                                                 <input 
                                                     type="number" 
-                                                    className="w-16 px-1.5 py-0.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-orange-500"
+                                                    className="w-16 px-1.5 py-0.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-orange-500 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
                                                     value={balance}
                                                     onChange={(e) => updateBalance(emp.id, e.target.value)}
                                                     placeholder="0"
+                                                    disabled={isLocked}
                                                 />
                                             </div>
                                         </div>
@@ -211,25 +292,32 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                 const avatarStyle = isTailwindClass ? {} : { backgroundColor: emp.avatarColor || stringToColor(emp.name) };
 
                                 const isEven = index % 2 === 0;
+                                const isHighlighted = highlightedEmployees.has(emp.id);
 
                                 return (
                                     <tr key={emp.id} className={cn(
                                         "group transition-colors",
-                                        isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50",
-                                        "hover:bg-slate-50 hover:dark:bg-slate-800/50"
+                                        isHighlighted 
+                                          ? "bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30" 
+                                          : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"),
+                                        !isHighlighted && "hover:bg-slate-50 hover:dark:bg-slate-800/50"
                                     )}>
                                         <td className="p-3 border-r border-slate-100 dark:border-slate-800">
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-3 min-w-0">
-                                                    <div 
+                                                    <button 
+                                                        disabled={isLocked}
+                                                        onClick={() => toggleHighlight(emp.id)}
                                                         className={cn(
-                                                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white shadow-sm",
+                                                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm transition-all",
+                                                            isLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-110 active:scale-95",
                                                             emp.avatarColor
                                                         )}
                                                         style={avatarStyle}
+                                                        title={isLocked ? "Odblokuj edycję aby zaznaczyć" : "Kliknij aby wyróżnić"}
                                                     >
-                                                        {emp.name.charAt(0).toUpperCase()}
-                                                    </div>
+                                                        {isHighlighted ? <Palmtree className="w-4 h-4 text-white" /> : emp.name.charAt(0).toUpperCase()}
+                                                    </button>
                                                     <div className="min-w-0">
                                                         <div className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{emp.name}</div>
                                                         <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider truncate">{emp.role}</div>
@@ -240,11 +328,12 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                                     <span className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Zaległe/Inne</span>
                                                     <input 
                                                         type="number" 
-                                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-slate-300"
+                                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-slate-300 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
                                                         value={balance}
                                                         onChange={(e) => updateBalance(emp.id, e.target.value)}
                                                         placeholder="0"
                                                         title="Dni zaległe lub przeniesione"
+                                                        disabled={isLocked}
                                                     />
                                                 </div>
                                             </div>
@@ -275,7 +364,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       <EmployeesManagerModal
         isOpen={isEmployeesManagerOpen}
         onClose={() => setIsEmployeesManagerOpen(false)}
-        employees={employees}
+        employees={allEmployees}
         shifts={[]}
         onSave={handleSaveEmployee}
         onDelete={deleteEmployee}

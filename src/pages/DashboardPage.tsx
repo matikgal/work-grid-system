@@ -38,13 +38,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
   
   // Custom Hooks
   const { 
-    employees, 
+    employees: allEmployees, 
     loading: employeesLoading, 
     addEmployee, 
     updateEmployee, 
     deleteEmployee, 
     reorderEmployees 
   } = useEmployees(session);
+
+  const employees = useMemo(() => allEmployees.filter(e => e.isVisibleInSchedule !== false), [allEmployees]);
 
   const { 
     shifts, 
@@ -262,14 +264,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
             employee.role, 
             employee.avatarColor,
             employee.isSeparator,
-            employee.rowColor
+            employee.rowColor,
+            employee.isVisibleInSchedule,
+            employee.isVisibleInVacations
          );
       } else {
          updateEmployee(employee.id, { 
             name: employee.name, 
             role: employee.role,
             isSeparator: employee.isSeparator,
-            rowColor: employee.rowColor
+            rowColor: employee.rowColor,
+            isVisibleInSchedule: employee.isVisibleInSchedule,
+            isVisibleInVacations: employee.isVisibleInVacations
          });
       }
   };
@@ -507,7 +513,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
           <EmployeesManagerModal
             isOpen={isEmployeesManagerOpen}
             onClose={() => setIsEmployeesManagerOpen(false)}
-            employees={employees}
+            employees={allEmployees}
             shifts={shifts}
             currentMonth={currentDate}
             onSave={handleSaveEmployee}

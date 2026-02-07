@@ -22,7 +22,7 @@ export function useEmployees(session: Session) {
     }
   }, [session.user.id]);
 
-  const addEmployee = async (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string) => {
+  const addEmployee = async (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string, isVisibleInSchedule = true, isVisibleInVacations = true) => {
     try {
       const newEmp = await employeeService.create({
         name, 
@@ -30,7 +30,9 @@ export function useEmployees(session: Session) {
         userId: session.user.id, 
         avatarColor,
         isSeparator,
-        rowColor
+        rowColor,
+        isVisibleInSchedule,
+        isVisibleInVacations
       });
       setEmployees(prev => [...prev, newEmp]);
       return newEmp;

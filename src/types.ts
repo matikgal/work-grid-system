@@ -6,6 +6,8 @@ export interface Employee {
   orderIndex?: number;
   isSeparator?: boolean;
   rowColor?: string;
+  isVisibleInSchedule?: boolean;
+  isVisibleInVacations?: boolean;
 }
 
 export interface Shift {
