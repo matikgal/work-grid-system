@@ -33,6 +33,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
   // employeeId -> [countJan, countFeb, ..., countDec]
   const [vacationCounts, setVacationCounts] = useState<Record<string, number[]>>({});
   const [vacationBalances, setVacationBalances] = useState<Record<string, number>>({});
+  const [vacationManual, setVacationManual] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState(true);
   
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -57,7 +58,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
             const start = `${selectedYear}-01-01`;
             const end = `${selectedYear}-12-31`;
             
-            // Fetch 1: Shifts
+            // Fetch 1: Shifts (Automatic)
             const shifts = await shiftService.getShifts(empIds, start, end, SHIFT_TYPES.VACATION);
             
             const counts: Record<string, number[]> = {};
@@ -75,19 +76,22 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
             setVacationCounts(counts);
 
-            // Fetch 2: External Balances (Notepad) and Highlights
+            // Fetch 2: External Balances (Notepad), Highlights, and Manual Adjustments
             const balances = await vacationService.getBalances(empIds, selectedYear, session.user.id);
             const balMap: Record<string, number> = {};
             const highlightSet = new Set<string>();
+            const manualMap: Record<string, number[]> = {};
             
             balances.forEach(b => {
                 balMap[b.employeeId] = b.days;
                 if (b.isHighlighted) {
                     highlightSet.add(b.employeeId);
                 }
+                manualMap[b.employeeId] = b.manualDays || Array(12).fill(0);
             });
             setVacationBalances(balMap);
             setHighlightedEmployees(highlightSet);
+            setVacationManual(manualMap);
         }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -103,12 +107,34 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       setVacationBalances(prev => ({ ...prev, [employeeId]: days }));
 
       try {
-          // We pass current highlight status to ensure it's preserved if upsert replaces row (though we hope partial update works)
-          // To be safe, let's pass both if we have them.
           const isHighlighted = highlightedEmployees.has(employeeId);
-          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted });
+          const manualDays = vacationManual[employeeId];
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted, manualDays });
       } catch(e) {
           console.error("Failed to save balance", e);
+      }
+  };
+
+  const updateManualDays = async (employeeId: string, monthIndex: number, value: string) => {
+      const val = parseInt(value) || 0;
+      
+      // Optimistic
+      const currentManual = vacationManual[employeeId] || Array(12).fill(0);
+      const newManual = [...currentManual];
+      newManual[monthIndex] = val;
+      
+      setVacationManual(prev => ({ ...prev, [employeeId]: newManual }));
+
+      try {
+          const days = vacationBalances[employeeId] || 0;
+          const isHighlighted = highlightedEmployees.has(employeeId);
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { 
+              days, 
+              isHighlighted, 
+              manualDays: newManual 
+          });
+      } catch (e) {
+          console.error("Failed to save manual days", e);
       }
   };
 
@@ -127,7 +153,8 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
       try {
           const days = vacationBalances[employeeId] || 0;
-          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted: newStatus });
+          const manualDays = vacationManual[employeeId];
+          await vacationService.upsertBalance(employeeId, session.user.id, selectedYear, { days, isHighlighted: newStatus, manualDays });
       } catch (e) {
           console.error("Failed to save highlight", e);
           // Revert on error
@@ -156,7 +183,9 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       }
   };
 
-  const calculateTotal = (counts: number[]) => counts.reduce((a, b) => a + b, 0);
+  const calculateTotal = (counts: number[], manuals: number[]) => {
+      return counts.reduce((a, b, i) => a + b + (manuals[i] || 0), 0);
+  };
 
   return (
     <MainLayout
@@ -205,7 +234,8 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                     <div className="space-y-3">
                         {employees.map((emp) => {
                             const counts = vacationCounts[emp.id] || Array(12).fill(0);
-                            const total = calculateTotal(counts);
+                            const manuals = vacationManual[emp.id] || Array(12).fill(0);
+                            const total = calculateTotal(counts, manuals);
                             const balance = vacationBalances[emp.id] ?? ''; // undefined shows placeholder
                             const isTailwindClass = emp.avatarColor?.startsWith('bg-');
 
@@ -255,9 +285,27 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                         {MONTHS.map((month, idx) => (
                                             <div key={month} className="bg-slate-50 dark:bg-slate-800 p-1.5 rounded-lg text-center">
                                                 <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">{month.substring(0, 3)}</span>
-                                                <span className={cn("text-sm font-bold", counts[idx] > 0 ? "text-slate-800 dark:text-white" : "text-slate-300 dark:text-slate-600")}>
-                                                    {counts[idx] || '-'}
-                                                </span>
+                                                <div className="flex justify-center items-center gap-1">
+                                                    <span className={cn("text-sm font-bold", counts[idx] > 0 ? "text-slate-800 dark:text-white" : "text-slate-300 dark:text-slate-600")}>
+                                                        {counts[idx] || '-'}
+                                                    </span>
+                                                    {!isLocked && (
+                                                        <div className="flex items-center">
+                                                            <span className="text-xs text-orange-500 font-bold ml-1">+</span>
+                                                            <input
+                                                                type="number"
+                                                                value={vacationManual[emp.id]?.[idx] || 0}
+                                                                onChange={(e) => updateManualDays(emp.id, idx, e.target.value)}
+                                                                className="w-8 ml-1 text-center text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {isLocked && (vacationManual[emp.id]?.[idx] || 0) > 0 && (
+                                                        <span className="text-xs text-orange-500 font-bold ml-1" title="Dni dodane ręcznie">
+                                                            +{vacationManual[emp.id]?.[idx]}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -278,15 +326,17 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                 <th className="p-3 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider text-center bg-slate-100 dark:bg-slate-800/80 border-l border-slate-200 dark:border-slate-700">Suma</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y-2 divide-slate-300 dark:divide-slate-700">
                             {employees.length === 0 ? (
                                 <tr>
                                     <td colSpan={14} className="p-8 text-center text-slate-500">Brak pracowników</td>
                                 </tr>
                             ) : employees.map((emp, index) => {
                                 const counts = vacationCounts[emp.id] || Array(12).fill(0);
-                                const total = calculateTotal(counts);
-                                const balance = vacationBalances[emp.id] ?? '';
+                                const manuals = vacationManual[emp.id] || Array(12).fill(0);
+                                const total = calculateTotal(counts, manuals);
+                                const balanceInput = vacationBalances[emp.id] ?? 0;
+                                const remaining = balanceInput - total;
                                 
                                 const isTailwindClass = emp.avatarColor?.startsWith('bg-');
                                 const avatarStyle = isTailwindClass ? {} : { backgroundColor: emp.avatarColor || stringToColor(emp.name) };
@@ -299,10 +349,10 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                         "group transition-colors",
                                         isHighlighted 
                                           ? "bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30" 
-                                          : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"),
-                                        !isHighlighted && "hover:bg-slate-50 hover:dark:bg-slate-800/50"
+                                          : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-900/50"),
+                                        !isHighlighted && "hover:bg-slate-100 dark:hover:bg-slate-800"
                                     )}>
-                                        <td className="p-3 border-r border-slate-100 dark:border-slate-800">
+                                        <td className="p-3 border-r-2 border-slate-300 dark:border-slate-700">
                                             <div className="flex items-center justify-between gap-2">
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <button 
@@ -324,12 +374,12 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="flex flex-col items-end shrink-0">
-                                                    <span className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Zaległe/Inne</span>
+                                            <div className="flex flex-col items-center shrink-0">
+                                                    <span className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Zaległe</span>
                                                     <input 
                                                         type="number" 
-                                                        className="w-16 px-1.5 py-0.5 text-xs font-bold text-right border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-slate-300 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
-                                                        value={balance}
+                                                        className="w-16 h-8 px-1 text-sm font-bold text-center border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all placeholder:text-slate-300 disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
+                                                        value={balanceInput || ''}
                                                         onChange={(e) => updateBalance(emp.id, e.target.value)}
                                                         placeholder="0"
                                                         title="Dni zaległe lub przeniesione"
@@ -339,17 +389,44 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                                             </div>
                                         </td>
                                         {counts.map((count, idx) => (
-                                            <td key={idx} className="p-3 text-center">
-                                                <span className={cn(
-                                                    "font-mono text-sm",
-                                                    count > 0 ? "font-bold text-slate-700 dark:text-slate-200 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded" : "text-slate-300 dark:text-slate-600"
-                                                )}>
-                                                    {count || '-'}
-                                                </span>
+                                            <td key={idx} className="p-2 text-center border-r border-slate-200 dark:border-slate-800 last:border-0 relative">
+                                                <div className="flex flex-col justify-center items-center gap-1 h-full min-h-[50px]">
+                                                    {!isLocked ? (
+                                                        // Unlocked view: Input is primary, Auto count is small
+                                                        <div className="relative w-full h-full flex items-center justify-center">
+                                                             <input
+                                                                type="number"
+                                                                value={manuals[idx] || 0}
+                                                                onChange={(e) => updateManualDays(emp.id, idx, e.target.value)}
+                                                                className="w-full max-w-[60px] h-10 text-center text-lg font-bold bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-orange-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+                                                            />
+                                                            {count > 0 && (
+                                                                <div className="absolute -top-2 -right-1 bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-blue-200 shadow-sm z-10" title={`Urlop z grafiku: ${count}`}>
+                                                                    +{count}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        // Locked view: Show Total (Auto + Manual)
+                                                        <div className="flex items-center justify-center">
+                                                            <span className={cn(
+                                                                "font-mono text-base px-3 py-1.5 rounded-lg transition-colors",
+                                                                (count + (manuals[idx] || 0)) > 0 
+                                                                    ? "font-bold text-slate-800 dark:text-slate-100 bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800" 
+                                                                    : "text-slate-300 dark:text-slate-600"
+                                                            )}>
+                                                                {(count + (manuals[idx] || 0)) || '-'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         ))}
-                                        <td className="p-3 text-center bg-slate-50/50 dark:bg-slate-800/20 group-hover:bg-slate-100/50 dark:group-hover:bg-slate-800/50 border-l border-slate-100 dark:border-slate-800">
-                                            <span className="font-bold text-lg text-orange-600 dark:text-orange-400">{total}</span>
+                                        <td className="p-3 text-center bg-slate-100 dark:bg-slate-800/40 border-l-2 border-slate-300 dark:border-slate-700">
+                                            <span className={cn(
+                                                "font-black text-xl",
+                                                remaining < 0 ? "text-green-600 dark:text-green-400" : (remaining > 0 ? "text-orange-600 dark:text-orange-400" : "text-slate-400")
+                                            )}>{remaining}</span>
                                         </td>
                                     </tr>
                                 );

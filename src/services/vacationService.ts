@@ -7,6 +7,7 @@ export interface VacationBalance {
   year: number;
   days: number;
   isHighlighted: boolean;
+  manualDays: number[];
 }
 
 export const vacationService = {
@@ -16,7 +17,7 @@ export const vacationService = {
     // Attempt to fetch from the new table
     const { data, error } = await supabase
       .from('vacation_balances')
-      .select('id, employee_id, user_id, year, days, is_highlighted')
+      .select('id, employee_id, user_id, year, days, is_highlighted, manual_days')
       .eq('user_id', userId)
       .eq('year', year)
       .in('employee_id', employeeIds);
@@ -32,33 +33,12 @@ export const vacationService = {
           userId: b.user_id,
           year: b.year,
           days: b.days,
-          isHighlighted: b.is_highlighted || false
+          isHighlighted: b.is_highlighted || false,
+          manualDays: b.manual_days || Array(12).fill(0)
       } as VacationBalance));
   },
 
-  async upsertBalance(employeeId: string, userId: string, year: number, updates: { days?: number, isHighlighted?: boolean }) {
-      // First, get current value if we are doing partial update to ensure we don't overwrite with null/default if row exists?
-      // Actually, Supabase upsert will merge? No, upsert replaces unless we conform to update behavior.
-      // Easiest is to fetch current row if needed, but usually we have state in UI.
-      // Let's assume the UI passes both or we risk overwriting.
-      // To be safe, let's just use what is passed, but if one is undefined, it might be tricky.
-      // Actually, simpler: fetch existing row, merge, then upsert.
-      
-      // Let's try to do it in one query? No, standard upsert needs all values.
-      // If we use 'onConflict' it updates. But if we omit a column in 'values', does it set to null or keep implementation?
-      // Supabase js upsert takes an object. Keys present are updated/inserted. Keys missing are... ?
-      // If row exists, keys missing might be left alone?
-      // Let's test this assumption or just fetch-update.
-      
-      // Since this is low volume, fetch first is fine if needed, but actually we can just select via UI state.
-      // Let's make the caller provide all values if unsure, OR fetch current.
-      // But here we might not have all values easily.
-      
-      // Better approach:
-      // Since we already loaded balances in the UI, we can pass the current 'days' when updating 'highlight' and vice versa.
-      // So we will require both or partial?
-      
-      // Let's just create payload with defined values.
+  async upsertBalance(employeeId: string, userId: string, year: number, updates: { days?: number, isHighlighted?: boolean, manualDays?: number[] }) {
       const payload: any = {
           employee_id: employeeId,
           user_id: userId,
@@ -67,13 +47,7 @@ export const vacationService = {
       
       if (updates.days !== undefined) payload.days = updates.days;
       if (updates.isHighlighted !== undefined) payload.is_highlighted = updates.isHighlighted;
-      
-      // If we don't provide a field, standard SQL/Supabase upsert might set it to null or default if inserting?
-      // If updating, does it touch missing fields?
-      // The `upsert` sends an INSERT ... ON CONFLICT DO UPDATE SET ...
-      // So checks documentation... Supabase-js upsert: "If the row exists, it will be updated with the data provided."
-      // If data provided is partial, it updates partially?
-      // Yes, usually.
+      if (updates.manualDays !== undefined) payload.manual_days = updates.manualDays;
       
       const { data, error } = await supabase
         .from('vacation_balances')
@@ -89,7 +63,8 @@ export const vacationService = {
           userId: data.user_id,
           year: data.year,
           days: data.days,
-          isHighlighted: data.is_highlighted
+          isHighlighted: data.is_highlighted,
+          manualDays: data.manual_days || Array(12).fill(0)
       } as VacationBalance;
   }
 };
