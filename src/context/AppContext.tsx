@@ -5,9 +5,11 @@ interface AppSettings {
   viewMode: ViewMode;
   isCompactMode: boolean;
   showWeekends: boolean;
+  userName: string;
   setViewMode: (mode: ViewMode) => void;
   setIsCompactMode: (isCompact: boolean) => void;
   setShowWeekends: (show: boolean) => void;
+  setUserName: (name: string) => void;
 }
 
 const AppContext = createContext<AppSettings | undefined>(undefined);
@@ -27,6 +29,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return stored === null ? true : stored === 'true';
   });
 
+  const [userName, setUserNameState] = useState(() => {
+    return localStorage.getItem('grafik_userName') || '';
+  });
+
   // Persistence wrappers
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
@@ -43,14 +49,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('grafik_showWeekends', String(show));
   };
 
+  const setUserName = (name: string) => {
+    setUserNameState(name);
+    localStorage.setItem('grafik_userName', name);
+  };
+
   return (
     <AppContext.Provider value={{ 
       viewMode, 
       isCompactMode, 
       showWeekends, 
+      userName,
       setViewMode, 
       setIsCompactMode, 
-      setShowWeekends 
+      setShowWeekends,
+      setUserName
     }}>
       {children}
     </AppContext.Provider>

@@ -6,10 +6,9 @@ import { cn } from '../../utils';
 import { useAppContext } from '../../context/AppContext';
 
 // Modals
-import { InstructionsModal } from '../InstructionsModal';
 import { FeedbackModal } from '../FeedbackModal';
-import { SettingsModal } from '../SettingsModal';
 import { SystemResetModal } from '../SystemResetModal';
+import { APP_CONFIG } from '../../config/app';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,6 +16,7 @@ interface MainLayoutProps {
   headerCenter?: React.ReactNode;
   headerRight?: React.ReactNode;
   onAddEmployee?: () => void;
+  pageTitle?: string | null;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -25,6 +25,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   headerCenter,
   headerRight,
   onAddEmployee,
+  pageTitle
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -32,16 +33,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [showTerms, setShowTerms] = useState(false);
 
   // Internal Modal States
-  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSystemResetOpen, setIsSystemResetOpen] = useState(false);
 
   // App Context
   const { 
-      viewMode, setViewMode, 
-      isCompactMode, setIsCompactMode, 
-      showWeekends, setShowWeekends 
+      userName
   } = useAppContext();
 
   useEffect(() => {
@@ -60,21 +57,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   };
 
   const menuItems = [
-    { label: 'Grafik', sub: 'Grafik zmian', active: location.pathname === '/' || location.pathname === '/work-grid-system/' || location.pathname === '/work-grid-system', icon: Calendar, action: () => navigate('/') },
+    { label: 'Pulpit', sub: 'Przegląd', active: location.pathname === '/', icon: LayoutDashboard, action: () => navigate('/') },
+    { label: 'Grafik', sub: 'Grafik zmian', active: location.pathname === '/schedule', icon: Calendar, action: () => navigate('/schedule') },
     { label: 'Wolne Soboty', sub: 'Rozliczenie roczne', active: location.pathname.includes('free-saturdays'), icon: Coffee, action: () => navigate('/free-saturdays') },
     { label: 'Urlopy', sub: 'Wykorzystane dni', active: location.pathname.includes('vacations'), icon: Palmtree, action: () => navigate('/vacations') },
     { label: 'Zamówienia', sub: 'Lista braków', active: location.pathname.includes('orders'), icon: ShoppingCart, action: () => navigate('/orders') },
-    { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: !onAddEmployee, icon: UsersRound, action: onAddEmployee },
-    { label: 'Instrukcja', sub: 'Pomoc', disabled: false, icon: BookOpen, action: () => setIsInstructionsOpen(true) },
+    { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', disabled: false, icon: UsersRound, action: onAddEmployee || (() => navigate('/schedule')) },
+    { label: 'Instrukcja', sub: 'Pomoc', disabled: false, icon: BookOpen, action: () => navigate('/instructions') },
     { label: 'Przeładuj system', sub: 'Reset danych', disabled: false, icon: RotateCcw, action: () => setIsSystemResetOpen(true) },
-    { label: 'Dashboard', sub: 'Statystyki', disabled: true, icon: LayoutDashboard },
     { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: false, icon: Lightbulb, action: () => setIsFeedbackModalOpen(true) },
-    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: false, icon: Settings, action: () => setIsSettingsOpen(true) },
-  ];
-
-  const infoItems = [
-    { label: 'O aplikacji', onClick: () => setShowAbout(true) },
-    { label: 'Regulamin', onClick: () => setShowTerms(true) },
+    { label: 'Ustawienia', sub: 'Konfiguracja', disabled: false, icon: Settings, action: () => navigate('/settings') },
   ];
 
   return (
@@ -90,7 +82,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                  >
                      {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                  </button>
-                 <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden md:block">Grafik</h1>
+                 {pageTitle !== null && (
+                    <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden md:block">{pageTitle || 'Grafik'}</h1>
+                 )}
               </div>
 
               {headerLeft && (
@@ -101,8 +95,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
            </div>
 
            {/* Center Section: Templates - Responsive wrapping */}
-           {/* On mobile/tablet/laptop: order-3 (new line), w-full (centered), with separator line */}
-           {/* On large desktop (2xl): order-2 (middle), w-auto, no separator */}
            <div className="order-3 2xl:order-2 w-full 2xl:w-auto flex justify-center items-center min-w-0 mx-2 mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-800 2xl:mt-0 2xl:pt-0 2xl:border-0">
                {headerCenter}
            </div>
@@ -115,11 +107,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   </div>
               )}
                <div className="hidden 2xl:flex items-center gap-3 shrink-0">
-                 <span className="hidden sm:inline text-sm font-bold text-slate-700 dark:text-slate-300">{userEmail.split('@')[0]}</span>
+                 <span className="hidden sm:inline text-sm font-bold text-slate-700 dark:text-slate-300">{userName || userEmail.split('@')[0]}</span>
                  <div 
                     className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs select-none overflow-hidden relative ring-2 ring-white dark:ring-slate-700 hover:scale-105 active:scale-95 transition-all"
                   >
-                      {userEmail.charAt(0).toUpperCase()}
+                      {(userName || userEmail).charAt(0).toUpperCase()}
                   </div>
                </div>
            </div>
@@ -201,23 +193,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        </main>
 
        {/* Global Modals */}
-       <InstructionsModal 
-         isOpen={isInstructionsOpen} 
-         onClose={() => setIsInstructionsOpen(false)} 
-       />
        <FeedbackModal 
          isOpen={isFeedbackModalOpen} 
          onClose={() => setIsFeedbackModalOpen(false)} 
-       />
-       <SettingsModal 
-         isOpen={isSettingsOpen} 
-         onClose={() => setIsSettingsOpen(false)} 
-         viewMode={viewMode}
-         onViewModeChange={setViewMode}
-         isCompactMode={isCompactMode}
-         onCompactModeChange={setIsCompactMode}
-         showWeekends={showWeekends}
-         onShowWeekendsChange={setShowWeekends}
        />
        <SystemResetModal
          isOpen={isSystemResetOpen}
@@ -230,34 +208,50 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAbout(false)} />
                <div className="relative bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                   <h3 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">O aplikacji</h3>
-                   <div className="space-y-3 text-slate-600 dark:text-slate-400 text-sm">
-                       <p>System Grafik to nowoczesne narzędzie do zarządzania czasem pracy w małych i średnich przedsiębiorstwach.</p>
-                        <p>Wersja: <strong className="text-slate-900 dark:text-slate-200">2.1.0 (Build 2025)</strong></p>
-                        <p className="select-none">
-                          Created by: <strong className="text-slate-900 dark:text-slate-200">Mateusz Gałuszka</strong>
-                        </p>
+                   <div className="flex items-center justify-between mb-4">
+                       <h3 className="text-xl font-bold text-slate-900 dark:text-white">O aplikacji</h3>
+                       <button onClick={() => setShowAbout(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                           <X className="w-5 h-5 text-slate-500" />
+                       </button>
+                   </div>
+                   
+                   <div className="space-y-4 text-slate-600 dark:text-slate-400 text-sm">
+                       <div className="text-center py-4 border-b border-slate-100 dark:border-slate-800">
+                           <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-indigo-600 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                               <LayoutDashboard className="w-8 h-8" strokeWidth={1.5} />
+                           </div>
+                           <h4 className="text-lg font-bold text-slate-900 dark:text-white">{APP_CONFIG.APP_NAME}</h4>
+                           <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-1">v{APP_CONFIG.APP_VERSION} (Build {APP_CONFIG.APP_BUILD})</p>
+                       </div>
+
+                       <p className="leading-relaxed text-center px-4">
+                           {APP_CONFIG.APP_DESCRIPTION}
+                       </p>
                        
-                       <div className="pt-2">
-                           <p className="font-bold text-slate-800 dark:text-slate-200 mb-1">Planowane funkcje:</p>
-                           <ul className="list-disc list-inside text-xs space-y-1 ml-1 text-slate-500 dark:text-slate-400">
-                               <li>Pełna responsywność (Mobile/Tablet)</li>
-                               <li>Zaawansowane raporty i statystyki</li>
-                               <li>Eksport do PDF/Excel</li>
-                           </ul>
-                       </div>
-
-                       <div className="pt-2">
-                           <a href="https://github.com/matikgal" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1">
-                               github.com/matikgal
-                           </a>
-                       </div>
-
-                       <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700 mt-4 text-xs text-slate-500 dark:text-slate-400">
-                           Stack technologiczny: React, TailwindCSS, Supabase, Vite.
+                       <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl space-y-2 border border-slate-100 dark:border-slate-800 text-xs">
+                           <div className="flex justify-between">
+                               <span className="text-slate-500 dark:text-slate-400">Autor:</span>
+                               <span className="font-medium text-slate-900 dark:text-white">{APP_CONFIG.APP_AUTHOR}</span>
+                           </div>
+                           <div className="flex justify-between">
+                               <span className="text-slate-500 dark:text-slate-400">Rok:</span>
+                               <span className="font-medium text-slate-900 dark:text-white">{APP_CONFIG.APP_YEAR}</span>
+                           </div>
+                           <div className="flex justify-between">
+                               <span className="text-slate-500 dark:text-slate-400">Kontakt:</span>
+                               <a href={APP_CONFIG.APP_AUTHOR_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-600 dark:text-brand-400 hover:underline">
+                                   GitHub Profil
+                               </a>
+                           </div>
                        </div>
                    </div>
-                   <button onClick={() => setShowAbout(false)} className="mt-6 w-full py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">Zamknij</button>
+                   
+                   <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+                       <p className="text-[10px] text-slate-400">
+                           Wszelkie prawa zastrzeżone &copy; {APP_CONFIG.APP_YEAR} <br/>
+                           Design & Development by {APP_CONFIG.APP_AUTHOR}
+                       </p>
+                   </div>
                </div>
            </div>
        )}
@@ -265,16 +259,73 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
        {showTerms && (
            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowTerms(false)} />
-               <div className="relative bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col">
-                   <h3 className="text-xl font-bold mb-4 shrink-0 text-slate-900 dark:text-white">Regulamin</h3>
-                   <div className="space-y-3 text-slate-600 dark:text-slate-400 text-sm overflow-y-auto pr-2 custom-scrollbar flex flex-col items-center justify-center min-h-[150px]">
-                       <p className="text-lg text-slate-500 dark:text-slate-400 font-medium text-center">Do uzupełnienia kiedyś może</p>
-                       
-                       <div className="mt-2 pt-4 w-full text-center">
-                           <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Właścicielem zdjęć jest Paulinka</p>
+               <div className="relative bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-2xl p-0 animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col overflow-hidden">
+                   
+                   {/* Header */}
+                   <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
+                       <div>
+                           <h3 className="text-xl font-bold text-slate-900 dark:text-white">Regulamin Serwisu</h3>
+                           <p className="text-xs text-slate-500 dark:text-slate-400">Ostatnia aktualizacja: {new Date().toLocaleDateString('pl-PL')}</p>
                        </div>
+                       <button onClick={() => setShowTerms(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                           <X className="w-5 h-5 text-slate-500" />
+                       </button>
                    </div>
-                   <button onClick={() => setShowTerms(false)} className="mt-6 w-full py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shrink-0">Akceptuję i zamykam</button>
+
+                   {/* Scrollable Content */}
+                   <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar space-y-6 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                       <section>
+                           <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">1. Postanowienia ogólne</h4>
+                           <p>
+                               Niniejszy regulamin określa zasady korzystania z systemu <strong>{APP_CONFIG.APP_NAME}</strong>.
+                               Dostęp do aplikacji jest możliwy wyłącznie dla autoryzowanych pracowników i administratorów.
+                               Korzystanie z serwisu oznacza akceptację poniższych warunków.
+                           </p>
+                       </section>
+
+                       <section>
+                           <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">2. Zasady użytkowania</h4>
+                           <ul className="list-disc list-inside space-y-1 ml-1">
+                               <li>Użytkownik zobowiązuje się do korzystania z systemu zgodnie z jego przeznaczeniem.</li>
+                               <li>Zabrania się wprowadzania fałszywych danych oraz prób nieautoryzowanego dostępu.</li>
+                               <li>Hasła dostępowe są poufne i nie mogą być udostępniane osobom trzecim.</li>
+                           </ul>
+                       </section>
+
+                       <section>
+                           <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">3. Ochrona danych (RODO)</h4>
+                           <p>
+                               System przetwarza dane osobowe pracowników w zakresie niezbędnym do planowania i ewidencji czasu pracy.
+                               Administratorem danych jest operator systemu. Dane są chronione zgodnie z obowiązującymi przepisami prawa.
+                           </p>
+                       </section>
+
+                       <section>
+                           <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2">4. Odpowiedzialność</h4>
+                           <p>
+                               Twórca oprogramowania nie ponosi odpowiedzialności za błędy w grafikach wynikające z wprowadzenia niepoprawnych danych przez użytkowników.
+                               System służy jako narzędzie wspomagające, a ostateczna weryfikacja zgodności z Kodeksem Pracy leży po stronie Pracodawcy.
+                           </p>
+                       </section>
+
+                        <section className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 mt-4">
+                           <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Nota Prawna</h4>
+                           <p className="text-xs">
+                               Oprogramowanie <strong>{APP_CONFIG.APP_NAME}</strong> jest dostarczane w modelu "as is" (takim jaki jest), bez gwarancji jakiegokolwiek rodzaju.
+                               Twórca (Mateusz Gałuszka) zachowuje wszelkie prawa autorskie do kodu źródłowego i projektu interfejsu.
+                           </p>
+                       </section>
+                   </div>
+
+                   {/* Footer */}
+                   <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end">
+                       <button 
+                           onClick={() => setShowTerms(false)} 
+                           className="px-6 py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shadow-lg shadow-slate-900/10 active:scale-95 transform"
+                       >
+                           Zamknij
+                       </button>
+                   </div>
                </div>
            </div>
        )}

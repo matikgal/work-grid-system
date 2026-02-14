@@ -111,7 +111,9 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageTitle="Zamówienia"
+    >
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* Header - Fixed */}
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex-none">

@@ -6,11 +6,14 @@ import { Loader2 } from 'lucide-react';
 
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { SchedulePage } from './pages/SchedulePage';
 import { FreeSaturdaysPage } from './pages/FreeSaturdaysPage';
 import { VacationsPage } from './pages/VacationsPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
+import { InstructionsPage } from './pages/InstructionsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from 'sonner';
@@ -64,6 +67,10 @@ const App: React.FC = () => {
                 element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
               />
               <Route 
+                path="/schedule" 
+                element={session ? <SchedulePage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
                 path="/free-saturdays" 
                 element={session ? <FreeSaturdaysPage session={session} /> : <Navigate to="/login" replace />} 
               />
@@ -83,7 +90,14 @@ const App: React.FC = () => {
                 path="/order/:token" 
                 element={<PublicOrderPage />} 
               />
-
+              <Route 
+                path="/instructions" 
+                element={session ? <InstructionsPage /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/settings" 
+                element={session ? <SettingsPage /> : <Navigate to="/login" replace />} 
+              />
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

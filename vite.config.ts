@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, './src'),
         }
       },
+      // Re-optimize dependencies trigger
       base: '/work-grid-system/',
     };
 });

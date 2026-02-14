@@ -189,6 +189,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
   return (
     <MainLayout
+      pageTitle="Urlopy"
       onAddEmployee={() => setIsEmployeesManagerOpen(true)}
     >
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">

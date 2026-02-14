@@ -100,7 +100,7 @@ export const AdminOrderPage: React.FC = () => {
     const shops = Array.from({ length: 13 }, (_, i) => i + 1);
 
     return (
-        <MainLayout>
+        <MainLayout pageTitle="Edycja Zamówienia">
             <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
                 {/* Header */}
                 <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex-none flex items-center justify-between">

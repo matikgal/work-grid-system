@@ -9,11 +9,9 @@ import { adjustmentService, WsAdjustment } from '../services/adjustmentService';
 
 // Modals
 import { SystemResetModal } from '../components/SystemResetModal';
-import { InstructionsModal } from '../components/InstructionsModal';
 import { FeedbackModal } from '../components/FeedbackModal';
-import { SettingsModal } from '../components/SettingsModal';
 import { EmployeesManagerModal } from '../components/EmployeesManagerModal';
-import { ViewMode, Employee } from '../types';
+import { Employee } from '../types';
 import { useMobile } from '../hooks/useMobile';
 import { useEmployees } from '../hooks/useEmployees';
 
@@ -32,15 +30,9 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
 
   // Modal states
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isEmployeesManagerOpen, setIsEmployeesManagerOpen] = useState(false);
   const isMobile = useMobile();
-
-  // Settings State (Stub for now, or local)
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [isCompactMode, setIsCompactMode] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -113,11 +105,8 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
 
   return (
     <MainLayout
+      pageTitle="Wolne Soboty"
       onAddEmployee={() => setIsEmployeesManagerOpen(true)}
-      onResetSystem={() => setIsResetModalOpen(true)}
-      onOpenInstructions={() => setIsInstructionsModalOpen(true)}
-      onOpenFeedback={() => setIsFeedbackModalOpen(true)}
-      onOpenSettings={() => setIsSettingsModalOpen(true)}
     >
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
             {/* Header */}
@@ -308,25 +297,9 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
         onConfirm={() => window.location.reload()}
       />
       
-      <InstructionsModal
-        isOpen={isInstructionsModalOpen}
-        onClose={() => setIsInstructionsModalOpen(false)}
-      />
-      
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
-      />
-
-      <SettingsModal 
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        isCompactMode={isCompactMode}
-        onCompactModeChange={setIsCompactMode}
-        showWeekends={true}
-        onShowWeekendsChange={() => {}}
       />
 
       <EmployeesManagerModal
