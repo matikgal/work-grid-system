@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Send, Lightbulb, MessageSquare } from 'lucide-react';
-import { cn } from '../utils';
+import { cn } from '../../utils';
 
 interface FeedbackModalProps {
   isOpen: boolean;

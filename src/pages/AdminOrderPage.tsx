@@ -1,58 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Home, Clipboard } from 'lucide-react';
-import { orderService, Order, OrderItem } from '../services/orderService';
+import { ArrowLeft, Save, Plus, Clipboard } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
-
-import { ConfirmModal } from '../components/ConfirmModal';
+import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
+import { 
+  useOrder, 
+  useOrderItems, 
+  useAddItem, 
+  useDeleteItem 
+} from '../hooks/useOrders';
+import { orderService } from '../services/orderService';
+import { AdminOrderTable } from '../components/features/orders/AdminOrderTable';
 
 export const AdminOrderPage: React.FC = () => {
     const { id } = useParams<{ id: string }>(); 
-    const [order, setOrder] = useState<Order | null>(null);
-    const [items, setItems] = useState<OrderItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [addingRow, setAddingRow] = useState(false);
-    const [error, setError] = useState('');
+    
+    // React Query
+    const { data: order, isLoading: isOrderLoading, error: orderError } = useOrder(id || '');
+    const { data: items = [], isLoading: isItemsLoading } = useOrderItems(id || '');
+    
+    // Mutations
+    const addItemMutation = useAddItem();
+    const deleteItemMutation = useDeleteItem();
+
     const [saving, setSaving] = useState(false);
     
-    // Modal state
+    // Modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (id) fetchData(id);
-    }, [id]);
-
-    const fetchData = async (orderId: string) => {
-        try {
-            setLoading(true);
-            const orderData = await orderService.getOrderById(orderId);
-            if (!orderData) throw new Error("Order not found");
-            setOrder(orderData);
-            
-            const itemsData = await orderService.getOrderItems(orderId);
-            setItems(itemsData);
-        } catch (e) {
-            console.error(e);
-            setError("Nie znaleziono zamówienia lub wystąpił błąd.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleAddItem = async () => {
         if (!id) return;
-        setAddingRow(true);
         try {
-            await orderService.addItem(id, "");
-            await fetchData(id);
+            await addItemMutation.mutateAsync({ orderId: id, name: "Nowy Produkt" });
             toast.success("Dodano nowy produkt");
         } catch (e) {
             console.error(e);
             toast.error("Błąd dodawania produktu");
-        } finally {
-            setAddingRow(false);
         }
     };
 
@@ -62,10 +47,9 @@ export const AdminOrderPage: React.FC = () => {
     };
 
     const confirmDelete = async () => {
-        if (!itemToDelete) return;
+        if (!itemToDelete || !id) return;
         try {
-            await orderService.deleteItem(itemToDelete);
-            setItems(prev => prev.filter(i => i.id !== itemToDelete));
+            await deleteItemMutation.mutateAsync({ id: itemToDelete, orderId: id });
             toast.success("Usunięto produkt");
             setIsDeleteModalOpen(false);
             setItemToDelete(null);
@@ -75,34 +59,80 @@ export const AdminOrderPage: React.FC = () => {
         }
     };
 
-    const handleBlur = async (itemId: string, field: keyof OrderItem, value: string) => {
+    const handleBlurName = async (itemId: string, value: string) => {
         if (!id) return;
         setSaving(true);
         try {
-            await orderService.updateItem(itemId, { [field]: value });
-            // Optional: toast.success("Zapisano"); - maybe too noisy for auto-save, let's keep it silent or minimal
+            await orderService.updateItemName(itemId, value);
         } catch (e) {
             console.error("Failed to save", e);
-            toast.error("Błąd zapisu");
+            toast.error("Błąd zapisu nazwy produktu");
         } finally {
             setSaving(false);
         }
     };
 
-    const handleLocalChange = (itemId: string, field: keyof OrderItem, value: string) => {
-        setItems(prev => prev.map(item => item.id === itemId ? { ...item, [field]: value } : item));
-        if (error) setError('');
-    }
-
-    if (loading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">Ładowanie zamówienia...</div>;
-    if (error && !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">{error || "Błąd"}</div>;
-
     const shops = Array.from({ length: 13 }, (_, i) => i + 1);
+
+    const copyToClipboard = () => {
+        const tableHtml = `
+            <table border="1" style="border-collapse: collapse; width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #d1d5db;">Nazwa Produktu</th>
+                        ${shops.map(n => `<th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Sklep ${n}</th>`).join('')}
+                        <th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Suma</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => {
+                        let sum = 0;
+                        shops.forEach(n => {
+                            const shopResp = item.responses?.find(r => r.shopId === n.toString());
+                            const val = shopResp?.value;
+                            const num = parseFloat(val?.replace(',', '.') || '0');
+                            if (!isNaN(num)) sum += num;
+                        });
+                        return `
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #d1d5db;">${item.name}</td>
+                                ${shops.map(n => {
+                                    const shopResp = item.responses?.find(r => r.shopId === n.toString());
+                                    return `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${shopResp?.value || ''}</td>`
+                                }).join('')}
+                                <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold;">${sum > 0 ? sum : ''}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        try {
+            const blobHtml = new Blob([tableHtml], { type: 'text/html' });
+            const blobText = new Blob([items.map(i => i.name).join('\n')], { type: 'text/plain' });
+            if (typeof ClipboardItem !== 'undefined') {
+                const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
+                navigator.clipboard.write(data).then(() => {
+                    toast.success('Tabela skopiowana do schowka! Możesz wkleić do Outlooka/Excela.');
+                }).catch(err => {
+                    throw err;
+                });
+            } else {
+                 toast.error('Twoja przeglądarka nie wspiera kopiowania Rich Text');
+            }
+        } catch(err) {
+            console.error('Failed to copy: ', err);
+            toast.error('Błąd kopiowania');
+        }
+    };
+
+    if (isOrderLoading || isItemsLoading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">Ładowanie zamówienia...</div>;
+    if (orderError && !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">Błąd ładowania lub brak zamówienia.</div>;
 
     return (
         <MainLayout pageTitle="Edycja Zamówienia">
             <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                {/* Header */}
                 <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex-none flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-4 mb-2">
@@ -114,52 +144,12 @@ export const AdminOrderPage: React.FC = () => {
                             </h1>
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 ml-11">
-                            Tutaj możesz zarządzać strukturą zamówienia (dodawać/usuwać produkty i zmieniać ich nazwy).
+                            Zarządzaj strukturą tabeli – dodawaj, usuwaj produkty i edytuj ich nazwy przed udostępnieniem.
                         </p>
                     </div>
                      <div className="flex items-center gap-4">
                         <button
-                            onClick={() => {
-                                const tableHtml = `
-                                    <table border="1" style="border-collapse: collapse; width: 100%;">
-                                        <thead>
-                                            <tr>
-                                                <th style="background-color: #f3f4f6; padding: 8px; text-align: left; border: 1px solid #d1d5db;">Nazwa Produktu</th>
-                                                ${shops.map(n => `<th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Sklep ${n}</th>`).join('')}
-                                                <th style="background-color: #f3f4f6; padding: 8px; text-align: center; border: 1px solid #d1d5db;">Suma</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${items.map(item => {
-                                                let sum = 0;
-                                                shops.forEach(n => {
-                                                    const val = item[`shop${n}` as keyof OrderItem] as string;
-                                                    const num = parseFloat(val?.replace(',', '.') || '0');
-                                                    if (!isNaN(num)) sum += num;
-                                                });
-                                                return `
-                                                    <tr>
-                                                        <td style="padding: 8px; border: 1px solid #d1d5db;">${item.name}</td>
-                                                        ${shops.map(n => `<td style="padding: 8px; text-align: center; border: 1px solid #d1d5db;">${item[`shop${n}` as keyof OrderItem] || ''}</td>`).join('')}
-                                                        <td style="padding: 8px; text-align: center; border: 1px solid #d1d5db; font-weight: bold;">${sum > 0 ? sum : ''}</td>
-                                                    </tr>
-                                                `;
-                                            }).join('')}
-                                        </tbody>
-                                    </table>
-                                `;
-                                
-                                const blobHtml = new Blob([tableHtml], { type: 'text/html' });
-                                const blobText = new Blob([items.map(i => i.name).join('\n')], { type: 'text/plain' });
-                                const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
-                                
-                                navigator.clipboard.write(data).then(() => {
-                                    toast.success('Tabela skopiowana do schowka! Możesz wkleić do Outlooka/Excela.');
-                                }).catch(err => {
-                                    console.error('Failed to copy: ', err);
-                                    toast.error('Błąd kopiowania');
-                                });
-                            }}
+                            onClick={copyToClipboard}
                             className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
                         >
                             <Clipboard className="w-4 h-4" />
@@ -169,81 +159,18 @@ export const AdminOrderPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6">
-                     <div className="max-w-[1920px] mx-auto bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-                                        <th className="p-4 min-w-[300px] text-xs font-bold uppercase text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800">
-                                            Nazwa Produktu (Edycja)
-                                        </th>
-                                        {shops.map(n => (
-                                            <th key={n} className="p-4 min-w-[80px] text-xs font-bold uppercase text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 last:border-0 opacity-50">
-                                                Sklep {n}
-                                            </th>
-                                        ))}
-                                        {/* Sum Column Header - Placeholder since values are read-only here for context */}
-                                         <th className="p-4 min-w-[80px] text-xs font-bold uppercase text-center text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
-                                            Suma
-                                        </th>
-                                        <th className="p-4 w-16 bg-slate-50 dark:bg-slate-950 text-center">
-                                            Usuń
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {items.map(item => {
-                                         // Mock calc sum for display context
-                                        let sum = 0;
-                                        shops.forEach(n => {
-                                            const val = item[`shop${n}` as keyof OrderItem] as string;
-                                            const num = parseFloat(val?.replace(',', '.') || '0');
-                                            if (!isNaN(num)) sum += num;
-                                        });
-
-                                        return (
-                                            <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                <td className="p-0 border-r border-slate-200 dark:border-slate-800">
-                                                    <input 
-                                                        type="text" 
-                                                        value={item.name}
-                                                        onChange={e => handleLocalChange(item.id, 'name', e.target.value)}
-                                                        onBlur={e => handleBlur(item.id, 'name', e.target.value)}
-                                                        className="w-full h-full p-4 bg-transparent focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 font-bold text-slate-800 dark:text-white placeholder-slate-300"
-                                                        placeholder="Wpisz nazwę produktu..."
-                                                    />
-                                                </td>
-                                                {shops.map(n => (
-                                                    <td key={n} className="p-4 text-center border-r border-slate-200 dark:border-slate-800 text-slate-400 text-sm">
-                                                        {item[`shop${n}` as keyof OrderItem] || '-'}
-                                                    </td>
-                                                ))}
-                                                <td className="p-4 text-center font-bold text-slate-800 dark:text-white bg-slate-50/50 dark:bg-slate-900/50">
-                                                    {sum > 0 ? sum : '-'}
-                                                </td>
-                                                <td className="p-0 text-center">
-                                                    <button 
-                                                        onClick={() => initiateDelete(item.id)}
-                                                        className="p-4 text-slate-300 hover:text-red-500 transition-colors w-full h-full flex items-center justify-center"
-                                                        title="Usuń wiersz"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <AdminOrderTable 
+                      items={items} 
+                      shops={shops} 
+                      onBlurName={handleBlurName} 
+                      onDeleteItem={initiateDelete} 
+                    />
 
                     <div className="mt-6">
                          <button 
                             onClick={handleAddItem}
-                            disabled={addingRow}
+                            disabled={addItemMutation.isPending}
                             className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
                         >
                             <Plus className="w-4 h-4" />

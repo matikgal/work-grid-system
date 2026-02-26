@@ -3,9 +3,6 @@ import { format, getDay, isToday, getMonth } from "date-fns";
 import { pl } from "date-fns/locale";
 import Holidays from "date-holidays";
 import { Info, Lock, Unlock } from "lucide-react";
-import { Employee, Shift, ViewMode } from "../types";
-import { getShiftStyle, cn, stringToColor } from "../utils";
-import { SHIFT_TYPES } from "../constants";
 import {
   DndContext,
   closestCenter,
@@ -23,6 +20,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Employee, Shift, ViewMode } from "../../types";
+import { getShiftStyle, cn, stringToColor } from "../../utils";
+import { SHIFT_TYPES } from "../../constants";
 
 interface CalendarGridProps {
   days: Date[];

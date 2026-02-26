@@ -1,228 +1,195 @@
 import { supabase } from '../lib/supabase';
-
-export interface Order {
-  id: string;
-  userId: string;
-  name: string;
-  createdAt: string;
-  isLocked: boolean;
-  // Progress
-  filledCount?: number;
-  totalCount?: number;
-}
-
-export interface OrderItem {
-  id: string;
-  orderId: string;
-  name: string;
-  shop1: string;
-  shop2: string;
-  shop3: string;
-  shop4: string;
-  shop5: string;
-  shop6: string;
-  shop7: string;
-  shop8: string;
-  shop9: string;
-  shop10: string;
-  shop11: string;
-  shop12: string;
-  shop13: string;
-}
+import { Order, Item, ShopResponse, OrderSchema, ItemSchema } from '../types/schemas';
 
 export const orderService = {
-  // Admin functions
-  async getMyOrders(userId: string) {
+  // --- ADMIN FUNCTIONS ---
+  async getMyOrders(userId: string): Promise<Order[]> {
     const { data, error } = await supabase
       .from('orders')
-      // Fetch orders plus their items to calc progress
-      .select('*, order_items(*)')
+      .select(`
+        *,
+        items (
+          *,
+          shop_responses (*)
+        )
+      `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    
+    if (error) throw new Error(error.message);
+
+    // Map and validate with Zod
     return (data || []).map((o: any) => {
-        let filled = 0;
-        const total = 12;
+      // Calculate filled responses across all items
+      let filledCount = 0;
+      let totalCount = 0;
 
-        if (o.order_items && o.order_items.length > 0) {
-            // Calculate total filled across ALL items? 
-            // Previous logic was only checking first item. 
-            // But now we have multiple items.
-            // If we want "progress" of the whole order, maybe we check if ALL shops in ALL items are filled?
-            // Or just stick to the first item for now?
-            // User requirement: "ile jest uzupełnionych juz rubryk".
-            // Let's sum up all filled cells in all items.
-            
-            // Wait, "to be safe", let's sum all items.
-            // But Total would be 12 * items.length.
-            
-            // For now, let's keep it simple: Just count the FIRST item for the badge if multiple exist, 
-            // OR if the user meant "how many shops have responded", we check per column?
-            // "13 kolmun... w pierwszej nazwa... dane ktore wpisuja ludzie".
-            // If shops respond, they fill their column.
-            // So if Shop 1 fills Item 1, Column 1 is filled.
-            // If Shop 1 fills Item 2...
-            // Usually, a shop fills "their column" for ALL rows.
-            // So "Filled" usually means "How many shops have completed their part?"
-            // A shop is "complete" if they filled at least one cell? Or all?
-            // Let's stick to the previous simple metric: Count non-empty shop cells in the first row. 
-            // It's a heuristic.
-            
-            const item = o.order_items[0];
-            // Check shop_1 through shop_13
-            for (let i = 1; i <= 13; i++) {
-                const val = item[`shop_${i}`];
-                if (val && val.trim() !== '') filled++;
-            }
-        }
+      if (o.items && o.items.length > 0) {
+        // Example logic: number of total responses
+        filledCount = o.items.reduce((acc: number, item: any) => acc + (item.shop_responses?.length || 0), 0);
+        // Assuming 13 shops are expected to fill each item
+        totalCount = o.items.length * 13;
+      }
 
-        return {
-          id: o.id,
-          userId: o.user_id,
-          name: o.name,
-          createdAt: o.created_at,
-          isLocked: o.is_locked,
-          filledCount: filled,
-          totalCount: total
-        } as Order;
+      return OrderSchema.parse({
+        id: o.id,
+        userId: o.user_id,
+        name: o.name,
+        isLocked: o.is_locked,
+        createdAt: o.created_at,
+        updatedAt: o.updated_at,
+        items: (o.items || []).map((i: any) => ({
+          id: i.id,
+          orderId: i.order_id,
+          name: i.name,
+          createdAt: i.created_at,
+          updatedAt: i.updated_at,
+          responses: (i.shop_responses || []).map((r: any) => ({
+            id: r.id,
+            itemId: r.item_id,
+            shopId: r.shop_id,
+            value: r.value,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          }))
+        }))
+      });
     });
   },
 
-  async createOrder(name: string, userId: string) {
+  async createOrder(name: string, userId: string): Promise<Order> {
     const { data, error } = await supabase
       .from('orders')
       .insert({ name, user_id: userId })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
 
-    // NO auto-create item. User wants to add manually.
-    
-    return {
+    return OrderSchema.parse({
       id: data.id,
       userId: data.user_id,
       name: data.name,
+      isLocked: data.is_locked,
       createdAt: data.created_at,
-      isLocked: data.is_locked || false
-    } as Order;
+      updatedAt: data.updated_at,
+    });
   },
 
-  async updateOrderStatus(id: string, isLocked: boolean) {
-      const { error } = await supabase
-        .from('orders')
-        .update({ is_locked: isLocked })
-        .eq('id', id);
-        
-      if (error) throw error;
+  async updateOrderStatus(id: string, isLocked: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('orders')
+      .update({ is_locked: isLocked })
+      .eq('id', id);
+      
+    if (error) throw new Error(error.message);
   },
 
-  async deleteOrder(id: string) {
+  async deleteOrder(id: string): Promise<void> {
     const { error } = await supabase.from('orders').delete().eq('id', id);
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   },
 
-  // Public functions
-  async getOrderById(id: string) {
+  // --- PUBLIC FUNCTIONS ---
+  async getOrderById(id: string): Promise<Order> {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
     
-    return {
+    return OrderSchema.parse({
       id: data.id,
       userId: data.user_id,
       name: data.name,
+      isLocked: data.is_locked,
       createdAt: data.created_at,
-      isLocked: data.is_locked
-    } as Order;
+      updatedAt: data.updated_at,
+      items: []
+    });
   },
 
-  async getOrderItems(orderId: string) {
+  async getOrderItems(orderId: string): Promise<Item[]> {
     const { data, error } = await supabase
-      .from('order_items')
-      .select('*')
+      .from('items')
+      .select('*, shop_responses(*)')
       .eq('order_id', orderId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
 
-    return (data || []).map(i => ({
+    return (data || []).map((i: any) => ItemSchema.parse({
       id: i.id,
       orderId: i.order_id,
       name: i.name,
-      shop1: i.shop_1,
-      shop2: i.shop_2,
-      shop3: i.shop_3,
-      shop4: i.shop_4,
-      shop5: i.shop_5,
-      shop6: i.shop_6,
-      shop7: i.shop_7,
-      shop8: i.shop_8,
-      shop9: i.shop_9,
-      shop10: i.shop_10,
-      shop11: i.shop_11,
-      shop12: i.shop_12,
-      shop13: i.shop_13,
-    } as OrderItem));
+      createdAt: i.created_at,
+      updatedAt: i.updated_at,
+      responses: (i.shop_responses || []).map((r: any) => ({
+        id: r.id,
+        itemId: r.item_id,
+        shopId: r.shop_id,
+        value: r.value,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })),
+    }));
   },
 
-  async addItem(orderId: string, name: string) {
+  async addItem(orderId: string, name: string): Promise<Item> {
     const { data, error } = await supabase
-      .from('order_items')
+      .from('items')
       .insert({ order_id: orderId, name })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
 
-    return data;
+    return ItemSchema.parse({
+      id: data.id,
+      orderId: data.order_id,
+      name: data.name,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      responses: []
+    });
   },
 
-  async updateItem(id: string, updates: Partial<OrderItem>) {
-    // Map camelCase to snake_case manually for shop fields
-    const dbUpdates: any = {};
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.shop1 !== undefined) dbUpdates.shop_1 = updates.shop1;
-    if (updates.shop2 !== undefined) dbUpdates.shop_2 = updates.shop2;
-    if (updates.shop3 !== undefined) dbUpdates.shop_3 = updates.shop3;
-    if (updates.shop4 !== undefined) dbUpdates.shop_4 = updates.shop4;
-    if (updates.shop5 !== undefined) dbUpdates.shop_5 = updates.shop5;
-    if (updates.shop6 !== undefined) dbUpdates.shop_6 = updates.shop6;
-    if (updates.shop7 !== undefined) dbUpdates.shop_7 = updates.shop7;
-    if (updates.shop8 !== undefined) dbUpdates.shop_8 = updates.shop8;
-    if (updates.shop9 !== undefined) dbUpdates.shop_9 = updates.shop9;
-    if (updates.shop10 !== undefined) dbUpdates.shop_10 = updates.shop10;
-    if (updates.shop11 !== undefined) dbUpdates.shop_11 = updates.shop11;
-    if (updates.shop12 !== undefined) dbUpdates.shop_12 = updates.shop12;
-    if (updates.shop13 !== undefined) dbUpdates.shop_13 = updates.shop13;
-
+  async updateItemName(id: string, name: string): Promise<void> {
     const { error } = await supabase
-      .from('order_items')
-      .update(dbUpdates)
+      .from('items')
+      .update({ name })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   },
   
-  async deleteItem(id: string) {
-      const { error } = await supabase.from('order_items').delete().eq('id', id);
-      if (error) throw error;
+  async deleteItem(id: string): Promise<void> {
+    const { error } = await supabase.from('items').delete().eq('id', id);
+    if (error) throw new Error(error.message);
   },
 
-  async getOrderLockStatus(id: string) {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('is_locked')
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
-      return data.is_locked;
+  async upsertShopResponse(itemId: string, shopId: string, value: string): Promise<void> {
+    // We use upsert to insert or update the response
+    const { error } = await supabase
+      .from('shop_responses')
+      .upsert(
+        { item_id: itemId, shop_id: shopId, value },
+        { onConflict: 'item_id,shop_id' }
+      );
+
+    if (error) throw new Error(error.message);
+  },
+
+  async getOrderLockStatus(id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('is_locked')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw new Error(error.message);
+    return data.is_locked;
   }
 };

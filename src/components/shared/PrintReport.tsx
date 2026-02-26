@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, getDay, getYear, getMonth } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
-import { Employee, Shift, ViewMode } from '../types';
-import { SHIFT_TYPES } from '../constants';
+import { Employee, Shift, ViewMode } from '../../types';
+import { SHIFT_TYPES } from '../../constants';
 
 interface PrintReportProps {
   currentDate: Date;

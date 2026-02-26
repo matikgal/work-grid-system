@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { cn } from '../utils';
+import { cn } from '../../utils';
 
 interface ConfirmModalProps {
   isOpen: boolean;

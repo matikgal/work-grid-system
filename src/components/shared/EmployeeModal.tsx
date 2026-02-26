@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, UserPlus, Shield, ShoppingCart, Beef, Croissant, Carrot, Trash2, Edit } from 'lucide-react';
-import { cn } from '../utils';
-import { Employee } from '../types';
+import { cn } from '../../utils';
+import { Employee } from '../../types';
 
 interface EmployeeModalProps {
   isOpen: boolean;

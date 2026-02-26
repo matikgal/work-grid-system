@@ -1,82 +1,69 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Employee } from '../types';
 import { employeeService } from '../services/employeeService';
 import { Session } from '@supabase/supabase-js';
 
+export const employeeKeys = {
+  all: (userId: string) => ['employees', userId] as const,
+};
+
 export function useEmployees(session: Session) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const userId = session.user.id;
 
-  const fetchEmployees = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await employeeService.getAll(session.user.id);
-      setEmployees(data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching employees:', err);
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [session.user.id]);
+  const { data: employees = [], isLoading: loading, error } = useQuery({
+    queryKey: employeeKeys.all(userId),
+    queryFn: () => employeeService.getAll(userId),
+  });
 
-  const addEmployee = async (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string, isVisibleInSchedule = true, isVisibleInVacations = true) => {
-    try {
-      const newEmp = await employeeService.create({
-        name, 
-        role, 
-        userId: session.user.id, 
-        avatarColor,
-        isSeparator,
-        rowColor,
-        isVisibleInSchedule,
-        isVisibleInVacations
-      });
-      setEmployees(prev => [...prev, newEmp]);
-      return newEmp;
-    } catch (err) {
-      console.error('Error adding employee:', err);
-      throw err;
+  const { mutateAsync: addEmployeeMutate } = useMutation({
+    mutationFn: (data: { name: string, role: string, avatarColor?: string, isSeparator?: boolean, rowColor?: string, isVisibleInSchedule?: boolean, isVisibleInVacations?: boolean }) => 
+        employeeService.create({ ...data, userId }),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
     }
+  });
+
+  const { mutateAsync: updateEmployeeMutate } = useMutation({
+    mutationFn: ({ id, updates }: { id: string, updates: Partial<Employee> }) => 
+        employeeService.update(id, updates),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
+    }
+  });
+
+  const { mutateAsync: deleteEmployee } = useMutation({
+    mutationFn: (id: string) => employeeService.delete(id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
+    }
+  });
+
+  const { mutateAsync: reorderEmployees } = useMutation({
+    mutationFn: (newOrder: Employee[]) => employeeService.updateOrder(newOrder, userId),
+    onMutate: async (newOrder) => {
+        await queryClient.cancelQueries({ queryKey: employeeKeys.all(userId) });
+        const previousEmployees = queryClient.getQueryData<Employee[]>(employeeKeys.all(userId));
+        queryClient.setQueryData(employeeKeys.all(userId), newOrder);
+        return { previousEmployees };
+    },
+    onError: (err, newOrder, context) => {
+        if (context?.previousEmployees) {
+            queryClient.setQueryData(employeeKeys.all(userId), context.previousEmployees);
+        }
+    },
+    onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
+    }
+  });
+
+  const addEmployee = (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string, isVisibleInSchedule = true, isVisibleInVacations = true) => {
+      return addEmployeeMutate({ name, role, avatarColor, isSeparator, rowColor, isVisibleInSchedule, isVisibleInVacations });
   };
 
-  const updateEmployee = async (id: string, updates: Partial<Employee>) => {
-    try {
-      const updated = await employeeService.update(id, updates);
-      setEmployees(prev => prev.map(e => e.id === id ? updated : e));
-      return updated;
-    } catch (err) {
-      console.error('Error updating employee:', err);
-      throw err;
-    }
+  const updateEmployee = (id: string, updates: Partial<Employee>) => {
+      return updateEmployeeMutate({ id, updates });
   };
-
-  const deleteEmployee = async (id: string) => {
-    try {
-      await employeeService.delete(id);
-      setEmployees(prev => prev.filter(e => e.id !== id));
-    } catch (err) {
-      console.error('Error deleting employee:', err);
-      throw err;
-    }
-  };
-
-  const reorderEmployees = async (newOrder: Employee[]) => {
-      // Optimistic update
-      setEmployees(newOrder);
-      try {
-          await employeeService.updateOrder(newOrder, session.user.id);
-      } catch (err) {
-          console.error("Error reordering employees:", err);
-          fetchEmployees(); 
-      }
-  };
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
 
   return {
     employees,
@@ -86,6 +73,6 @@ export function useEmployees(session: Session) {
     updateEmployee,
     deleteEmployee,
     reorderEmployees,
-    refreshEmployees: fetchEmployees
+    refreshEmployees: () => queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) })
   };
 }

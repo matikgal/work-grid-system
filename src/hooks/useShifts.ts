@@ -1,81 +1,49 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shift, Employee } from '../types';
 import { shiftService } from '../services/shiftService';
 import { startOfMonth, endOfMonth, format, subDays, addDays } from 'date-fns';
 
+export const shiftKeys = {
+  all: () => ['shifts'] as const,
+  list: (empIds: string[], start: string, end: string) => [...shiftKeys.all(), { empIds, start, end }] as const,
+};
+
 export function useShifts(employees: Employee[], currentDate: Date) {
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const fetchShifts = useCallback(async () => {
-    if (employees.length === 0) return;
-    
-    setLoading(true);
-    try {
-      // Fetch a bit more than just the month to handle weeks crossing months
-      const start = format(subDays(startOfMonth(currentDate), 7), 'yyyy-MM-dd');
-      const end = format(addDays(endOfMonth(currentDate), 7), 'yyyy-MM-dd');
-      const empIds = employees.map(e => e.id);
-      
-      const data = await shiftService.getShifts(empIds, start, end);
-      setShifts(data);
-    } catch (error) {
-      console.error('Error fetching shifts:', error);
-    } finally {
-      setLoading(false);
+  const start = format(subDays(startOfMonth(currentDate), 7), 'yyyy-MM-dd');
+  const end = format(addDays(endOfMonth(currentDate), 7), 'yyyy-MM-dd');
+  const empIds = employees.map(e => e.id);
+
+  const { data: shifts = [], isLoading: loading } = useQuery({
+    queryKey: shiftKeys.list(empIds, start, end),
+    queryFn: () => shiftService.getShifts(empIds, start, end),
+    enabled: empIds.length > 0,
+  });
+
+  const { mutateAsync: saveShift } = useMutation({
+    mutationFn: (shiftData: Shift | Omit<Shift, 'id'>) => shiftService.upsert(shiftData),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: shiftKeys.all() });
     }
-  }, [employees, currentDate]);
+  });
 
-  useEffect(() => {
-    fetchShifts();
-  }, [fetchShifts]);
+  const { mutateAsync: deleteShift } = useMutation({
+    mutationFn: (id: string) => shiftService.delete(id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: shiftKeys.all() });
+    }
+  });
 
-  const saveShift = async (shiftData: Shift | Omit<Shift, 'id'>) => {
-      try {
-          const saved = await shiftService.upsert(shiftData);
-          setShifts(prev => {
-              const exists = prev.some(s => s.id === saved.id);
-              if (exists) {
-                  return prev.map(s => s.id === saved.id ? saved : s);
-              }
-              return [...prev, saved];
-          });
-      } catch (e) {
-          console.error("Error saving shift:", e);
-      }
-  };
-
-  const deleteShift = async (id: string) => {
-      try {
-          await shiftService.delete(id);
-          setShifts(prev => prev.filter(s => s.id !== id));
-      } catch (e) {
-          console.error("Error deleting shift:", e);
-      }
-  };
-
-
-  const saveMultipleShifts = async (shiftsData: (Shift | Omit<Shift, 'id'>)[]) => {
-      try {
-          const promises = shiftsData.map(s => shiftService.upsert(s));
-          const savedShifts = await Promise.all(promises);
-          
-          setShifts(prev => {
-              let newShifts = [...prev];
-              savedShifts.forEach(saved => {
-                  const index = newShifts.findIndex(s => s.id === saved.id);
-                  if (index >= 0) {
-                      newShifts[index] = saved;
-                  } else {
-                      newShifts.push(saved);
-                  }
-              });
-              return newShifts;
-          });
-      } catch (e) {
-          console.error("Error saving multiple shifts:", e);
-      }
-  };
+  const { mutateAsync: saveMultipleShifts } = useMutation({
+    mutationFn: async (shiftsData: (Shift | Omit<Shift, 'id'>)[]) => {
+        const promises = shiftsData.map(s => shiftService.upsert(s));
+        return Promise.all(promises);
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: shiftKeys.all() });
+    }
+  });
 
   return {
       shifts,
@@ -83,6 +51,6 @@ export function useShifts(employees: Employee[], currentDate: Date) {
       saveShift,
       saveMultipleShifts,
       deleteShift,
-      refreshShifts: fetchShifts
+      refreshShifts: () => queryClient.invalidateQueries({ queryKey: shiftKeys.list(empIds, start, end) })
   };
 }

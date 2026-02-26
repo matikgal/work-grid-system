@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { format, addDays, subDays, isSameDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Share2, Plus, Clock, User } from 'lucide-react';
-import { Employee, Shift } from '../types';
-import { cn, stringToColor, getShiftStyle } from '../utils';
+import { Employee, Shift } from '../../types';
+import { cn, stringToColor, getShiftStyle } from '../../utils';
 
 interface MobileDayViewProps {
   currentDate: Date;

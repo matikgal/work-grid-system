@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
@@ -13,10 +14,13 @@ import { OrdersPage } from './pages/OrdersPage';
 import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
 import { InstructionsPage } from './pages/InstructionsPage';
+import { EmployeesPage } from './pages/EmployeesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ThemeProvider } from './context/ThemeContext';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from 'sonner';
+
+const queryClient = new QueryClient();
 
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -50,8 +54,9 @@ const App: React.FC = () => {
   }
 
   return (
-    <ThemeProvider>
-      <AppProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AppProvider>
         <Toaster richColors position="bottom-right" />
         <BrowserRouter basename={import.meta.env.BASE_URL}>
             <Routes>
@@ -95,6 +100,10 @@ const App: React.FC = () => {
                 element={session ? <InstructionsPage /> : <Navigate to="/login" replace />} 
               />
               <Route 
+                path="/employees" 
+                element={session ? <EmployeesPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
                 path="/settings" 
                 element={session ? <SettingsPage /> : <Navigate to="/login" replace />} 
               />
@@ -104,6 +113,7 @@ const App: React.FC = () => {
         </BrowserRouter>
       </AppProvider>
     </ThemeProvider>
+  </QueryClientProvider>
   );
 };
 

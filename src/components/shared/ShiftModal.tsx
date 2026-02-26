@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, Clock, Calendar } from 'lucide-react';
-import { ModalState, Shift } from '../types';
-import { calculateDuration } from '../utils';
-import { SHIFT_TYPES } from '../constants';
+import { ModalState, Shift } from '../../types';
+import { calculateDuration } from '../../utils';
+import { SHIFT_TYPES } from '../../constants';
 
 interface ShiftModalProps {
   isOpen: boolean;
