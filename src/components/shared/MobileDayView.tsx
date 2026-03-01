@@ -3,7 +3,7 @@ import { format, addDays, subDays, isSameDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Share2, Plus, Clock, User } from 'lucide-react';
 import { Employee, Shift } from '../../types';
-import { cn, stringToColor, getShiftStyle } from '../../utils';
+import { cn, stringToColor, getShiftStyle, displayName } from '../../utils';
 
 interface MobileDayViewProps {
   currentDate: Date;
@@ -114,12 +114,12 @@ export const MobileDayView: React.FC<MobileDayViewProps> = ({
                               style={!employee.avatarColor?.startsWith('bg-') ? { backgroundColor: employee.avatarColor || stringToColor(employee.name) } : {}}
                           >
                               <span className="text-white drop-shadow-md">
-                                  {employee.name.charAt(0).toUpperCase()}
+                                  {displayName(employee.name).charAt(0).toUpperCase()}
                               </span>
                           </div>
                           <div>
                               <h3 className={cn("font-bold text-base leading-tight", shift ? "opacity-100" : "text-slate-700 dark:text-slate-200")}>
-                                  {employee.name}
+                                  {displayName(employee.name)}
                               </h3>
                               <p className={cn("text-xs font-medium opacity-70", shift ? "" : "text-slate-500 dark:text-slate-400")}>
                                   {employee.role || 'Pracownik'}

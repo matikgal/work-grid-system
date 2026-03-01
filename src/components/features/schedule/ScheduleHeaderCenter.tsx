@@ -23,7 +23,7 @@ export const ScheduleHeaderCenter: React.FC<ScheduleHeaderCenterProps> = ({
             key={template.id}
             onClick={() => onSelectTemplate(activeTemplate?.id === template.id ? null : template)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all active:scale-95 text-center min-w-[85px] relative group",
+               "px-2.5 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all active:scale-95 text-center relative group shrink-0",
               style.bg, 
               activeTemplate?.id === template.id ? "border-slate-950 dark:border-white ring-2 ring-slate-900/20 dark:ring-white/40 shadow-md scale-105 z-10" : cn(style.border, "border-opacity-50 shadow-sm opacity-90 hover:opacity-100 hover:border-opacity-100"),
               style.text
@@ -32,7 +32,7 @@ export const ScheduleHeaderCenter: React.FC<ScheduleHeaderCenterProps> = ({
             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold border border-white shadow-sm">
               {index + 1}
             </span>
-            <span className="whitespace-nowrap">{template.label}</span>
+            <span className="whitespace-nowrap">{template.displayLabel || template.label}</span>
           </button>
         );
       })}

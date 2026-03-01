@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Employee, Shift, ViewMode } from "../../types";
-import { getShiftStyle, cn, stringToColor } from "../../utils";
+import { getShiftStyle, cn, stringToColor, displayName } from "../../utils";
 import { SHIFT_TYPES } from "../../constants";
 
 interface CalendarGridProps {
@@ -151,6 +151,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     if (shift.type === SHIFT_TYPES.HOLIDAY) return 0;
     if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return 8;
     if (shift.type === SHIFT_TYPES.WS) return 0;
+    if (shift.type === SHIFT_TYPES.WS_ON_DEMAND) return 0;
     if (shift.type === SHIFT_TYPES.WORK_8) return 8;
     return shift.duration || 0;
   };
@@ -408,11 +409,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                             )}
                             style={avatarStyle}
                             >
-                            {employee.name.charAt(0)}
+                            {displayName(employee.name).charAt(0)}
                             </div>
                             <div className="min-w-0">
                             <div className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover/row:text-blue-700 dark:group-hover/row:text-blue-400 transition-colors">
-                                {employee.name}
+                                {displayName(employee.name)}
                             </div>
                             {!isCompactMode && (
                                 <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
@@ -473,6 +474,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   abbr = "L4";
                                 else if (shift.type === SHIFT_TYPES.WS)
                                   abbr = "WS";
+                                else if (shift.type === SHIFT_TYPES.WS_ON_DEMAND)
+                                  abbr = "WS";
                                 else if (shift.type === SHIFT_TYPES.WORK_8)
                                   abbr = "8";
                                 else {
@@ -505,6 +508,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   abbr = "L4";
                                 if (shift.type === SHIFT_TYPES.WS)
                                   abbr = "WS";
+                                if (shift.type === SHIFT_TYPES.WS_ON_DEMAND)
+                                  abbr = "WS";
                                 if (shift.type === SHIFT_TYPES.WORK_8)
                                   abbr = "8";
 
@@ -521,7 +526,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     >
                                       {abbr}
                                     </span>
-                                    {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WORK_8 && (
+                                    {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WS_ON_DEMAND && shift.type !== SHIFT_TYPES.WORK_8 && (
                                       <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-300 mt-0.5">
                                         {startH}-{endH}
                                       </span>
@@ -540,7 +545,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                   >
                                     {shift.type}
                                   </span>
-                                  {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WORK_8 && (
+                                  {shift.duration > 0 && shift.type !== SHIFT_TYPES.WS && shift.type !== SHIFT_TYPES.WS_ON_DEMAND && shift.type !== SHIFT_TYPES.WORK_8 && (
                                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-200 mt-0.5">
                                       {shift.startTime}-{shift.endTime}
                                     </span>

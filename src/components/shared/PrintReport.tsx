@@ -5,6 +5,7 @@ import { pl } from 'date-fns/locale';
 import Holidays from 'date-holidays';
 import { Employee, Shift, ViewMode } from '../../types';
 import { SHIFT_TYPES } from '../../constants';
+import { displayName } from '../../utils';
 
 interface PrintReportProps {
   currentDate: Date;
@@ -58,6 +59,14 @@ const getShiftDisplayInfo = (
         displayVal: 'WS',
         bgColor: '#a3e635',
         textColor: '#1a2e05',
+        isSpecial: true,
+        hoursToAdd: 0,
+      };
+    case SHIFT_TYPES.WS_ON_DEMAND:
+      return {
+        displayVal: 'WS',
+        bgColor: '#ef4444',
+        textColor: '#ffffff',
         isSpecial: true,
         hoursToAdd: 0,
       };
@@ -398,7 +407,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                     backgroundColor: nameCellBg, 
                     color: 'black' 
                   }}>
-                    {emp.name}
+                    {displayName(emp.name)}
                   </td>
                   {daysInfo.map(info => {
                     const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
@@ -435,6 +444,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                         if (shift.type === SHIFT_TYPES.HOLIDAY) return acc;
                         if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return acc + 8;
                         if (shift.type === SHIFT_TYPES.WS) return acc;
+                        if (shift.type === SHIFT_TYPES.WS_ON_DEMAND) return acc;
                         if (shift.type === SHIFT_TYPES.WORK_8) return acc + 8;
                         return acc + (shift.duration || 0);
                     }, 0)}
@@ -449,6 +459,7 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
                         if (shift.type === SHIFT_TYPES.HOLIDAY) return acc;
                         if (shift.type === SHIFT_TYPES.SICK_LEAVE_L4) return acc + 8;
                         if (shift.type === SHIFT_TYPES.WS) return acc;
+                        if (shift.type === SHIFT_TYPES.WS_ON_DEMAND) return acc;
                         if (shift.type === SHIFT_TYPES.WORK_8) return acc + 8;
                         return acc + (shift.duration || 0);
                       }, 0);
@@ -472,12 +483,13 @@ export const PrintReport: React.FC<PrintReportProps> = React.memo(({ currentDate
         </table>
       </div>
 
-      <div className="print-legend" style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '9px', color: 'black' }}>
+      <div className="print-legend" style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '9px', color: 'black', flexWrap: 'wrap' }}>
         <span><b style={{ padding: '0 4px', backgroundColor: '#fed7aa' }}>U</b> Urlop</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#fef08a' }}>L4</b> Zwolnienie</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#fecaca' }}>ŚW</b> Święto</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#e2e8f0' }}>WS</b> Wolna Sob.</span>
         <span><b style={{ padding: '0 4px', backgroundColor: '#a3e635' }}>WS/8</b> Oddaje</span>
+        <span><b style={{ padding: '0 4px', backgroundColor: '#ef4444', color: '#ffffff' }}>WS</b> Na żądanie</span>
         <span style={{ marginLeft: '10px' }}>Dodatkowe dni: <b style={{ color: 'green' }}>+1</b> / Zaległe: <b style={{ color: 'red' }}>-1</b></span>
       </div>
     </>,

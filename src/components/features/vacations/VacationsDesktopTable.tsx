@@ -1,7 +1,7 @@
 import React from 'react';
 import { Palmtree } from 'lucide-react';
 import { Employee } from '../../../types';
-import { cn, stringToColor } from '../../../utils';
+import { cn, stringToColor, displayName } from '../../../utils';
 
 interface VacationsDesktopTableProps {
   employees: Employee[];
@@ -82,10 +82,10 @@ export const VacationsDesktopTable: React.FC<VacationsDesktopTableProps> = ({
                                         style={avatarStyle}
                                         title={isLocked ? "Odblokuj edycję aby zaznaczyć" : "Kliknij aby wyróżnić"}
                                     >
-                                        {isHighlighted ? <Palmtree className="w-4 h-4 text-white" /> : emp.name.charAt(0).toUpperCase()}
+                                        {isHighlighted ? <Palmtree className="w-4 h-4 text-white" /> : displayName(emp.name).charAt(0).toUpperCase()}
                                     </button>
                                     <div className="min-w-0">
-                                        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{emp.name}</div>
+                                        <div className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{displayName(emp.name)}</div>
                                         <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider truncate">{emp.role}</div>
                                     </div>
                                 </div>

@@ -30,6 +30,7 @@ export interface ModalState {
 export interface ShiftTemplate {
   id: string;
   label: string;
+  displayLabel?: string;
   startTime: string;
   endTime: string;
   colorClass: string;

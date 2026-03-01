@@ -4,6 +4,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
+import { PageFooter } from '../components/shared/PageFooter';
 
 import { ProfileSection } from '../components/features/settings/ProfileSection';
 import { AppearanceSection } from '../components/features/settings/AppearanceSection';
@@ -97,15 +99,10 @@ export const SettingsPage: React.FC = () => {
   return (
     <MainLayout pageTitle="Ustawienia">
       <div className="flex flex-col h-full bg-[#FAFAFA] dark:bg-slate-950 w-full font-sans overflow-hidden relative">
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-[1.0]" 
-             style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(0,0,0,0.06) 1.5px, transparent 0)', backgroundSize: '24px 24px' }}>
-        </div>
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-[1.0] hidden dark:block" 
-             style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.08) 1.5px, transparent 0)', backgroundSize: '24px 24px' }}>
-        </div>
+        <PageBackgroundPattern />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10">
-          <div className="max-w-4xl mx-auto w-full space-y-8 pb-24">
+          <div className="max-w-4xl mx-auto w-full space-y-8 pb-2 md:pb-4">
             
             <div className="space-y-1">
                  <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -158,6 +155,8 @@ export const SettingsPage: React.FC = () => {
 
           </div>
         </div>
+        
+        <PageFooter />
       </div>
     </MainLayout>
   );

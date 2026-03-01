@@ -19,19 +19,18 @@ export const EmployeesSection: React.FC = () => {
                         <div className="flex items-start gap-3">
                             <List className="w-5 h-5 text-slate-400 mt-0.5" />
                             <div>
-                                <strong className="text-slate-900 dark:text-white text-sm block">Separatory</strong>
+                                <strong className="text-slate-900 dark:text-white text-sm block">Separatory i Sortowanie</strong>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Możesz dodać specjalnego "pracownika" będącego separatorem, aby oddzielić grupy w grafiku (np. Kasjerzy, Magazyn).
-                                    Separatory nie są widoczne w zakładce Urlopy.
+                                    Możesz włączyć tryb "Separator" na dowolnym pracowniku, wtedy będzie służył jako nagłówek na grafiku (np. Kasjerzy, Mięso). Możesz także sortować listę łapiąc pracowników za uchwyt z lewej strony i przesuwając ich w górę bądź wdół.
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-start gap-3">
                             <Settings className="w-5 h-5 text-slate-400 mt-0.5" />
                             <div>
-                                <strong className="text-slate-900 dark:text-white text-sm block">Widoczność</strong>
+                                <strong className="text-slate-900 dark:text-white text-sm block">Widoczność i Role</strong>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Każdego pracownika można ukryć w Grafiku lub w Urlopach, odznaczając odpowiednie opcje w edycji pracownika.
+                                    Każdego pracownika można ukryć w konkretnym module (Grafik, Urlopy, Wolne Soboty). Można im również przypisywać Role widoczne tylko dla szefostwa albo ustawiać ich niestandardowy awatar (losowy kolor inicjałów).
                                 </p>
                             </div>
                         </div>

@@ -62,7 +62,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', active: location.pathname === '/employees', disabled: false, icon: UsersRound, action: () => navigate('/employees') },
     { label: 'Instrukcja', sub: 'Pomoc', disabled: false, icon: BookOpen, action: () => navigate('/instructions') },
     { label: 'Przeładuj system', sub: 'Reset danych', disabled: false, icon: RotateCcw, action: () => setIsSystemResetOpen(true) },
-    { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: false, icon: Lightbulb, action: () => setIsFeedbackModalOpen(true) },
+    { label: 'Zgłoś pomysł', sub: 'Feedback', disabled: true, icon: Lightbulb, action: () => setIsFeedbackModalOpen(true) },
     { label: 'Ustawienia', sub: 'Konfiguracja', disabled: false, icon: Settings, action: () => navigate('/settings') },
   ];
 

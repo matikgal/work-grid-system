@@ -1,6 +1,6 @@
 import React from 'react';
 import { Employee } from '../../../types';
-import { cn, stringToColor } from '../../../utils';
+import { cn, stringToColor, displayName } from '../../../utils';
 import { WsAdjustment } from '../../../services/adjustmentService';
 
 interface FreeSaturdaysMobileListProps {
@@ -33,10 +33,10 @@ export const FreeSaturdaysMobileList: React.FC<FreeSaturdaysMobileListProps> = (
                             className={cn("w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white shadow-sm", emp.avatarColor)}
                             style={!isTailwindClass ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
                         >
-                            {emp.name.charAt(0).toUpperCase()}
+                            {displayName(emp.name).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-800 dark:text-white">{emp.name}</h3>
+                            <h3 className="font-bold text-slate-800 dark:text-white">{displayName(emp.name)}</h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{emp.role}</p>
                         </div>
                     </div>

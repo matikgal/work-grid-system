@@ -16,10 +16,10 @@ export const TipsSection: React.FC = () => {
                     <div>
                         <h3 className="text-lg font-bold mb-2">Wskazówki</h3>
                         <ul className="space-y-2 text-slate-300 text-sm">
-                            <li>• Używaj trybu kompaktowego (w Ustawieniach) na mniejszych ekranach.</li>
-                            <li>• Kliknij prawym przyciskiem myszy na zmianę, aby szybko ją usunąć.</li>
-                            <li>• W widoku zamówień możesz filtrować listę po kategoriach.</li>
-                            <li>• Grafik zapisuje się automatycznie w czasie rzeczywistym.</li>
+                            <li>• Skróty klawiszowe (1-9, 0) przyspieszają wprowadzanie wielu zmian z rzędu. Wystarczy wybrać skrótem z paska i naklikać całą serię.</li>
+                            <li>• Tryb kompaktowy (przełącznik nad kalendarzem "Zwiń widok") bardzo upraszcza kalendarz miesięczny na smartfonach.</li>
+                            <li>• Podgląd kurierski do Zamówień można otworzyć udostępniając komukolwiek publiczny link do Zamówienia.</li>
+                            <li>• Moduły Urlopów i Wolnych Sobót muszą zostać zasilone pulą z ubiegłego roku, aby mogły prawidłowo liczyć bilans dodając go do przepracowanych!</li>
                         </ul>
                     </div>
                 </div>

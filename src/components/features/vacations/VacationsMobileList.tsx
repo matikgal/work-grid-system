@@ -1,7 +1,7 @@
 import React from 'react';
 import { Palmtree } from 'lucide-react';
 import { Employee } from '../../../types';
-import { cn, stringToColor } from '../../../utils';
+import { cn, stringToColor, displayName } from '../../../utils';
 
 interface VacationsMobileListProps {
   employees: Employee[];
@@ -59,10 +59,10 @@ export const VacationsMobileList: React.FC<VacationsMobileListProps> = ({
                             )}
                             style={!isTailwindClass ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
                         >
-                            {isHighlighted ? <Palmtree className="w-5 h-5 text-white" /> : emp.name.charAt(0).toUpperCase()}
+                            {isHighlighted ? <Palmtree className="w-5 h-5 text-white" /> : displayName(emp.name).charAt(0).toUpperCase()}
                         </button>
                         <div className="flex-1">
-                            <h3 className="font-bold text-slate-800 dark:text-white">{emp.name}</h3>
+                            <h3 className="font-bold text-slate-800 dark:text-white">{displayName(emp.name)}</h3>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-slate-400">Zeszły rok/Inne:</span>
                                 <input 

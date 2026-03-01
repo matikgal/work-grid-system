@@ -5,13 +5,15 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities';
 import { Session } from '@supabase/supabase-js';
 import { Employee } from '../types';
-import { cn, stringToColor, getRandomColor } from '../utils';
+import { cn, stringToColor, getRandomColor, displayName } from '../utils';
 import { ROLES } from '../constants';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useEmployees } from '../hooks/useEmployees';
 import { useShifts } from '../hooks/useShifts';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
+import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
+import { PageFooter } from '../components/shared/PageFooter';
 
 interface SortableEmployeeRowProps {
   employee: Employee;
@@ -77,13 +79,13 @@ const SortableEmployeeRow = ({ employee, hours, onEdit }: SortableEmployeeRowPro
           className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm shrink-0", employee.avatarColor)}
           style={!employee.avatarColor?.startsWith('bg-') ? { backgroundColor: employee.avatarColor || stringToColor(employee.name) } : {}}
         >
-          <span className="text-white drop-shadow-md text-lg">{employee.name.charAt(0).toUpperCase()}</span>
+          <span className="text-white drop-shadow-md text-lg">{displayName(employee.name).charAt(0).toUpperCase()}</span>
         </div>
 
         {/* INFO */}
         <div className="min-w-0 pr-4">
           <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100 truncate flex items-center gap-2">
-            {employee.name}
+            {displayName(employee.name)}
             {employee.rowColor === 'blue' && <span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Niebieski" />}
             {employee.rowColor === 'red' && <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Czerwony" />}
             {employee.rowColor === 'green' && <span className="w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Zielony" />}
@@ -255,10 +257,11 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
 
   return (
     <MainLayout pageTitle="Mój Zespół">
-      <div className="relative h-full w-full bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col">
+      <div className="relative h-full w-full bg-[#FAFAFA] dark:bg-slate-950 overflow-hidden flex flex-col">
+        <PageBackgroundPattern />
           
         {/* Main Content Area */}
-        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col min-h-0">
+        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col min-h-0 relative z-10">
             
             {/* Page Header (Search + Buttons) */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
@@ -299,14 +302,14 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-24">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 md:pb-4">
 
             {loading ? (
                 <div className="flex justify-center items-center h-40">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
                 </div>
             ) : filteredEmployees.length > 0 ? (
-                <div className="flex flex-col mb-24">
+                <div className="flex flex-col">
                   {!searchTerm ? (
                       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                           <SortableContext items={filteredEmployees.map(e => e.id)} strategy={verticalListSortingStrategy}>
@@ -325,10 +328,10 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                               <div className="flex items-center gap-4">
                                   <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm", emp.avatarColor)}
                                        style={!emp.avatarColor?.startsWith('bg-') ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}>
-                                      <span className="text-white drop-shadow-md text-lg">{emp.name.charAt(0).toUpperCase()}</span>
+                                      <span className="text-white drop-shadow-md text-lg">{displayName(emp.name).charAt(0).toUpperCase()}</span>
                                   </div>
                                   <div>
-                                      <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100">{emp.name}</h3>
+                                      <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100">{displayName(emp.name)}</h3>
                                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{emp.role}</p>
                                   </div>
                               </div>
@@ -550,6 +553,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                 </button>
             </div>
         </div>
+        <PageFooter />
       </div>
 
       <ConfirmModal
@@ -557,9 +561,9 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
         onClose={() => setIsConfirmDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Usuń pozycję"
-        description={`Czy na pewno chcesz usunąć pracownika / separator? Tej operacji nie cofniemy.`}
-        confirmText="Tak, usuń"
-        intent="danger"
+        message="Czy na pewno chcesz usunąć pracownika / separator? Tej operacji nie cofniemy."
+        confirmLabel="Tak, usuń"
+        variant="danger"
       />
     </MainLayout>
   );

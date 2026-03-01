@@ -7,6 +7,7 @@ export const SHIFT_TYPES = {
   WORK_OFFICE: '10-18',
   WORK_8: '8',
   WS: 'WS',
+  WS_ON_DEMAND: 'WS-NŻ',
   VACATION: 'Urlop',
   FREE_SATURDAY: 'Wolna Sobota',
   HOLIDAY: 'Święto',
@@ -37,5 +38,6 @@ export const SHIFT_TEMPLATES: ShiftTemplate[] = [
   { id: 't_holiday', label: SHIFT_TYPES.HOLIDAY, startTime: '00:00', endTime: '00:00', colorClass: 'bg-rose-100 border-rose-300 text-rose-600', type: 'holiday' },
   { id: 't_l4', label: SHIFT_TYPES.SICK_LEAVE_L4, startTime: '08:00', endTime: '16:00', colorClass: 'bg-yellow-100 border-yellow-300 text-yellow-800', type: 'sick' },
   { id: 't_ws', label: SHIFT_TYPES.WS, startTime: '00:00', endTime: '00:00', colorClass: 'bg-lime-400 border-lime-600 text-lime-950', type: 'dayoff' },
+  { id: 't_ws_nz', label: SHIFT_TYPES.WS_ON_DEMAND, displayLabel: 'WS', startTime: '00:00', endTime: '00:00', colorClass: 'bg-red-500 border-red-700 text-white', type: 'dayoff' },
   { id: 't_8', label: SHIFT_TYPES.WORK_8, startTime: '08:00', endTime: '16:00', colorClass: 'bg-lime-400 border-lime-600 text-lime-950', type: 'work' },
 ];

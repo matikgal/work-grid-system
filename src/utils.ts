@@ -6,6 +6,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Reverses "First Last" to "Last First" for display. Single names stay unchanged. */
+export function displayName(name: string): string {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return name;
+  return `${parts.slice(1).join(' ')} ${parts[0]}`;
+}
+
 // Calculate hours between two HH:MM strings
 export const calculateDuration = (start: string, end: string): number => {
   const [startH, startM] = start.split(':').map(Number);
@@ -92,6 +100,13 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           bg: 'bg-lime-400 dark:bg-lime-600', 
           border: 'border-lime-600 dark:border-lime-400', 
           text: 'text-lime-950 dark:text-white' 
+      };
+
+    case SHIFT_TYPES.WS_ON_DEMAND:
+      return { 
+          bg: 'bg-red-500 dark:bg-red-600', 
+          border: 'border-red-700 dark:border-red-400', 
+          text: 'text-white dark:text-white' 
       };
 
     case SHIFT_TYPES.WORK_8:

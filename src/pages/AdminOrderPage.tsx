@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Clipboard } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Clipboard, Printer } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import {
 } from '../hooks/useOrders';
 import { orderService } from '../services/orderService';
 import { AdminOrderTable } from '../components/features/orders/AdminOrderTable';
+import { PrintOrderReport } from '../components/features/orders/PrintOrderReport';
 
 export const AdminOrderPage: React.FC = () => {
     const { id } = useParams<{ id: string }>(); 
@@ -25,6 +26,7 @@ export const AdminOrderPage: React.FC = () => {
     const deleteItemMutation = useDeleteItem();
 
     const [saving, setSaving] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
     
     // Modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -127,6 +129,15 @@ export const AdminOrderPage: React.FC = () => {
         }
     };
 
+    const handlePrint = () => setIsPrinting(true);
+
+    useEffect(() => {
+        if (isPrinting) {
+            const timer = setTimeout(() => { window.print(); setIsPrinting(false); }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [isPrinting]);
+
     if (isOrderLoading || isItemsLoading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">Ładowanie zamówienia...</div>;
     if (orderError && !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">Błąd ładowania lub brak zamówienia.</div>;
 
@@ -147,13 +158,21 @@ export const AdminOrderPage: React.FC = () => {
                             Zarządzaj strukturą tabeli – dodawaj, usuwaj produkty i edytuj ich nazwy przed udostępnieniem.
                         </p>
                     </div>
-                     <div className="flex items-center gap-4">
+                     <div className="flex items-center gap-3">
                         <button
                             onClick={copyToClipboard}
                             className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
                         >
                             <Clipboard className="w-4 h-4" />
-                            Kopiuj tabelę
+                            <span className="hidden sm:inline">Kopiuj</span>
+                        </button>
+                        <button
+                            onClick={handlePrint}
+                            className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
+                            title="Drukuj zamówienie jako A4"
+                        >
+                            <Printer className="w-4 h-4" />
+                            <span className="hidden sm:inline">Drukuj</span>
                         </button>
                         {saving && <span className="text-blue-600 font-medium text-sm animate-pulse">Zapisywanie...</span>}
                     </div>
@@ -177,6 +196,14 @@ export const AdminOrderPage: React.FC = () => {
                             Dodaj kolejny produkt
                         </button>
                     </div>
+
+                    {isPrinting && (
+                        <PrintOrderReport
+                            orderName={order?.name || 'Zamówienie'}
+                            items={items}
+                            shops={shops}
+                        />
+                    )}
 
                     <ConfirmModal 
                         isOpen={isDeleteModalOpen}

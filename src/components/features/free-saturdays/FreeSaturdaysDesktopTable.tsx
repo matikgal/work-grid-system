@@ -1,6 +1,6 @@
 import React from 'react';
 import { Employee } from '../../../types';
-import { cn, stringToColor } from '../../../utils';
+import { cn, stringToColor, displayName } from '../../../utils';
 import { WsAdjustment } from '../../../services/adjustmentService';
 
 interface FreeSaturdaysDesktopTableProps {
@@ -59,10 +59,10 @@ export const FreeSaturdaysDesktopTable: React.FC<FreeSaturdaysDesktopTableProps>
                                     )}
                                     style={avatarStyle}
                                 >
-                                    {emp.name.charAt(0).toUpperCase()}
+                                    {displayName(emp.name).charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{emp.name}</div>
+                                    <div className="font-bold text-slate-700 dark:text-slate-200 text-sm">{displayName(emp.name)}</div>
                                     <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{emp.role}</div>
                                 </div>
                             </div>

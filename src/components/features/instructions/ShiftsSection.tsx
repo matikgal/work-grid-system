@@ -18,25 +18,25 @@ export const ShiftsSection: React.FC = () => {
                         Dodawanie i Edycja Zmian
                     </h3>
                     <p className="text-slate-600 dark:text-slate-400 text-sm mb-3">
-                        Aby dodać lub zmienić zmianę, kliknij na wybraną komórkę w grafiku. Pojawi się okno wyboru typu zmiany.
-                        Możesz wybrać standardowe godziny pracy lub inne typy absencji (Urlop, L4, itp.).
+                        Aby dodać lub zmienić zmianę, kliknij na wybraną komórkę w grafiku. Pojawi się pełne okno wyboru typu zmiany i godzin. 
+                        <strong>Szybkie dodawanie:</strong> Wybierz szablon z górnego paska (lub użyj skrótu na klawiaturze `1`-`0`), a następnie klikaj na komórki w grafiku, aby błyskawicznie nakładać wybraną zmianę.
                     </p>
                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-400">
                         <li className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                            <span><strong>Zmiana (6-14, 14-22)</strong> - Standardowe godziny pracy.</span>
+                            <span><strong>Praca</strong> - Zielone (6-14), Niebieskie (14-22), Fioletowe (10-18).</span>
                         </li>
                         <li className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
                             <span className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 shrink-0" />
-                            <span><strong>Urlop (W)</strong> - Dni wolne od pracy, wliczane do puli urlopowej.</span>
+                            <span><strong>Urlop (U)</strong> - Wliczane do rocznej puli pracownika.</span>
                         </li>
                         <li className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                            <span><strong>Chorobowe (L4)</strong> - Nieobecność chorobowa.</span>
+                            <span className="w-2 h-2 rounded-full bg-lime-500 mt-1.5 shrink-0" />
+                            <span><strong>Wolna Sobota (WS) / 8 godzin</strong> - Odbiór dni wolnych lub dodatkowa obecność.</span>
                         </li>
                         <li className="flex items-start gap-2 bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                            <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0" />
-                            <span><strong>Wolne (UŻ)</strong> - Urlop na żądanie lub okolicznościowy.</span>
+                            <span className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                            <span><strong>WS Na Żądanie (NŻ)</strong> - Czerwone WS mocno wyróżnione na wydruku.</span>
                         </li>
                     </ul>
                 </div>
