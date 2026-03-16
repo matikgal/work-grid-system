@@ -31,7 +31,7 @@ export const ScheduleHeaderRight: React.FC<ScheduleHeaderRightProps> = ({
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
 
   return (
-    <div className="flex items-center gap-2" style={{ zoom: zoomLevel } as any}>
+    <div className="flex items-center gap-2" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'right center' }}>
       {/* Desktop Tools (2xl+) */}
       <div className="hidden 2xl:flex items-center gap-2">
         <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-2 py-1.5 shadow-sm h-[34px]">

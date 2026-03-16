@@ -1,5 +1,5 @@
 import React from 'react';
-import { GithubLogo } from '@phosphor-icons/react';
+import { Github } from 'lucide-react';
 import { APP_CONFIG } from '../../config/app';
 
 export const PageFooter: React.FC = () => {
@@ -8,17 +8,17 @@ export const PageFooter: React.FC = () => {
              <div className="max-w-[1920px] mx-auto w-full flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
                  <div className="flex items-center gap-1">
                      <span>Autor:</span>
-                     <a 
-                        href={APP_CONFIG.APP_AUTHOR_URL} 
-                        target="_blank" 
+                     <a
+                        href="https://matikgal.github.io/portfolio/contact"
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-bold"
                      >
-                        <GithubLogo className="w-3.5 h-3.5 fill-current" />
+                        <Github className="w-3.5 h-3.5" />
                         {APP_CONFIG.APP_AUTHOR}
                      </a>
                  </div>
-                 
+
                  <div className="flex items-center gap-4">
                      <span className="opacity-50 hidden sm:inline">{APP_CONFIG.APP_NAME}</span>
                      <div className="flex items-center gap-2">

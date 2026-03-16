@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { Lock, Unlock, ChevronLeft, ChevronRight, Palmtree } from 'lucide-react';
+import { Lock, Unlock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
-import { Employee } from '../types';
-import { cn } from '../utils';
 import { useMobile } from '../hooks/useMobile';
 import { useEmployees } from '../hooks/useEmployees';
 import { useVacations } from '../hooks/useVacations';
+import { cn } from '../utils';
 import { VacationsMobileList } from '../components/features/vacations/VacationsMobileList';
 import { VacationsDesktopTable } from '../components/features/vacations/VacationsDesktopTable';
 import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
@@ -22,7 +21,7 @@ const MONTHS = [
 ];
 
 export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
-  const { employees: allEmployees, addEmployee, updateEmployee, deleteEmployee } = useEmployees(session);
+  const { employees: allEmployees, loading: employeesLoading } = useEmployees(session);
   
   const employees = React.useMemo(() => {
     return allEmployees
@@ -50,26 +49,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       toggleHighlight
   } = useVacations(session.user.id, selectedYear, employeeIds);
 
-  const handleSaveEmployee = async (employee: Employee, isNew: boolean) => {
-      if (isNew) {
-        addEmployee(
-          employee.name, 
-          employee.role, 
-          employee.avatarColor,
-          employee.isSeparator,
-          employee.rowColor,
-          employee.isVisibleInSchedule,
-          employee.isVisibleInVacations
-        );
-      } else {
-        updateEmployee(employee.id, { 
-          name: employee.name, 
-          role: employee.role,
-          isVisibleInSchedule: employee.isVisibleInSchedule,
-          isVisibleInVacations: employee.isVisibleInVacations
-        });
-      }
-  };
+
 
   const calculateTotal = (counts: number[], manuals: number[]) => {
       return counts.reduce((a, b, i) => a + b + (manuals[i] || 0), 0);
@@ -96,6 +76,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                     <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full p-1 shadow-sm">
                         <button 
                           onClick={() => setSelectedYear(selectedYear - 1)} 
+                          aria-label="Poprzedni rok"
                           className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
                         >
                           <ChevronLeft className="w-4 h-4 text-slate-500" />
@@ -103,6 +84,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
                         <span className="px-3 font-bold text-slate-700 dark:text-slate-200 text-sm tabular-nums">{selectedYear}</span>
                         <button 
                           onClick={() => setSelectedYear(selectedYear + 1)} 
+                          aria-label="Następny rok"
                           className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
                         >
                           <ChevronRight className="w-4 h-4 text-slate-500" />
@@ -128,7 +110,11 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-2 md:pb-4">
-                {isMobile ? (
+                {employeesLoading ? (
+                    <div className="flex items-center justify-center h-40">
+                        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+                    </div>
+                ) : isMobile ? (
                     <VacationsMobileList 
                         employees={employees}
                         isLocked={isLocked}

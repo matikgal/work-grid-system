@@ -313,8 +313,17 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
           )}
 
 
-          {/* Grid */}
-          <div className="flex-1 overflow-hidden relative" style={!isMobile ? { zoom: zoomLevel } as any : {}}>
+          {/* Tutaj renderowanie głównego widoku */}
+          <div className="flex-1 overflow-hidden relative">
+            <div 
+              className="absolute inset-0 origin-top-left transition-transform duration-200 ease-in-out" 
+              style={!isMobile ? { 
+                transform: `scale(${zoomLevel})`, 
+                width: `${100 / zoomLevel}%`, 
+                height: `${100 / zoomLevel}%` 
+              } : {}}
+            >
+              <div className="absolute inset-0 z-0 bg-white dark:bg-slate-900 overflow-hidden custom-scrollbar flex flex-col">
               {isMobile ? (
                   <MobileDayView
                     currentDate={currentDate}
@@ -337,6 +346,8 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
                     onReorder={reorderEmployees}
                   />
               )}
+              </div>
+            </div>
           </div>
 
           {/* Modals */}

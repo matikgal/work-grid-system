@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, RotateCcw, } from 'lucide-react';
+import { X, RotateCcw } from 'lucide-react';
 
 interface SystemResetModalProps {
   isOpen: boolean;
@@ -7,12 +7,23 @@ interface SystemResetModalProps {
   onConfirm: () => void;
 }
 
-export const SystemResetModal: React.FC<SystemResetModalProps> = ({ isOpen, onClose, onConfirm }) => {
+export const SystemResetModal: React.FC<SystemResetModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
+  const handleConfirm = () => {
+    try { localStorage.clear(); } catch { /* storage may be blocked */ }
+    window.location.reload();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-[2px]" onClick={onClose}>
-      <div 
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-modal-title"
+      className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-[2px]"
+      onClick={onClose}
+    >
+      <div
         className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -23,11 +34,12 @@ export const SystemResetModal: React.FC<SystemResetModalProps> = ({ isOpen, onCl
                     <RotateCcw className="w-5 h-5" />
                 </div>
                 <div>
-                    <h2 className="font-bold text-xl text-slate-800 dark:text-slate-100">Przeładuj system</h2>
+                    <h2 id="reset-modal-title" className="font-bold text-xl text-slate-800 dark:text-slate-100">Przeładuj system</h2>
                 </div>
             </div>
-            <button 
+            <button
                 onClick={onClose}
+                aria-label="Zamknij"
                 className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
             >
                 <X className="w-5 h-5" />
@@ -37,7 +49,6 @@ export const SystemResetModal: React.FC<SystemResetModalProps> = ({ isOpen, onCl
         {/* Content */}
         <div className="p-6">
             <div className="flex gap-4 mb-6">
-                
                 <div className="space-y-2">
                     <p className="font-bold text-slate-800 dark:text-slate-200">
                         Czy na pewno chcesz kontynuować?
@@ -59,7 +70,7 @@ export const SystemResetModal: React.FC<SystemResetModalProps> = ({ isOpen, onCl
                     Anuluj
                 </button>
                 <button
-                    onClick={onConfirm}
+                    onClick={handleConfirm}
                     className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                     <RotateCcw className="w-4 h-4" />

@@ -1,6 +1,5 @@
 import React from 'react';
 import { MainLayout } from '../components/layout/MainLayout';
-import { BookOpen } from 'lucide-react';
 
 import { IntroSection } from '../components/features/instructions/IntroSection';
 import { ShiftsSection } from '../components/features/instructions/ShiftsSection';

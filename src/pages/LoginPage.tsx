@@ -93,6 +93,7 @@ export const LoginPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-transparent text-white w-full text-sm outline-none px-1 placeholder:text-[#5B6071] font-semibold"
                   placeholder="np. admin"
+                  autoComplete="username"
                   required
                 />
                 <User className="w-5 h-5 text-[#848C9E]" strokeWidth={2} />
@@ -112,6 +113,7 @@ export const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-transparent text-[#0EA5E9] w-full text-sm outline-none px-1 placeholder:text-[#5B6071] font-black tracking-[0.2em]"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                 />
                 <button

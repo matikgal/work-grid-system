@@ -1,6 +1,7 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { FileText, Calendar, Clock, RotateCcw, MessageSquare, Menu, LogOut, Info, Tag, FileText as TermsIcon } from 'lucide-react';
 import { cn } from '../../utils';
+import { APP_CONFIG } from '../../config/app';
 
 interface MenuItem {
   label: string;
@@ -18,6 +19,7 @@ interface SidebarMenuProps {
   onLogout: () => void;
   onShowAbout: () => void;
   onShowTerms: () => void;
+  onShowChangelog: () => void;
 }
 
 export const SidebarMenu: React.FC<SidebarMenuProps> = ({
@@ -26,7 +28,8 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
   menuItems,
   onLogout,
   onShowAbout,
-  onShowTerms
+  onShowTerms,
+  onShowChangelog,
 }) => {
   return (
     <>
@@ -83,14 +86,24 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
                     Wyloguj się
                 </button>
                 
-                <div className="flex justify-center items-center gap-4 mt-4 px-2">
-                    <button onClick={() => { onShowAbout(); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                <div className="flex justify-center items-center gap-3 mt-4 px-2 flex-wrap">
+                    <button onClick={() => { onShowAbout(); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                         O aplikacji
                     </button>
-                    <span className="text-slate-300 text-[10px] select-none">•</span>
-                    <button onClick={() => { onShowTerms(); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                    <span className="text-slate-300 dark:text-slate-600 text-[10px] select-none">•</span>
+                    <button onClick={() => { onShowChangelog(); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        Co nowego
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-600 text-[10px] select-none">•</span>
+                    <button onClick={() => { onShowTerms(); setIsMenuOpen(false); }} className="text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                         Regulamin
                     </button>
+                </div>
+
+                <div className="mt-6 mb-2 text-center flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Wersja {APP_CONFIG.APP_VERSION}
+                    </span>
                 </div>
             </div>
         </div>

@@ -53,8 +53,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const styles = getVariantStyles();
 
+  const titleId = React.useId();
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-[2px]" onClick={onClose}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-[2px]"
+      onClick={onClose}
+    >
       <div 
         className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
@@ -66,7 +80,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                    <h2 className="font-bold text-xl text-slate-800 dark:text-slate-100">{title}</h2>
+                    <h2 id={titleId} className="font-bold text-xl text-slate-800 dark:text-slate-100">{title}</h2>
                 </div>
             </div>
             <button 

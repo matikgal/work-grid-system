@@ -15,7 +15,7 @@ export const ScheduleHeaderCenter: React.FC<ScheduleHeaderCenterProps> = ({
   zoomLevel
 }) => {
   return (
-    <div className="flex flex-nowrap items-center gap-1.5 px-3 py-1.5 overflow-x-auto no-scrollbar whitespace-nowrap max-w-full bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm" style={{ zoom: zoomLevel } as any}>
+    <div className="flex flex-nowrap items-center gap-1.5 px-3 py-1.5 overflow-x-auto no-scrollbar whitespace-nowrap max-w-full bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}>
       {SHIFT_TEMPLATES.map((template, index) => {
         const style = getShiftStyle(template.label);
         return (

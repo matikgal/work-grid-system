@@ -9,6 +9,7 @@ import { FeedbackModal } from '../shared/FeedbackModal';
 import { SystemResetModal } from '../shared/SystemResetModal';
 import { AboutModal } from '../shared/AboutModal';
 import { TermsModal } from '../shared/TermsModal';
+import { ChangelogModal } from '../shared/ChangelogModal';
 import { SidebarMenu } from './SidebarMenu';
 
 interface MainLayoutProps {
@@ -30,6 +31,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [userEmail, setUserEmail] = useState<string>('');
   const [showAbout, setShowAbout] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
 
   // Internal Modal States
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -80,7 +82,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                      {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                  </button>
                  {pageTitle !== null && (
-                    <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight hidden md:block">{pageTitle || 'Grafik'}</h1>
+                    <h1 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">{pageTitle || 'Grafik'}</h1>
                  )}
               </div>
 
@@ -115,13 +117,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </header>
 
        {/* Sidebar component replacing raw markup */}
-       <SidebarMenu 
+       <SidebarMenu
            isMenuOpen={isMenuOpen}
            setIsMenuOpen={setIsMenuOpen}
            menuItems={menuItems}
            onLogout={handleLogout}
            onShowAbout={() => setShowAbout(true)}
            onShowTerms={() => setShowTerms(true)}
+           onShowChangelog={() => setShowChangelog(true)}
        />
 
        {/* Page Content */}
@@ -140,9 +143,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
          onConfirm={() => window.location.reload()}
        />
 
-       {/* Modals for About/Terms */}
-       <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+       {/* Modals for About/Terms/Changelog */}
+       <AboutModal
+         isOpen={showAbout}
+         onClose={() => setShowAbout(false)}
+         onOpenChangelog={() => { setShowAbout(false); setShowChangelog(true); }}
+       />
        <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+       <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
 
     </div>
   );

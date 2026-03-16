@@ -22,8 +22,12 @@ export const ScheduleHeaderLeft: React.FC<ScheduleHeaderLeftProps> = ({
   onToday
 }) => {
   return (
-    <div className="flex items-center gap-1 md:gap-3" style={{ zoom: zoomLevel } as any}>
-      <button onClick={onPrev} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
+    <div className="flex items-center gap-1 md:gap-3" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'left center' }}>
+      <button 
+        onClick={onPrev} 
+        aria-label="Wstecz"
+        className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+      >
         <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
       </button>
       <div 
@@ -46,7 +50,11 @@ export const ScheduleHeaderLeft: React.FC<ScheduleHeaderLeftProps> = ({
           </span>
         </div>
       </div>
-      <button onClick={onNext} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors">
+      <button 
+        onClick={onNext} 
+        aria-label="Dalej"
+        className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+      >
         <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
       </button>
     </div>

@@ -110,6 +110,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
                         placeholder="Nazwa np. nabiał 28.02"
+                        maxLength={80}
                         onKeyDown={e => e.key === 'Enter' && handleCreate()}
                         className="w-full sm:w-64 pl-4 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all placeholder:text-slate-400 font-medium shadow-sm"
                     />
@@ -126,11 +127,15 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
 
             {createError && <p className="text-red-500 text-sm font-medium mb-4 shrink-0">{createError}</p>}
 
-            {/* Scrollable List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 md:pb-4">
                 {isLoading ? (
                     <div className="flex justify-center items-center h-40">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                        <div className="animate-spin text-brand-500">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </div>
                 ) : orders.length > 0 ? (
                     <div className="flex flex-col gap-2">
@@ -154,10 +159,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
                         })}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 mt-8 shadow-sm">
-                        <ShoppingCart className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-700" />
+                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 mt-8 shadow-sm">
+                        <div className="w-16 h-16 bg-brand-50 gap-2 dark:bg-brand-900/20 rounded-full flex items-center justify-center flex-col text-brand-600 dark:text-brand-400 mb-4 shadow-sm animate-pulse">
+                            <ShoppingCart className="w-8 h-8 opacity-80" />
+                        </div>
                         <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Brak zamówień</h3>
-                        <p className="text-sm mt-1">Utwórz nowe zamówienie powyżej.</p>
+                        <p className="text-sm mt-1 max-w-sm text-center">Strumień jest pusty. Wpisz nazwę u góry i utwórz pierwsze zamówienie w zaledwie kilka sekund.</p>
                     </div>
                 )}
             </div>

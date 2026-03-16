@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { APP_CONFIG } from '../config/app';
 import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
 import { PageFooter } from '../components/shared/PageFooter';
 
@@ -56,8 +57,8 @@ export const SettingsPage: React.FC = () => {
 
           const backupData = {
               timestamp: new Date().toISOString(),
-              appName: 'WorkGrid System',
-              version: '1.0.0',
+              appName: APP_CONFIG.APP_NAME,
+              version: APP_CONFIG.APP_VERSION,
               data: {
                   employees: employees || [],
                   shifts: shifts || [],
@@ -79,8 +80,7 @@ export const SettingsPage: React.FC = () => {
           URL.revokeObjectURL(url);
 
           toast.success('Kopia zapasowa pobrana pomyślnie!');
-      } catch (error) {
-          console.error('Backup failed:', error);
+      } catch {
           toast.error('Błąd podczas tworzenia kopii zapasowej.');
       } finally {
           setIsBackingUp(false);
