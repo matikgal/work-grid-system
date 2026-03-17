@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, Calendar, Settings, X, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee, Palmtree, ShoppingCart } from 'lucide-react';
+import { Menu, Calendar, Settings, X, LayoutDashboard, UsersRound, BookOpen, Lightbulb, RotateCcw, Coffee, Palmtree, ShoppingCart, Phone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAppContext } from '../../context/AppContext';
 
@@ -60,6 +60,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     { label: 'Grafik', sub: 'Grafik zmian', active: location.pathname === '/schedule', icon: Calendar, action: () => navigate('/schedule') },
     { label: 'Wolne Soboty', sub: 'Rozliczenie roczne', active: location.pathname.includes('free-saturdays'), icon: Coffee, action: () => navigate('/free-saturdays') },
     { label: 'Urlopy', sub: 'Wykorzystane dni', active: location.pathname.includes('vacations'), icon: Palmtree, action: () => navigate('/vacations') },
+    { label: 'Książka telefoniczna', sub: 'Numery kontaktowe', active: location.pathname.includes('phones'), icon: Phone, action: () => navigate('/phones') },
     { label: 'Zamówienia', sub: 'Lista braków', active: location.pathname.includes('orders'), icon: ShoppingCart, action: () => navigate('/orders') },
     { label: 'Zarządzaj pracownikami', sub: 'Dodaj/Edytuj', active: location.pathname === '/employees', disabled: false, icon: UsersRound, action: () => navigate('/employees') },
     { label: 'Instrukcja', sub: 'Pomoc', disabled: false, icon: BookOpen, action: () => navigate('/instructions') },
@@ -71,7 +72,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   return (
     <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] w-full bg-[#FAFAFA] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
        {/* Global Header */}
-        <header className="min-h-16 h-auto py-2 2xl:py-0 bg-white dark:bg-slate-900 flex flex-wrap 2xl:flex-nowrap items-center justify-between px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-x-4 gap-y-2">
+        <header className="min-h-16 h-auto py-2 2xl:py-0 bg-white dark:bg-slate-900 flex flex-wrap 2xl:flex-nowrap items-center justify-between px-6 border-b border-gray-100 dark:border-slate-800 z-50 shrink-0 gap-x-4 gap-y-2 print:hidden">
            {/* Left Section: Menu + Title + Navigation */}
            <div className="flex items-center gap-4 shrink-0 order-1">
               <div className="flex items-center gap-2 mr-2">

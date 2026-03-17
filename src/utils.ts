@@ -14,6 +14,16 @@ export function displayName(name: string): string {
   return `${parts.slice(1).join(' ')} ${parts[0]}`;
 }
 
+/** Formats a 9-digit phone number with spaces: XXX XXX XXX */
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 9) {
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  }
+  return phone;
+}
+
 // Calculate hours between two HH:MM strings
 export const calculateDuration = (start: string, end: string): number => {
   const [startH, startM] = start.split(':').map(Number);

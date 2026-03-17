@@ -18,6 +18,7 @@ import {
   Coffee,
   FileText,
   Thermometer,
+  Phone,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -275,21 +276,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ session }) => {
                         </div>
                     </button>
 
-                    {/* 7. Instructions */}
+                    {/* 7. Phonebook */}
                     <button
-                        onClick={() => navigate('/instructions')}
-                        className="min-h-[120px] md:min-h-0 h-full bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-gray-100 dark:border-slate-800 shadow-sm hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-lg transition-all duration-300 ease-out group text-left relative overflow-hidden"
+                        onClick={() => navigate('/phones')}
+                        className="min-h-[120px] md:min-h-0 h-full bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-gray-100 dark:border-slate-800 shadow-sm hover:border-amber-200 dark:hover:border-amber-900 hover:shadow-lg transition-all duration-300 ease-out group text-left relative overflow-hidden"
                     >
-                        <div className="absolute -right-6 -bottom-6 text-gray-50 dark:text-gray-800">
-                             <FileText className="w-40 h-40" />
+                        <div className="absolute -right-6 -bottom-6 text-amber-50 dark:text-amber-900/20">
+                             <Phone className="w-40 h-40" />
                         </div>
                         <div className="flex flex-col justify-between h-full relative z-10">
                             <div className="flex justify-end w-full">
-                                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors duration-300 -rotate-45 group-hover:rotate-0" />
+                                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-amber-500 transition-colors duration-300 -rotate-45 group-hover:rotate-0" />
                             </div>
                             <div>
-                                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Instrukcja</h3>
-                                <p className="text-xs md:text-sm text-gray-400 font-medium mt-1">Dokumentacja</p>
+                                <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Telefony</h3>
+                                <p className="text-xs md:text-sm text-gray-400 font-medium mt-1">Książka kontaktowa</p>
                             </div>
                         </div>
                     </button>

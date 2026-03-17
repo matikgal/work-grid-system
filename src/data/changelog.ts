@@ -14,9 +14,18 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '2.2.0',
+    date: '17.03.2026',
+    label: 'Najnowsza',
+    changes: [
+      { tag: 'ui', text: 'Nowy, dedykowany widok drukowania książki telefonicznej z automatycznym dopasowaniem do formatu A4.' },
+      { tag: 'fix', text: 'Poprawiono czytelność numerów telefonów na wydruku poprzez dodanie spacji (format XXX XXX XXX).' },
+      { tag: 'fix', text: 'Optymalizacja mechanizmu wywoływania okna drukowania i naprawa błędów typowania w ustawieniach motywu.' },
+    ],
+  },
+  {
     version: '2.1.0',
     date: '06.03.2026',
-    label: 'Najnowsza',
     changes: [
       { tag: 'fix', text: 'Pole nazwy produktu w edycji zamówienia wyświetla placeholder zamiast domyślnej wartości.' },
       { tag: 'ui', text: 'Wolne Soboty: usunięto kolumnę "Z grafiku", dane wpisywane ręcznie przez użytkownika.' },

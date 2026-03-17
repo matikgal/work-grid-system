@@ -11,6 +11,7 @@ interface CreateEmployeeParams {
   rowColor?: string;
   isVisibleInSchedule?: boolean;
   isVisibleInVacations?: boolean;
+  phone?: string;
 }
 
 export const employeeService = {
@@ -33,11 +34,12 @@ export const employeeService = {
       isSeparator: e.is_separator,
       rowColor: e.row_color,
       isVisibleInSchedule: e.is_visible_in_schedule,
-      isVisibleInVacations: e.is_visible_in_vacations
+      isVisibleInVacations: e.is_visible_in_vacations,
+      phone: e.phone
     } as Employee));
   },
 
-  async create({ name, role, userId, avatarColor, isSeparator = false, rowColor, isVisibleInSchedule = true, isVisibleInVacations = true }: CreateEmployeeParams) {
+  async create({ name, role, userId, avatarColor, isSeparator = false, rowColor, isVisibleInSchedule = true, isVisibleInVacations = true, phone = '' }: CreateEmployeeParams) {
     const newEmpData = { 
       name, 
       role, 
@@ -46,7 +48,8 @@ export const employeeService = {
       is_separator: isSeparator,
       row_color: rowColor,
       is_visible_in_schedule: isVisibleInSchedule,
-      is_visible_in_vacations: isVisibleInVacations
+      is_visible_in_vacations: isVisibleInVacations,
+      phone: phone
     };
     
     // We try to insert. If columns don't exist, this might fail unless we assume user has migrated DB.
@@ -67,7 +70,8 @@ export const employeeService = {
       avatarColor: data.avatar_color,
       orderIndex: data.order_index,
       isSeparator: data.is_separator,
-      rowColor: data.row_color
+      rowColor: data.row_color,
+      phone: data.phone
     } as Employee;
   },
 
@@ -81,6 +85,7 @@ export const employeeService = {
     if (updates.rowColor !== undefined) dbUpdates.row_color = updates.rowColor;
     if (updates.isVisibleInSchedule !== undefined) dbUpdates.is_visible_in_schedule = updates.isVisibleInSchedule;
     if (updates.isVisibleInVacations !== undefined) dbUpdates.is_visible_in_vacations = updates.isVisibleInVacations;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
 
     const { data, error } = await supabase
       .from('employees')
@@ -100,7 +105,8 @@ export const employeeService = {
       isSeparator: data.is_separator,
       rowColor: data.row_color,
       isVisibleInSchedule: data.is_visible_in_schedule,
-      isVisibleInVacations: data.is_visible_in_vacations
+      isVisibleInVacations: data.is_visible_in_vacations,
+      phone: data.phone
     } as Employee;
   },
 
@@ -115,7 +121,8 @@ export const employeeService = {
       is_separator: emp.isSeparator,
       row_color: emp.rowColor,
       is_visible_in_schedule: emp.isVisibleInSchedule,
-      is_visible_in_vacations: emp.isVisibleInVacations
+      is_visible_in_vacations: emp.isVisibleInVacations,
+      phone: emp.phone
     }));
 
     const { error } = await supabase.from('employees').upsert(updates);

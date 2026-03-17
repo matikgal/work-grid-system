@@ -8,6 +8,7 @@ export interface Employee {
   rowColor?: string;
   isVisibleInSchedule?: boolean;
   isVisibleInVacations?: boolean;
+  phone?: string;
 }
 
 export interface Shift {

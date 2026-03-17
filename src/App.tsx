@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { SchedulePage } from './pages/SchedulePage';
 import { FreeSaturdaysPage } from './pages/FreeSaturdaysPage';
 import { VacationsPage } from './pages/VacationsPage';
+import { PhonesPage } from './pages/PhonesPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
@@ -82,6 +83,10 @@ const App: React.FC = () => {
               <Route 
                 path="/vacations" 
                 element={session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />} 
+              />
+              <Route 
+                path="/phones" 
+                element={session ? <PhonesPage session={session} /> : <Navigate to="/login" replace />} 
               />
               <Route 
                 path="/orders" 

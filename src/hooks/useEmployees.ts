@@ -17,7 +17,7 @@ export function useEmployees(session: Session) {
   });
 
   const { mutateAsync: addEmployeeMutate } = useMutation({
-    mutationFn: (data: { name: string, role: string, avatarColor?: string, isSeparator?: boolean, rowColor?: string, isVisibleInSchedule?: boolean, isVisibleInVacations?: boolean }) => 
+    mutationFn: (data: { name: string, role: string, avatarColor?: string, isSeparator?: boolean, rowColor?: string, isVisibleInSchedule?: boolean, isVisibleInVacations?: boolean, phone?: string }) => 
         employeeService.create({ ...data, userId }),
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
@@ -57,8 +57,8 @@ export function useEmployees(session: Session) {
     }
   });
 
-  const addEmployee = (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string, isVisibleInSchedule = true, isVisibleInVacations = true) => {
-      return addEmployeeMutate({ name, role, avatarColor, isSeparator, rowColor, isVisibleInSchedule, isVisibleInVacations });
+  const addEmployee = (name: string, role: string, avatarColor?: string, isSeparator = false, rowColor?: string, isVisibleInSchedule = true, isVisibleInVacations = true, phone?: string) => {
+      return addEmployeeMutate({ name, role, avatarColor, isSeparator, rowColor, isVisibleInSchedule, isVisibleInVacations, phone });
   };
 
   const updateEmployee = (id: string, updates: Partial<Employee>) => {
