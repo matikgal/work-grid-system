@@ -23,8 +23,8 @@ export function useFreeSaturdays(userId: string, selectedYear: number, employees
   });
 
   const { mutateAsync: updateAdjustmentMutate } = useMutation({
-    mutationFn: async ({ employeeId, newVal }: { employeeId: string; newVal: number }) => {
-      return adjustmentService.upsertAdjustment(employeeId, userId, selectedYear, newVal);
+    mutationFn: async ({ employeeId, dates, markedDates }: { employeeId: string; dates: string[]; markedDates: number[] }) => {
+      return adjustmentService.upsertAdjustment(employeeId, userId, selectedYear, dates.length, dates, markedDates);
     },
     onMutate: async (newVar) => {
       await queryClient.cancelQueries({ queryKey: freeSaturdaysKeys.all(userId, selectedYear) });
@@ -37,7 +37,9 @@ export function useFreeSaturdays(userId: string, selectedYear: number, employees
           employeeId: newVar.employeeId,
           userId,
           year: selectedYear,
-          adjustment: newVar.newVal,
+          adjustment: newVar.dates.length,
+          dates: newVar.dates,
+          markedDates: newVar.markedDates,
         };
         queryClient.setQueryData(freeSaturdaysKeys.all(userId, selectedYear), {
           ...prev,
@@ -59,14 +61,17 @@ export function useFreeSaturdays(userId: string, selectedYear: number, employees
     },
   });
 
-  // Sets the absolute value entered by the user directly.
-  const setAdjustment = (employeeId: string, newVal: number) => {
-    return updateAdjustmentMutate({ employeeId, newVal });
+  const updateAdjustment = (employeeId: string, updates: { dates?: string[]; markedDates?: number[] }) => {
+    const existing = data?.adjustments?.find((a) => a.employeeId === employeeId);
+    const finalDates = updates.dates ?? (existing?.dates || []);
+    const finalMarkedDates = updates.markedDates ?? (existing?.markedDates || []);
+    return updateAdjustmentMutate({ employeeId, dates: finalDates, markedDates: finalMarkedDates });
   };
 
   return {
     adjustments: data?.adjustments || [],
     loading,
-    setAdjustment,
+    updateAdjustment, // Zwracamy nową funkcję aktualizującą
+    setAdjustment: (id: string, dates: string[]) => updateAdjustment(id, { dates }), // Zachowane dla kompatybilności MobileList
   };
 }

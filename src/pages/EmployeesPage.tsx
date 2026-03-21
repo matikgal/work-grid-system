@@ -510,8 +510,8 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                                               <input type="checkbox" checked={isVisibleInSchedule} onChange={(e) => setIsVisibleInSchedule(e.target.checked)} className="peer w-6 h-6 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 bg-white" />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200">Grafik Zmian</div>
-                                                <div className="text-xs text-slate-500 font-medium">Będzie można przypisać zmianę dla osoby.</div>
+                                                <div className="font-bold text-slate-800 dark:text-slate-200">Grafik Zmian i Wolne Soboty</div>
+                                                <div className="text-xs text-slate-500 font-medium">Będzie można przypisywać zmiany i rozliczać soboty.</div>
                                             </div>
                                         </label>
                                         <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer transition-all">
@@ -519,8 +519,8 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                                               <input type="checkbox" checked={isVisibleInVacations} onChange={(e) => setIsVisibleInVacations(e.target.checked)} className="peer w-6 h-6 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 bg-white" />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200">Urlopy i Wolne Soboty</div>
-                                                <div className="text-xs text-slate-500 font-medium">Obliczenia w pozostałych 2 widokach całorocznych.</div>
+                                                <div className="font-bold text-slate-800 dark:text-slate-200">Urlopy</div>
+                                                <div className="text-xs text-slate-500 font-medium">Wyświetlanie w widoku całorocznych limitów urlopowych.</div>
                                             </div>
                                         </label>
                                     </div>

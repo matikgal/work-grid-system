@@ -17,12 +17,12 @@ interface FreeSaturdaysPageProps {
 
 export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session }) => {
   const { employees } = useEmployees(session);
+  const activeEmployees = employees.filter(e => !e.isSeparator && e.isVisibleInSchedule !== false);
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isLocked, setIsLocked] = useState(true);
   const isMobile = useMobile();
-
-  const { adjustments, setAdjustment, loading } = useFreeSaturdays(session.user.id, selectedYear, employees);
+  const { adjustments, setAdjustment, updateAdjustment, loading } = useFreeSaturdays(session.user.id, selectedYear, activeEmployees);
 
   return (
     <MainLayout pageTitle="Wolne Soboty">
@@ -36,7 +36,7 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
             <div className="hidden md:block">
               <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Wolne Soboty</h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-                Rozliczenie roczne dla <span className="font-bold text-brand-600 dark:text-brand-400">{employees.length}</span> pracowników.
+                Rozliczenie roczne dla <span className="font-bold text-brand-600 dark:text-brand-400">{activeEmployees.length}</span> pracowników.
               </p>
             </div>
 
@@ -83,17 +83,17 @@ export const FreeSaturdaysPage: React.FC<FreeSaturdaysPageProps> = ({ session })
               </div>
             ) : isMobile ? (
               <FreeSaturdaysMobileList
-                employees={employees}
+                employees={activeEmployees}
                 isLocked={isLocked}
                 adjustments={adjustments}
                 onSetAdjustment={setAdjustment}
               />
             ) : (
               <FreeSaturdaysDesktopTable
-                employees={employees}
+                employees={activeEmployees}
                 isLocked={isLocked}
                 adjustments={adjustments}
-                onSetAdjustment={setAdjustment}
+                onUpdateAdjustment={updateAdjustment}
               />
             )}
           </div>

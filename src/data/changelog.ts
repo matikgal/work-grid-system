@@ -14,9 +14,20 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '2.3.0',
+    date: '21.03.2026',
+    label: 'Najnowsza',
+    changes: [
+      { tag: 'feat', text: 'Wolne Soboty: System zarządzania kolumnami (limit 4) z potwierdzeniem usuwania danych.' },
+      { tag: 'feat', text: 'Wolne Soboty: Interaktywne zaznaczanie komórek (podświetlenia) z trwałością w bazie danych.' },
+      { tag: 'ui', text: 'Wolne Soboty: Automatyczne sortowanie alfabetyczne po nazwisku oraz poprawa wyrównania kolumn.' },
+      { tag: 'ui', text: 'Grafik: Dodano nową szybką zmianę 9-17 w górnym panelu nawigacji.' },
+      { tag: 'refactor', text: 'Centralizacja wersji aplikacji oraz poprawa estetyki krawędzi tabel.' },
+    ],
+  },
+  {
     version: '2.2.0',
     date: '17.03.2026',
-    label: 'Najnowsza',
     changes: [
       { tag: 'ui', text: 'Nowy, dedykowany widok drukowania książki telefonicznej z automatycznym dopasowaniem do formatu A4.' },
       { tag: 'fix', text: 'Poprawiono czytelność numerów telefonów na wydruku poprzez dodanie spacji (format XXX XXX XXX).' },

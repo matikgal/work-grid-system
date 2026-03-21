@@ -5,6 +5,7 @@ export const SHIFT_TYPES = {
   WORK_MORNING: '6-14',
   WORK_AFTERNOON: '14-22',
   WORK_OFFICE: '10-18',
+  WORK_9_17: '9-17',
   WORK_8: '8',
   WS: 'WS',
   WS_ON_DEMAND: 'WS-NŻ',
@@ -32,6 +33,7 @@ export const ROLES = [
 export const SHIFT_TEMPLATES: ShiftTemplate[] = [
   { id: 't1', label: SHIFT_TYPES.WORK_MORNING, startTime: '06:00', endTime: '14:00', colorClass: 'bg-emerald-100 border-emerald-300 text-emerald-800', type: 'work' },
   { id: 't3', label: SHIFT_TYPES.WORK_AFTERNOON, startTime: '14:00', endTime: '22:00', colorClass: 'bg-indigo-100 border-indigo-300 text-indigo-800', type: 'work' },
+  { id: 't_9_17', label: SHIFT_TYPES.WORK_9_17, startTime: '09:00', endTime: '17:00', colorClass: 'bg-cyan-100 border-cyan-300 text-cyan-800', type: 'work' },
   { id: 't_mid', label: SHIFT_TYPES.WORK_OFFICE, startTime: '10:00', endTime: '18:00', colorClass: 'bg-purple-100 border-purple-300 text-purple-800', type: 'work' },
   { id: 't_vacation', label: SHIFT_TYPES.VACATION, startTime: '08:00', endTime: '16:00', colorClass: 'bg-orange-100 border-orange-300 text-orange-800', type: 'vacation' },
   { id: 't_sat', label: SHIFT_TYPES.FREE_SATURDAY, startTime: '00:00', endTime: '00:00', colorClass: 'bg-slate-100 border-slate-300 text-slate-500', type: 'dayoff' },

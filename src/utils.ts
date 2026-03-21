@@ -91,6 +91,14 @@ export const getShiftStyle = (type: string): { bg: string; border: string; text:
           text: 'text-purple-800 dark:text-purple-300' 
       };
 
+    case SHIFT_TYPES.WORK_9_17:
+    case '09:00':
+        return { 
+            bg: 'bg-cyan-100 dark:bg-cyan-500/20', 
+            border: 'border-cyan-200 dark:border-cyan-500/30', 
+            text: 'text-cyan-800 dark:text-cyan-300' 
+        };
+
     case SHIFT_TYPES.VACATION:
       return { 
           bg: 'bg-orange-100 dark:bg-orange-500/20', 

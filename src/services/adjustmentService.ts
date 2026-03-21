@@ -6,6 +6,8 @@ export interface WsAdjustment {
   userId: string;
   year: number;
   adjustment: number;
+  dates: string[];
+  markedDates: number[];
 }
 
 export const adjustmentService = {
@@ -14,7 +16,7 @@ export const adjustmentService = {
     
     const { data, error } = await supabase
       .from('ws_adjustments')
-      .select('id, employee_id, user_id, year, adjustment')
+      .select('id, employee_id, user_id, year, adjustment, dates, marked_dates')
       .eq('user_id', userId)
       .eq('year', year)
       .in('employee_id', employeeIds);
@@ -26,18 +28,22 @@ export const adjustmentService = {
           employeeId: a.employee_id,
           userId: a.user_id,
           year: a.year,
-          adjustment: a.adjustment
+          adjustment: a.adjustment,
+          dates: a.dates || [],
+          markedDates: a.marked_dates || []
       } as WsAdjustment));
   },
 
-  async upsertAdjustment(employeeId: string, userId: string, year: number, adjustment: number) {
+  async upsertAdjustment(employeeId: string, userId: string, year: number, adjustment: number, dates: string[] = [], markedDates: number[] = []) {
       const { data, error } = await supabase
         .from('ws_adjustments')
         .upsert({
             employee_id: employeeId,
             user_id: userId,
             year: year,
-            adjustment: adjustment
+            adjustment: adjustment,
+            dates: dates,
+            marked_dates: markedDates
         }, { onConflict: 'employee_id, year' })
         .select()
         .single();
@@ -49,7 +55,9 @@ export const adjustmentService = {
           employeeId: data.employee_id,
           userId: data.user_id,
           year: data.year,
-          adjustment: data.adjustment
+          adjustment: data.adjustment,
+          dates: data.dates || [],
+          markedDates: data.marked_dates || []
       } as WsAdjustment;
   }
 };
