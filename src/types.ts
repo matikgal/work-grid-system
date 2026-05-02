@@ -9,6 +9,7 @@ export interface Employee {
   isVisibleInSchedule?: boolean;
   isVisibleInVacations?: boolean;
   phone?: string;
+  isArchived?: boolean;
 }
 
 export interface Shift {

@@ -35,7 +35,8 @@ export const employeeService = {
       rowColor: e.row_color,
       isVisibleInSchedule: e.is_visible_in_schedule,
       isVisibleInVacations: e.is_visible_in_vacations,
-      phone: e.phone
+      phone: e.phone,
+      isArchived: e.is_archived
     } as Employee));
   },
 
@@ -71,7 +72,8 @@ export const employeeService = {
       orderIndex: data.order_index,
       isSeparator: data.is_separator,
       rowColor: data.row_color,
-      phone: data.phone
+      phone: data.phone,
+      isArchived: data.is_archived
     } as Employee;
   },
 
@@ -86,6 +88,7 @@ export const employeeService = {
     if (updates.isVisibleInSchedule !== undefined) dbUpdates.is_visible_in_schedule = updates.isVisibleInSchedule;
     if (updates.isVisibleInVacations !== undefined) dbUpdates.is_visible_in_vacations = updates.isVisibleInVacations;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.isArchived !== undefined) dbUpdates.is_archived = updates.isArchived;
 
     const { data, error } = await supabase
       .from('employees')
@@ -106,7 +109,8 @@ export const employeeService = {
       rowColor: data.row_color,
       isVisibleInSchedule: data.is_visible_in_schedule,
       isVisibleInVacations: data.is_visible_in_vacations,
-      phone: data.phone
+      phone: data.phone,
+      isArchived: data.is_archived
     } as Employee;
   },
 
@@ -129,7 +133,23 @@ export const employeeService = {
     if (error) throw error;
   },
 
-  async delete(id: string) {
+  async archive(id: string) {
+    const { error } = await supabase
+      .from('employees')
+      .update({ is_archived: true, is_visible_in_schedule: false, is_visible_in_vacations: false })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async restore(id: string) {
+    const { error } = await supabase
+      .from('employees')
+      .update({ is_archived: false, is_visible_in_schedule: true, is_visible_in_vacations: true })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async hardDelete(id: string) {
     await supabase.from('shifts').delete().eq('employee_id', id); 
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (error) throw error;

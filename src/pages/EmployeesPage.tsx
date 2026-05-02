@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Clock, Trash2, X, PenTool, GripVertical, Minus } from 'lucide-react';
+import { Search, Plus, User, Clock, Trash2, X, PenTool, GripVertical, Minus, Archive, RefreshCw } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, TouchSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -113,10 +113,11 @@ interface EmployeesPageProps {
 
 export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
   const currentMonth = new Date();
-  const { employees, addEmployee, updateEmployee, deleteEmployee, reorderEmployees, loading } = useEmployees(session);
+  const { employees, addEmployee, updateEmployee, archiveEmployee, restoreEmployee, hardDeleteEmployee, reorderEmployees, loading } = useEmployees(session);
   const { shifts } = useShifts(employees, currentMonth);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   
   // Drawer / Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -229,11 +230,36 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
       }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (editingEmployee) {
       try {
-        await deleteEmployee(editingEmployee.id);
-        toast.success('Pracownik został usunięty');
+        await archiveEmployee(editingEmployee.id);
+        toast.success('Pracownik został zarchiwizowany');
+        setIsConfirmDeleteOpen(false);
+        handleCloseForm();
+      } catch (err) {
+        toast.error('Błąd podczas archiwizacji');
+      }
+    }
+  };
+
+  const handleRestore = async () => {
+    if (editingEmployee) {
+      try {
+        await restoreEmployee(editingEmployee.id);
+        toast.success('Pracownik został przywrócony');
+        handleCloseForm();
+      } catch (err) {
+        toast.error('Błąd podczas przywracania');
+      }
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (editingEmployee) {
+      try {
+        await hardDeleteEmployee(editingEmployee.id);
+        toast.success('Pracownik został trwale usunięty');
         setIsConfirmDeleteOpen(false);
         handleCloseForm();
       } catch (err) {
@@ -242,10 +268,12 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          emp.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesArchive = showArchived ? emp.isArchived : !emp.isArchived;
+    return matchesSearch && matchesArchive;
+  });
 
   const getMonthlyHours = (employeeId: string) => {
     if(!shifts) return 0;
@@ -283,6 +311,19 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                     </div>
                 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={() => setShowArchived(!showArchived)}
+                            className={cn(
+                                "flex items-center justify-center gap-2 px-4 py-2 border rounded-full text-sm font-bold transition-all shadow-sm shrink-0",
+                                showArchived 
+                                  ? "bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-900/30 dark:border-brand-800 dark:text-brand-400" 
+                                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            )}
+                            title="Archiwum"
+                        >
+                            <Archive className="w-4 h-4" />
+                            <span className="hidden sm:inline">{showArchived ? 'Wróć' : 'Archiwum'}</span>
+                        </button>
                         <button 
                             onClick={() => handleOpenForm(null, true)}
                             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm font-bold transition-all shadow-sm"
@@ -374,7 +415,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
             <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/50">
                 <div>
                    <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-none">
-                     {editingEmployee ? 'Edycja Profilu' : isSeparatorMode ? 'Nowy Wiersz' : 'Dodaj Osobę'}
+                     {editingEmployee ? (editingEmployee.isArchived ? 'Zarchiwizowany' : 'Edycja Profilu') : isSeparatorMode ? 'Nowy Wiersz' : 'Dodaj Osobę'}
                    </h2>
                    {editingEmployee && !isSeparatorMode && <p className="text-sm text-slate-500 mt-2 font-medium">Uaktualnij dane i uprawnienia widoczności widoków.</p>}
                 </div>
@@ -535,22 +576,37 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
             {/* Bottom Actions */}
             <div className="p-6 md:p-8 border-t border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-950 flex gap-3 pb-8 md:pb-6">
                 {editingEmployee && (
+                    <>
+                        {editingEmployee.isArchived ? (
+                            <button
+                                type="button"
+                                onClick={handleRestore}
+                                className="px-5 py-3.5 rounded-full font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200 dark:border-emerald-800 focus:outline-none flex-1 flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw className="w-5 h-5" />
+                                Przywróć pracownika
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setIsConfirmDeleteOpen(true)}
+                                className="px-5 py-3.5 rounded-full font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors border border-slate-200 dark:border-slate-800 group focus:outline-none"
+                                title="Archiwizuj"
+                            >
+                                <Archive className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            </button>
+                        )}
+                    </>
+                )}
+                {!editingEmployee?.isArchived && (
                     <button
-                        type="button"
-                        onClick={() => setIsConfirmDeleteOpen(true)}
-                        className="px-5 py-3.5 rounded-full font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors border border-slate-200 dark:border-slate-800 group focus:outline-none"
-                        title="Usuń trwale"
+                        type="submit"
+                        form="employee-form"
+                        className="flex-1 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 py-3.5 px-6 rounded-full font-bold shadow-xl shadow-slate-900/10 dark:shadow-white/10 transition-all active:scale-[0.98] focus:outline-none"
                     >
-                        <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        {editingEmployee ? 'Zachowaj Pozycję' : 'Zatrudnij / Utwórz'}
                     </button>
                 )}
-                <button
-                    type="submit"
-                    form="employee-form"
-                    className="flex-1 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 py-3.5 px-6 rounded-full font-bold shadow-xl shadow-slate-900/10 dark:shadow-white/10 transition-all active:scale-[0.98] focus:outline-none"
-                >
-                    {editingEmployee ? 'Zachowaj Pozycję' : 'Zatrudnij / Utwórz'}
-                </button>
             </div>
         </div>
         <PageFooter />
@@ -559,10 +615,10 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
       <ConfirmModal
         isOpen={isConfirmDeleteOpen}
         onClose={() => setIsConfirmDeleteOpen(false)}
-        onConfirm={handleDelete}
-        title="Usuń pozycję"
-        message="Czy na pewno chcesz usunąć pracownika / separator? Tej operacji nie cofniemy."
-        confirmLabel="Tak, usuń"
+        onConfirm={handleArchive}
+        title="Archiwizuj pozycję"
+        message="Czy na pewno chcesz zarchiwizować tę pozycję? Pracownik przestanie być widoczny w nowych grafikach, ale jego dotychczasowa historia pozostanie."
+        confirmLabel="Tak, archiwizuj"
         variant="danger"
       />
     </MainLayout>

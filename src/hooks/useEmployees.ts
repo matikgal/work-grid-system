@@ -32,8 +32,22 @@ export function useEmployees(session: Session) {
     }
   });
 
-  const { mutateAsync: deleteEmployee } = useMutation({
-    mutationFn: (id: string) => employeeService.delete(id),
+  const { mutateAsync: archiveEmployee } = useMutation({
+    mutationFn: (id: string) => employeeService.archive(id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
+    }
+  });
+
+  const { mutateAsync: restoreEmployee } = useMutation({
+    mutationFn: (id: string) => employeeService.restore(id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
+    }
+  });
+
+  const { mutateAsync: hardDeleteEmployee } = useMutation({
+    mutationFn: (id: string) => employeeService.hardDelete(id),
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) });
     }
@@ -71,7 +85,10 @@ export function useEmployees(session: Session) {
     error,
     addEmployee,
     updateEmployee,
-    deleteEmployee,
+    archiveEmployee,
+    restoreEmployee,
+    hardDeleteEmployee,
+    deleteEmployee: archiveEmployee, // Backwards compatibility for now
     reorderEmployees,
     refreshEmployees: () => queryClient.invalidateQueries({ queryKey: employeeKeys.all(userId) })
   };
