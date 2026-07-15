@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { format, getDay, isToday, getMonth } from "date-fns";
 import { pl } from "date-fns/locale";
 import Holidays from "date-holidays";
@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Employee, Shift, ViewMode } from "../../types";
-import { getShiftStyle, cn, stringToColor, displayName } from "../../utils";
+import { getShiftStyle, cn, displayName, resolveEmployeeAvatar, getMonthlyHoursStatus } from "../../utils";
 import { SHIFT_TYPES } from "../../constants";
 
 interface CalendarGridProps {
@@ -32,9 +32,15 @@ interface CalendarGridProps {
   isCompactMode?: boolean;
   onSlotClick: (employeeId: string, date: string, shift?: Shift) => void;
   workingDaysCount?: number;
+  wsTarget?: number;
+  sumDisplay?: SumDisplay;
+  /** Gdy aktywny jest szablon zmiany — pozwala „malować" zmiany przeciągnięciem po komórkach */
+  paintEnabled?: boolean;
   onReorder?: (newOrder: Employee[]) => void;
   onDayClick?: (date: Date) => void;
 }
+
+export type SumDisplay = 'days' | 'ws' | 'both';
 
 interface SortableRowProps {
   employee: Employee;
@@ -78,10 +84,36 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   isCompactMode = false,
   onSlotClick,
   workingDaysCount,
+  wsTarget = 0,
+  sumDisplay = 'days',
+  paintEnabled = false,
   onReorder,
   onDayClick,
 }) => {
   const [isLocked, setIsLocked] = useState(true);
+
+  // „Malowanie" zmian przeciągnięciem — aktywne tylko gdy wybrany jest szablon i wiersze są zablokowane
+  const paintActive = paintEnabled && isLocked;
+  const [paintCells, setPaintCells] = useState<Set<string>>(() => new Set());
+  const paintCellsRef = useRef<Set<string>>(new Set());
+  const isPaintingRef = useRef(false);
+
+  const updateSelection = (next: Set<string>) => {
+    paintCellsRef.current = next;
+    setPaintCells(next);
+  };
+  const startPaint = (empId: string, dateStr: string) => {
+    isPaintingRef.current = true;
+    updateSelection(new Set([`${empId}__${dateStr}`]));
+  };
+  const extendPaint = (empId: string, dateStr: string) => {
+    if (!isPaintingRef.current) return;
+    const key = `${empId}__${dateStr}`;
+    if (paintCellsRef.current.has(key)) return;
+    const next = new Set(paintCellsRef.current);
+    next.add(key);
+    updateSelection(next);
+  };
 
   // Initialize holidays for Poland
   const hd = useMemo(() => new Holidays("PL", { languages: ["pl"] }), []);
@@ -144,6 +176,28 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return lookup;
   }, [shifts]);
 
+  // Po puszczeniu przycisku: wypełnij wszystkie zaznaczone komórki aktywnym szablonem
+  useEffect(() => {
+    if (!paintActive) return;
+    const finishPaint = () => {
+      if (!isPaintingRef.current) return;
+      isPaintingRef.current = false;
+      const cells = Array.from(paintCellsRef.current);
+      updateSelection(new Set());
+      cells.forEach((key) => {
+        const [empId, dateStr] = key.split('__');
+        const existing = shiftsLookup[`${empId}-${dateStr}`];
+        onSlotClick(empId, dateStr, existing);
+      });
+    };
+    window.addEventListener('pointerup', finishPaint);
+    window.addEventListener('pointercancel', finishPaint);
+    return () => {
+      window.removeEventListener('pointerup', finishPaint);
+      window.removeEventListener('pointercancel', finishPaint);
+    };
+  }, [paintActive, shiftsLookup, onSlotClick]);
+
   // OPTIMIZATION: Shift hours calculation helper
   const getShiftHours = (shift: Shift) => {
     if (shift.type === SHIFT_TYPES.VACATION) return 8;
@@ -182,22 +236,30 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     // Only needed for month view where we show totals
     if (viewMode !== "month") return {};
 
-    const stats: Record<string, { totalHours: number; vacationDays: number }> =
-      {};
+    const stats: Record<
+      string,
+      { totalHours: number; vacationDays: number; wsCount: number }
+    > = {};
 
     employees.forEach((emp) => {
       let h = 0;
       let v = 0;
+      let ws = 0;
 
       daysInfo.forEach((info) => {
         const shift = shiftsLookup[`${emp.id}-${info.dateStr}`];
         if (shift) {
           h += getShiftHours(shift);
           if (shift.type === SHIFT_TYPES.VACATION) v++;
+          if (
+            shift.type === SHIFT_TYPES.WS ||
+            shift.type === SHIFT_TYPES.WS_ON_DEMAND
+          )
+            ws++;
         }
       });
 
-      stats[emp.id] = { totalHours: h, vacationDays: v };
+      stats[emp.id] = { totalHours: h, vacationDays: v, wsCount: ws };
     });
 
     return stats;
@@ -214,29 +276,28 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   const activeEmployeesCount = employees.filter(e => !e.isSeparator).length;
 
   return (
-    <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900/50 relative custom-scrollbar h-full calendar-grid overscroll-contain">
+    <div className="schedule-grid flex-1 overflow-auto relative custom-scrollbar h-full overscroll-contain">
       <div
         className={cn(viewMode === "week" ? "min-w-0 w-full" : "min-w-full w-max")}
       >
         {/* Header Row */}
-        <div className="flex sticky top-0 z-20 bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-800">
+        <div className="schedule-grid__header flex sticky top-0 z-20">
           <div
             className={cn(
-              "w-28 md:w-64 sticky left-0 z-30 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0",
+              "schedule-grid__corner w-28 md:w-64 sticky left-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0",
               isCompactMode
                 ? "p-1 md:p-2 text-xs"
                 : "p-2 md:p-4 text-sm md:text-base"
             )}
           >
             <span className="truncate">Pracownik</span>
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+            <div className="schedule-grid__lock-wrap flex items-center shrink-0">
               <button
+                type="button"
                 onClick={() => setIsLocked(!isLocked)}
                 className={cn(
-                  "p-1 rounded hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all",
-                  !isLocked
-                    ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shadow-sm"
-                    : "text-slate-400 dark:text-slate-500"
+                  "schedule-grid__lock-btn",
+                  !isLocked && "schedule-grid__lock-btn--unlocked"
                 )}
                 title={
                   isLocked ? "Odblokuj edycję kolejności" : "Zablokuj kolejność"
@@ -260,11 +321,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   key={day.toISOString()}
                   className={cn(
                     colWidthClass,
-                    "text-center flex flex-col justify-center transition-all relative group/header overflow-visible z-10",
+                    "schedule-grid__day-col text-center flex flex-col justify-center relative group/header overflow-visible z-10",
                     isCompactMode ? "p-0.5" : "p-2",
-                    isMonthChange
-                      ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-600"
-                      : "border-r border-slate-100 dark:border-slate-800",
+                    isMonthChange && "schedule-grid__day-col--month-end",
                     isHolidayDay
                       ? "bg-amber-50 dark:bg-amber-900/10"
                       : isWeekend
@@ -310,9 +369,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   </span>
 
                   {isHolidayDay && (
-                    <div className="absolute top-1 right-1 text-amber-500 opacity-70 group-hover/header:opacity-100 transition-opacity z-50">
+                    <div className="absolute top-1 right-1 text-amber-600 opacity-80 group-hover/header:opacity-100 transition-opacity z-50">
                       <Info size={isCompactMode ? 10 : 14} />
-                      <div className="absolute top-full right-0 mt-2 w-max max-w-[150px] px-3 py-1.5 bg-slate-800 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover/header:opacity-100 group-hover/header:visible transition-all duration-200 z-[100] pointer-events-none text-center">
+                      <div className="schedule-grid__holiday-tip">
                         <div className="font-semibold">{holiday?.name}</div>
                       </div>
                     </div>
@@ -322,7 +381,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             )}
 
             {viewMode === "month" && (
-              <div className="w-20 md:w-24 sticky right-0 z-30 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-2 font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 text-xs text-center leading-tight">
+              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 sticky right-0 z-30 p-2 flex items-center justify-center flex-shrink-0 text-xs text-center leading-tight">
                 SUMA
               </div>
             )}
@@ -339,24 +398,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             items={employees.map((e) => e.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="schedule-grid__body">
               {employees.map((employee, index) => {
                 const stats = employeeSummaryStats[employee.id] || {
                   totalHours: 0,
                   vacationDays: 0,
+                  wsCount: 0,
                 };
-                const { totalHours, vacationDays } = stats;
+                const { totalHours, vacationDays, wsCount } = stats;
 
-                const isTailwindClass = employee.avatarColor?.startsWith("bg-");
-                const avatarStyle = isTailwindClass
-                  ? {}
-                  : {
-                      backgroundColor:
-                        employee.avatarColor || stringToColor(employee.name),
-                    };
-                const avatarClass = isTailwindClass
-                  ? employee.avatarColor
-                  : undefined;
+                const avatar = resolveEmployeeAvatar(employee.avatarColor, employee.name, employee.id);
 
                 const isEven = index % 2 === 0;
 
@@ -376,23 +427,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   >
                     <div
                       className={cn(
-                        "flex group/row transition-all duration-75 relative",
+                        "schedule-grid__row flex group/row transition-all duration-75 relative",
                         isCompactMode ? "h-10 text-xs" : "h-20",
-                        employee.isSeparator 
-                             ? "bg-slate-100/50 dark:bg-slate-800/50" 
-                             : (isEven ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-900/50"),
-                        !isLocked && "cursor-grab active:cursor-grabbing border-b border-transparent",
-                         !employee.isSeparator && "hover:z-20 hover:ring-1 hover:ring-blue-600 dark:hover:ring-blue-400 hover:shadow-lg"
+                        employee.isSeparator
+                          ? "schedule-grid__row--separator bg-slate-100/50 dark:bg-slate-800/50"
+                          : isEven
+                          ? "bg-white dark:bg-slate-900"
+                          : "bg-slate-50/50 dark:bg-slate-900/50",
+                        !isLocked && "cursor-grab active:cursor-grabbing"
                       )}
                     >
                       {/* Employee Header Cell */}
                       <div
                         className={cn(
-                          "w-28 md:w-64 sticky left-0 z-10 border-r border-slate-200 dark:border-slate-800 p-2 md:p-3 flex items-center gap-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all",
+                          "schedule-grid__employee-cell w-28 md:w-64 sticky left-0 z-10 p-2 md:p-3 flex items-center gap-3 flex-shrink-0",
                           rowBgClass,
-                          isCompactMode ? "py-1" : "",
-                          // FIX: Use brightness filter instead of background override to preserve rowColor
-                          !employee.isSeparator && "group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
+                          isCompactMode ? "py-1" : ""
                         )}
                       >
                        {employee.isSeparator ? (
@@ -401,22 +451,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         <>
                             <div
                             className={cn(
-                                "rounded-full flex items-center justify-center text-white font-bold shrink-0 transition-all",
+                                "schedule-grid__avatar",
                                 isCompactMode
                                 ? "w-6 h-6 text-[10px]"
-                                : "w-10 h-10 text-sm shadow-sm",
-                                avatarClass
+                                : "w-10 h-10 text-sm",
+                                avatar.className
                             )}
-                            style={avatarStyle}
+                            style={avatar.style}
                             >
                             {displayName(employee.name).charAt(0)}
                             </div>
                             <div className="min-w-0">
-                            <div className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover/row:text-blue-700 dark:group-hover/row:text-blue-400 transition-colors">
+                            <div className="schedule-grid__employee-name truncate">
                                 {displayName(employee.name)}
                             </div>
                             {!isCompactMode && (
-                                <div className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                                <div className="schedule-grid__employee-role truncate mt-0.5">
                                 {employee.role}
                                 </div>
                             )}
@@ -441,10 +491,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                         key={dateStr}
                                         className={cn(
                                             colWidthClass,
-                                            "border-r relative flex items-center justify-center p-0.5 pointer-events-none select-none",
-                                            isMonthChange
-                                                ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
-                                                : "border-r-slate-100 dark:border-r-slate-800",
+                                            "schedule-grid__cell border-r relative flex items-center justify-center p-0.5 pointer-events-none select-none",
+                                            isMonthChange && "schedule-grid__cell--month-end",
                                             "bg-slate-50/50 dark:bg-slate-900/50 text-slate-300 dark:text-slate-700 font-mono text-lg"
                                         )}
                                     >
@@ -550,52 +598,69 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                       {shift.startTime}-{shift.endTime}
                                     </span>
                                   )}
-                                  <div className="absolute top-0 right-0 px-1 py-0.5 bg-white/50 text-[8px] font-bold text-slate-500 rounded-bl backdrop-blur-[1px]">
+                                  <div className="schedule-grid__shift-duration">
                                     {shift.duration}h
                                   </div>
                                 </>
                               );
                             };
 
+                            const isPainted = paintCells.has(
+                              `${employee.id}__${dateStr}`
+                            );
+
                             return (
                               <div
                                 key={dateStr}
                                 onPointerDown={(e) => {
-                                  // Prevent auto-drag when interacting with cells if locked or if slot click is intended
+                                  if (!paintActive || e.button !== 0) return;
+                                  e.preventDefault();
+                                  // Zwolnij domyślne przechwycenie wskaźnika, aby pointerenter działał na kolejnych komórkach (dotyk)
+                                  try {
+                                    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+                                  } catch {
+                                    /* ignore */
+                                  }
+                                  startPaint(employee.id, dateStr);
                                 }}
-                                onClick={() =>
-                                  onSlotClick(employee.id, dateStr, shift)
-                                }
+                                onPointerEnter={() => {
+                                  if (paintActive) extendPaint(employee.id, dateStr);
+                                }}
+                                onClick={() => {
+                                  // Gdy malujemy, wypełnienie obsługuje pointerup
+                                  if (paintActive) return;
+                                  onSlotClick(employee.id, dateStr, shift);
+                                }}
                                 className={cn(
                                   colWidthClass,
-                                  "border-r relative transition-all cursor-pointer flex items-center justify-center p-0.5",
-                                  isMonthChange
-                                    ? "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
-                                    : "border-r-slate-100 dark:border-r-slate-800",
+                                  "schedule-grid__cell relative flex items-center justify-center p-0.5",
+                                  paintActive && "cursor-crosshair select-none",
+                                  isMonthChange && "schedule-grid__cell--month-end",
+                                  !shift && "schedule-grid__cell--empty",
                                   !shift &&
-                                    "group-hover/row:bg-blue-50/50 dark:group-hover/row:bg-blue-900/20 hover:!bg-blue-100 dark:hover:!bg-blue-800/40",
+                                    "group-hover/row:bg-emerald-50/40 dark:group-hover/row:bg-emerald-900/15",
                                   isWeekend &&
                                     !shift &&
                                     "bg-slate-50 dark:bg-slate-900",
                                   isHolidayDay &&
                                     !shift &&
-                                    "bg-amber-50/50 dark:bg-amber-900/10"
+                                    "bg-amber-50/50 dark:bg-amber-900/10",
+                                  isPainted && "schedule-grid__cell--painting"
                                 )}
                               >
                                 {shift ? (
                                   <div
                                     className={cn(
-                                      "w-full h-full rounded transition-all shadow-sm flex items-center justify-center overflow-hidden relative",
+                                      "schedule-grid__shift",
                                       style?.bg,
                                       style?.border,
-                                      "border",
                                       isCompactMode ? "" : "flex-col p-1"
                                     )}
                                   >
                                     {getShiftContent()}
                                   </div>
                                 ) : (
-                                  <div className="w-full h-full rounded hover:bg-slate-200/50 transition-colors" />
+                                  <div className="schedule-grid__empty" />
                                 )}
                               </div>
                             );
@@ -605,40 +670,52 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         {viewMode === "month" && (
                           <div
                             className={cn(
-                              "w-20 md:w-24 sticky right-0 z-10 border-l border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-colors",
+                              "schedule-grid__sum-col w-20 md:w-24 sticky right-0 z-10 flex items-center justify-center flex-shrink-0 transition-colors",
                               isCompactMode
                                 ? "py-1 text-xs"
                                 : "p-2 flex-col gap-1",
-                              employee.isSeparator 
-                                ? "bg-slate-50 dark:bg-slate-900" 
-                                : (totalHours === targetMonthlyHours
-                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110"
-                                  : "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 group-hover/row:brightness-95 dark:group-hover/row:brightness-110")
+                              employee.isSeparator
+                                ? "bg-slate-50 dark:bg-slate-900"
+                                : (() => {
+                                    const status = getMonthlyHoursStatus(totalHours, targetMonthlyHours);
+                                    return {
+                                      ok: "schedule-grid__sum-cell--ok",
+                                      low: "schedule-grid__sum-cell--low",
+                                      high: "schedule-grid__sum-cell--high",
+                                    }[status];
+                                  })()
                             )}
                           >
                             {employee.isSeparator ? (
                                 <span className="text-slate-300 dark:text-slate-600">-</span>
                             ) : (
-                                <>
-                                    <div
-                                    className="text-center flex flex-col items-center"
-                                    title={`Norma: ${targetMonthlyHours}h`}
-                                    >
-                                    <div className="font-bold leading-tight">
-                                        {totalHours}h
-                                        <span className="text-[10px] opacity-75 font-normal ml-1">
-                                        / {parseFloat((totalHours / 8).toFixed(2))}d
-                                        </span>
-                                    </div>
-                                    </div>
+                                <div
+                                  className="flex w-full flex-col items-center justify-center leading-tight"
+                                  title={`Norma: ${targetMonthlyHours}h${sumDisplay !== 'days' ? ` • WS: ${wsCount}${wsTarget ? `/${wsTarget}` : ''}` : ''}`}
+                                >
                                     {!isCompactMode && (
-                                    <div className="text-center" title="Dni urlopu">
-                                        <span className="text-[10px] font-medium text-amber-600 bg-white/50 px-1.5 py-0.5 rounded-full border border-amber-100/50">
-                                        {vacationDays}d url.
-                                        </span>
-                                    </div>
+                                      <span className="text-[8px] font-semibold uppercase tracking-wide opacity-45">
+                                        {[sumDisplay !== 'ws' && 'h/d', sumDisplay !== 'days' && 'ws']
+                                          .filter(Boolean)
+                                          .join('/')}
+                                      </span>
                                     )}
-                                </>
+                                    <span className="schedule-grid__sum-values whitespace-nowrap font-bold tabular-nums text-[10px] md:text-[11px]">
+                                      {[
+                                        sumDisplay !== 'ws' &&
+                                          `${totalHours}h/${parseFloat((totalHours / 8).toFixed(2))}d`,
+                                        sumDisplay !== 'days' &&
+                                          `${wsCount}${wsTarget ? `/${wsTarget}` : ''}ws`,
+                                      ]
+                                        .filter(Boolean)
+                                        .join('/')}
+                                    </span>
+                                    {sumDisplay !== 'ws' && !isCompactMode && vacationDays > 0 && (
+                                      <span className="schedule-grid__vac-badge mt-0.5">
+                                        {vacationDays}d url.
+                                      </span>
+                                    )}
+                                </div>
                             )}
                           </div>
                         )}
@@ -652,8 +729,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </DndContext>
 
         {/* Footer Row (Totals) */}
-        <div className="flex bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-400 sticky bottom-0 z-30 shadow-[0_-4px_8px_-4px_rgba(0,0,0,0.1)] h-10 md:h-12">
-          <div className="w-28 md:w-64 sticky left-0 z-30 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 px-3 text-right text-xs uppercase tracking-wider flex items-center justify-end shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] flex-shrink-0">
+        <div className="schedule-grid__footer flex sticky bottom-0 z-30 h-10 md:h-12">
+          <div className="schedule-grid__footer-corner w-28 md:w-64 sticky left-0 z-30 px-3 text-right flex items-center justify-end flex-shrink-0">
             Suma (1zm/2zm | obecni):
           </div>
           <div className="flex flex-1 w-0">
@@ -674,14 +751,13 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                   key={dateStr}
                   className={cn(
                     colWidthClass,
-                    "h-full text-center text-[10px] md:text-xs flex items-center justify-center border-r border-slate-200 dark:border-slate-800 transition-colors",
+                    "schedule-grid__footer-cell h-full text-center text-[10px] md:text-xs flex items-center justify-center transition-colors",
                     isFullStaff
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/10 dark:text-emerald-400"
                       : count > 0
                       ? "bg-rose-50 text-rose-700 dark:bg-rose-900/10 dark:text-rose-400"
                       : "",
-                    isMonthChange &&
-                      "border-r-[3px] border-r-slate-300 dark:border-r-slate-700"
+                    isMonthChange && "schedule-grid__footer-cell--month-end"
                   )}
                 >
                   {count > 0 ? (
@@ -723,7 +799,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             })}
 
             {viewMode === "month" && (
-              <div className="w-20 md:w-24 sticky right-0 z-30 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex-shrink-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
+              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 sticky right-0 z-30 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
                 {activeEmployeesCount} os.
               </div>
             )}

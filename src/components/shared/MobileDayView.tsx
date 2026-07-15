@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { format, addDays, subDays, isSameDay } from 'date-fns';
+import { format, addDays, subDays } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Share2, Plus, Clock, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Clock, User } from 'lucide-react';
 import { Employee, Shift } from '../../types';
-import { cn, stringToColor, getShiftStyle, displayName } from '../../utils';
+import { cn, getShiftStyle, displayName, resolveEmployeeAvatar } from '../../utils';
 
 interface MobileDayViewProps {
   currentDate: Date;
@@ -20,7 +20,6 @@ export const MobileDayView: React.FC<MobileDayViewProps> = ({
   employees,
   shifts,
   onSlotClick,
-  workingDaysCount
 }) => {
   const dateKey = format(currentDate, 'yyyy-MM-dd');
 
@@ -29,129 +28,114 @@ export const MobileDayView: React.FC<MobileDayViewProps> = ({
   }, [employees]);
 
   const getShiftForEmployee = (employeeId: string) => {
-    return shifts.find(s => s.employeeId === employeeId && s.date === dateKey);
+    return shifts.find((s) => s.employeeId === employeeId && s.date === dateKey);
   };
 
-  const dayShifts = shifts.filter(s => s.date === dateKey);
+  const dayShifts = shifts.filter((s) => s.date === dateKey);
   const totalEmployees = dayShifts.length;
   const totalHours = dayShifts.reduce((acc, s) => acc + s.duration, 0);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-      {/* Mobile Header Controls - Moved here from DashboardPage header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-              <button 
-                onClick={() => onDateChange(subDays(currentDate, 1))}
-                className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 active:scale-95 transition-all"
-              >
-                  <ChevronLeft className="w-5 h-5" />
-              </button>
-              
-              <div className="flex flex-col items-center">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white capitalize">
-                      {format(currentDate, 'EEEE', { locale: pl })}
-                  </h2>
-                  <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      {format(currentDate, 'd MMMM yyyy', { locale: pl })}
-                  </span>
-              </div>
+    <div className="schedule-mobile flex h-full flex-col">
+      <div className="schedule-mobile__header">
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => onDateChange(subDays(currentDate, 1))}
+            className="schedule-header-nav-btn"
+            aria-label="Poprzedni dzień"
+          >
+            <ChevronLeft className="schedule-header-nav-btn__icon" strokeWidth={2} />
+          </button>
 
-              <button 
-                onClick={() => onDateChange(addDays(currentDate, 1))}
-                className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 active:scale-95 transition-all"
-              >
-                  <ChevronRight className="w-5 h-5" />
-              </button>
+          <div className="flex flex-col items-center text-center">
+            <h2 className="text-base font-bold uppercase capitalize">{format(currentDate, 'EEEE', { locale: pl })}</h2>
+            <span className="text-xs font-semibold text-black/50 dark:text-white/50">
+              {format(currentDate, 'd MMMM yyyy', { locale: pl })}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex flex-col items-center justify-center border border-slate-100 dark:border-slate-700">
-                  <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Obsada</span>
-                  <div className="flex items-center gap-1 mt-0.5">
-                      <User className="w-3.5 h-3.5 text-brand-500" />
-                      <span className="text-lg font-bold text-slate-700 dark:text-slate-200">{totalEmployees}</span>
-                  </div>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex flex-col items-center justify-center border border-slate-100 dark:border-slate-700">
-                  <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Godziny</span>
-                  <div className="flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3.5 h-3.5 text-blue-500" />
-                      <span className="text-lg font-bold text-slate-700 dark:text-slate-200">{totalHours}h</span>
-                  </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => onDateChange(addDays(currentDate, 1))}
+            className="schedule-header-nav-btn"
+            aria-label="Następny dzień"
+          >
+            <ChevronRight className="schedule-header-nav-btn__icon" strokeWidth={2} />
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="schedule-mobile__stat">
+            <span className="schedule-mobile__stat-label">Obsada</span>
+            <div className="mt-0.5 flex items-center gap-1">
+              <User className="h-3.5 w-3.5 text-[#059669]" strokeWidth={2} />
+              <span className="text-lg font-bold">{totalEmployees}</span>
+            </div>
           </div>
+          <div className="schedule-mobile__stat">
+            <span className="schedule-mobile__stat-label">Godziny</span>
+            <div className="mt-0.5 flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 text-sky-600" strokeWidth={2} />
+              <span className="text-lg font-bold">{totalHours}h</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Employee List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
-          {sortedEmployees.map(employee => {
-              const shift = getShiftForEmployee(employee.id);
-              
-              // Shift Styles
-              let shiftStyleClasses = "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-700";
-              
-              if (shift) {
-                  const style = getShiftStyle(shift.type || '');
-                  shiftStyleClasses = `${style.bg} ${style.border} ${style.text}`;
-              }
+      <div className="flex-1 space-y-3 overflow-y-auto p-4 pb-24">
+        {sortedEmployees.map((employee) => {
+          const shift = getShiftForEmployee(employee.id);
+          const avatar = resolveEmployeeAvatar(employee.avatarColor, employee.name, employee.id);
 
-              return (
-                  <div 
-                      key={employee.id}
-                      onClick={() => onSlotClick(employee.id, dateKey, shift)}
-                      className={cn(
-                          "relative rounded-2xl p-4 border transition-all active:scale-[0.98] shadow-sm flex items-center justify-between gap-4",
-                          shiftStyleClasses
-                      )}
-                  >
-                      <div className="flex items-center gap-3">
-                          <div 
-                              className={cn(
-                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0",
-                                  employee.avatarColor
-                              )}
-                              style={!employee.avatarColor?.startsWith('bg-') ? { backgroundColor: employee.avatarColor || stringToColor(employee.name) } : {}}
-                          >
-                              <span className="text-white drop-shadow-md">
-                                  {displayName(employee.name).charAt(0).toUpperCase()}
-                              </span>
-                          </div>
-                          <div>
-                              <h3 className={cn("font-bold text-base leading-tight", shift ? "opacity-100" : "text-slate-700 dark:text-slate-200")}>
-                                  {displayName(employee.name)}
-                              </h3>
-                              <p className={cn("text-xs font-medium opacity-70", shift ? "" : "text-slate-500 dark:text-slate-400")}>
-                                  {employee.role || 'Pracownik'}
-                              </p>
-                          </div>
-                      </div>
+          let shiftStyleClasses = 'schedule-mobile__card--empty';
+          if (shift) {
+            const style = getShiftStyle(shift.type || '');
+            shiftStyleClasses = `${style.bg} ${style.border} ${style.text}`;
+          }
 
-                      <div className="flex items-center">
-                          {shift ? (
-                              <div className="flex flex-col items-end">
-                                  <span className="text-lg font-black tracking-tight leading-none">
-                                      {shift.type}
-                                  </span>
-                                  <span className="text-[10px] font-bold opacity-70 uppercase tracking-widest mt-0.5">
-                                      {shift.duration}h
-                                  </span>
-                              </div>
-                          ) : (
-                              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                  <Plus className="w-5 h-5" />
-                              </div>
-                          )}
-                      </div>
-                  </div>
-              );
-          })}
-          
-          {employees.length === 0 && (
-              <div className="text-center py-10 text-slate-400 dark:text-slate-500">
-                  <p>Brak pracowników</p>
+          return (
+            <div
+              key={employee.id}
+              onClick={() => onSlotClick(employee.id, dateKey, shift)}
+              className={cn('schedule-mobile__card', shiftStyleClasses)}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn('schedule-mobile__avatar', avatar.className)}
+                  style={avatar.style}
+                >
+                  {displayName(employee.name).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold leading-tight">{displayName(employee.name)}</h3>
+                  <p className="text-xs font-medium opacity-70">{employee.role || 'Pracownik'}</p>
+                </div>
               </div>
-          )}
+
+              <div className="flex items-center">
+                {shift ? (
+                  <div className="flex flex-col items-end">
+                    <span className="text-lg font-black leading-none tracking-tight">{shift.type}</span>
+                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-widest opacity-70">
+                      {shift.duration}h
+                    </span>
+                  </div>
+                ) : (
+                  <div className="schedule-mobile__add-btn">
+                    <Plus className="h-5 w-5" strokeWidth={2} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {employees.length === 0 && (
+          <div className="py-10 text-center text-sm text-black/45 dark:text-white/45">
+            <p>Brak pracowników</p>
+          </div>
+        )}
       </div>
     </div>
   );

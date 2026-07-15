@@ -23,6 +23,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   cancelLabel = 'Anuluj',
   variant = 'warning'
 }) => {
+  const titleId = React.useId();
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const getVariantStyles = () => {
@@ -52,14 +60,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   };
 
   const styles = getVariantStyles();
-
-  const titleId = React.useId();
-
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    if (isOpen) window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
 
   return (
     <div
