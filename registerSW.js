@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/work-grid-system/sw.js', { scope: '/work-grid-system/' })})}
