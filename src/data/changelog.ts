@@ -14,9 +14,43 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '2.6.0',
+    date: '29.06.2026',
+    label: 'Najnowsza',
+    changes: [
+      { tag: 'ui', text: 'Nowy język wizualny „aurora glass" — szkło, gradienty i spójna paleta indygo/fiolet na całej aplikacji.' },
+      { tag: 'ui', text: 'Ujednolicenie wszystkich podstron: nagłówki, przyciski, wyszukiwarki, tabele i listy mobilne we wspólnym stylu.' },
+      { tag: 'ui', text: 'Przeprojektowany ekran logowania ze zdjęciem sklepu w tle i ciemnym przyciemnieniem.' },
+      { tag: 'feat', text: 'Grafik: limit WS na miesiąc, kompaktowa kolumna SUMA (h/d/ws), menu „Narzędzia" i malowanie zmian przeciąganiem.' },
+      { tag: 'feat', text: 'Panel sieci sklepów jako rozwijana harmonijka z mapą Google i dokładnymi pinezkami (tymczasowo wyłączony).' },
+      { tag: 'feat', text: 'System archiwum (miękkie usuwanie) z możliwością przywracania pozycji.' },
+      { tag: 'ui', text: 'Pulpit: obłożenie liczone do 14 osób, czytelniejsze kafelki i przycisk Wiadomości.' },
+    ],
+  },
+  {
+    version: '2.5.0',
+    date: '25.06.2026',
+    changes: [
+      { tag: 'feat', text: 'Eksport do Excel: grafik, pracownicy, urlopy (exceljs).' },
+      { tag: 'feat', text: 'Czat między sklepami z Supabase Realtime (/chat).' },
+      { tag: 'feat', text: 'Powiadomienia in-app, wnioski urlopowe, panel sieci sklepów.' },
+      { tag: 'feat', text: 'Wykrywanie konfliktów w grafiku + dziennik zdarzeń (audit log).' },
+    ],
+  },
+  {
+    version: '2.4.0',
+    date: '15.06.2026',
+    changes: [
+      { tag: 'feat', text: 'Rebranding Freshmarket Scheduler — logo, nazwa, kolory klienta.' },
+      { tag: 'feat', text: 'PWA: instalacja aplikacji z przeglądarki (manifest + service worker).' },
+      { tag: 'feat', text: 'Konfigurowalna lokalizacja pogody w Ustawieniach.' },
+      { tag: 'feat', text: 'Import pracowników z pliku CSV lub JSON (Ustawienia).' },
+      { tag: 'security', text: 'Publiczne zamówienia zabezpieczone kodem PIN + RPC Supabase.' },
+    ],
+  },
+  {
     version: '2.3.0',
     date: '21.03.2026',
-    label: 'Najnowsza',
     changes: [
       { tag: 'feat', text: 'Wolne Soboty: System zarządzania kolumnami (limit 4) z potwierdzeniem usuwania danych.' },
       { tag: 'feat', text: 'Wolne Soboty: Interaktywne zaznaczanie komórek (podświetlenia) z trwałością w bazie danych.' },

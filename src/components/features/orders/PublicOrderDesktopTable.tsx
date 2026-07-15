@@ -15,24 +15,24 @@ export const PublicOrderDesktopTable: React.FC<PublicOrderDesktopTableProps> = (
   onBlurCell,
 }) => {
   return (
-    <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table className="w-full text-left border-collapse">
-            <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="sticky left-0 z-10 bg-gray-50 p-3 min-w-[200px] text-xs font-bold uppercase text-gray-600 border-r border-gray-200">
+    <div className="dash-glass dash-scroll hidden overflow-x-auto md:block">
+        <table className="dash-table">
+            <thead className="dash-thead">
+                <tr>
+                    <th className="dash-th dash-th--sticky-left min-w-[200px]">
                         Nazwa Produktu
                     </th>
                     {shops.map(n => (
-                        <th key={n} className="p-3 min-w-[100px] text-xs font-bold uppercase text-center text-gray-600 border-r border-gray-200 last:border-0">
+                        <th key={n} className="dash-th dash-th--center min-w-[100px]">
                             Sklep {n}
                         </th>
                     ))}
-                    <th className="p-3 bg-gray-50 text-center font-bold text-xs uppercase text-gray-800 border-l border-gray-200">
+                    <th className="dash-th dash-th--sum">
                         Suma
                     </th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
                 {items.map(item => {
                     let sum = 0;
                     shops.forEach(n => {
@@ -43,37 +43,37 @@ export const PublicOrderDesktopTable: React.FC<PublicOrderDesktopTableProps> = (
                     });
 
                     return (
-                        <tr key={item.id} className="group hover:bg-gray-50">
-                            <td className="sticky left-0 z-10 bg-white p-3 border-r border-gray-200 font-bold text-gray-900 border-b border-gray-100">
+                        <tr key={item.id} className="group dash-trow">
+                            <td className="dash-td dash-td--sticky-left font-semibold text-indigo-950 dark:text-indigo-50">
                                 {item.name}
                             </td>
-                            
+
                             {shops.map(n => {
                                 const shopResp = item.responses?.find((r: ShopResponse) => r.shopId === n.toString());
                                 return (
-                                    <td key={n} className="p-0 border-r border-gray-200 last:border-0">
-                                        <input 
-                                            type="text" 
+                                    <td key={n} className="dash-td !p-0 border-r border-indigo-950/[0.06] dark:border-white/[0.06]">
+                                        <input
+                                            type="text"
                                             defaultValue={shopResp?.value || ''}
                                             onBlur={(e) => onBlurCell(item.id, n, e.target.value)}
-                                            className="w-full h-full p-3 text-center bg-transparent focus:outline-none focus:bg-blue-50 text-gray-800 disabled:text-gray-500 disabled:bg-gray-50/50"
+                                            className="h-full w-full bg-transparent p-3 text-center text-indigo-950 transition-colors focus:bg-indigo-500/10 focus:outline-none disabled:bg-black/[0.03] disabled:text-indigo-950/40 dark:text-indigo-50 dark:disabled:bg-white/[0.03] dark:disabled:text-indigo-100/40"
                                             placeholder="-"
                                             disabled={isLocked}
                                         />
                                     </td>
                                 );
                             })}
-                            
-                            <td className="p-3 text-center font-bold text-blue-600 bg-gray-50 border-l border-gray-200">
+
+                            <td className="dash-td dash-td--sum font-bold text-indigo-700 dark:text-indigo-300">
                                 {sum > 0 ? Number(sum.toFixed(2)) : '-'}
                             </td>
                         </tr>
                     );
                 })}
-                
+
                 {items.length === 0 && (
                     <tr>
-                        <td colSpan={15} className="p-8 text-center text-gray-400">
+                        <td colSpan={15} className="p-8 text-center text-indigo-950/45 dark:text-indigo-100/45">
                             Brak danych zamówienia.
                         </td>
                     </tr>

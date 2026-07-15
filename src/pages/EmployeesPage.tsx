@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, User, Clock, Trash2, X, PenTool, GripVertical, Minus, Archive, RefreshCw } from 'lucide-react';
+import { Plus, User, Clock, Trash2, X, PenTool, GripVertical, Minus, Archive, RefreshCw, Settings, UsersRound } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, TouchSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Session } from '@supabase/supabase-js';
 import { Employee } from '../types';
-import { cn, stringToColor, getRandomColor, displayName } from '../utils';
+import { cn, getRandomColor, getAvatarColor, displayName } from '../utils';
 import { ROLES } from '../constants';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useEmployees } from '../hooks/useEmployees';
 import { useShifts } from '../hooks/useShifts';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
-import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
+import { DashboardBackground } from '../components/dashboard/DashboardBackground';
 import { PageFooter } from '../components/shared/PageFooter';
+import { PageHeader } from '../components/shared/PageHeader';
+import { SearchInput } from '../components/shared/SearchInput';
+import '../components/dashboard/dashboard-modern.css';
 
 interface SortableEmployeeRowProps {
   employee: Employee;
@@ -25,10 +28,11 @@ const SortableEmployeeRow = ({ employee, hours, onEdit }: SortableEmployeeRowPro
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: employee.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    // Tylko pion — zerujemy oś X, żeby wiersz nie uciekał w bok poza ekran.
+    transform: transform ? CSS.Transform.toString({ ...transform, x: 0, scaleX: 1, scaleY: 1 }) : undefined,
     transition,
     zIndex: isDragging ? 50 : 'auto',
-    opacity: isDragging ? 0.8 : 1,
+    opacity: isDragging ? 0.85 : 1,
   };
 
   if (employee.isSeparator) {
@@ -37,17 +41,17 @@ const SortableEmployeeRow = ({ employee, hours, onEdit }: SortableEmployeeRowPro
         ref={setNodeRef}
         style={style}
         className={cn(
-          "group flex items-center gap-2 py-2 px-1 rounded-xl transition-all relative touch-manipulation cursor-pointer",
-          isDragging && "shadow-xl ring-2 ring-brand-500/20 z-50 bg-white dark:bg-slate-800"
+          "group relative flex cursor-pointer touch-manipulation items-center gap-2 rounded-xl px-1 py-2 transition-all",
+          isDragging && "z-50 bg-white shadow-xl ring-2 ring-indigo-500/20 dark:bg-white/10"
         )}
       >
-        <div {...attributes} {...listeners} className="p-2 cursor-grab touch-none text-slate-300 hover:text-slate-500 dark:hover:text-slate-400 shrink-0">
-          <GripVertical className="w-5 h-5" />
+        <div {...attributes} {...listeners} className="shrink-0 cursor-grab touch-none p-2 text-indigo-950/25 hover:text-indigo-500 dark:text-indigo-100/30">
+          <GripVertical className="h-5 w-5" />
         </div>
-        <div className="flex-1 flex items-center justify-center gap-3 opacity-60" onClick={() => onEdit(employee)}>
-          <div className="h-px w-full bg-slate-300 dark:bg-slate-600"></div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Separator</span>
-          <div className="h-px w-full bg-slate-300 dark:bg-slate-600"></div>
+        <div className="flex flex-1 items-center justify-center gap-3 opacity-70" onClick={() => onEdit(employee)}>
+          <div className="h-px w-full bg-indigo-950/12 dark:bg-white/10"></div>
+          <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-950/40 dark:text-indigo-100/45">Separator</span>
+          <div className="h-px w-full bg-indigo-950/12 dark:bg-white/10"></div>
         </div>
       </div>
     );
@@ -58,50 +62,57 @@ const SortableEmployeeRow = ({ employee, hours, onEdit }: SortableEmployeeRowPro
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-center justify-between p-4 mb-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all relative overflow-hidden touch-manipulation cursor-pointer",
-        isDragging && "shadow-2xl border-brand-500 ring-2 ring-brand-500/20 z-50 bg-white dark:bg-slate-800"
+        "group relative mb-2 flex cursor-pointer touch-manipulation items-center justify-between overflow-hidden rounded-2xl border border-white/55 bg-white/60 p-5 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-indigo-400/40 hover:bg-white hover:shadow-[0_16px_30px_-18px_rgba(49,46,129,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]",
+        isDragging && "z-50 border-indigo-500 bg-white shadow-2xl ring-2 ring-indigo-500/20 dark:bg-white/10"
       )}
       onClick={() => onEdit(employee)}
     >
-      <div className="flex items-center gap-3 md:gap-4 overflow-hidden flex-1">
+      <div className="flex flex-1 items-center gap-3 overflow-hidden md:gap-4">
         {/* DRAG HANDLE */}
-        <div 
-          {...attributes} 
-          {...listeners} 
+        <div
+          {...attributes}
+          {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="p-1 -ml-2 cursor-grab touch-none text-slate-300 hover:text-slate-500 dark:hover:text-slate-400 active:cursor-grabbing shrink-0"
+          className="-ml-2 shrink-0 cursor-grab touch-none p-1 text-indigo-950/25 transition-colors hover:text-indigo-500 active:cursor-grabbing dark:text-indigo-100/30"
         >
-          <GripVertical className="w-5 h-5" />
+          <GripVertical className="h-5 w-5" />
         </div>
 
         {/* AVATAR */}
-        <div 
-          className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm shrink-0", employee.avatarColor)}
-          style={!employee.avatarColor?.startsWith('bg-') ? { backgroundColor: employee.avatarColor || stringToColor(employee.name) } : {}}
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-white/30"
+          style={{ backgroundColor: getAvatarColor(employee.id || employee.name) }}
         >
-          <span className="text-white drop-shadow-md text-lg">{displayName(employee.name).charAt(0).toUpperCase()}</span>
+          <span className="text-lg font-semibold leading-none text-white">{displayName(employee.name).charAt(0).toUpperCase()}</span>
         </div>
 
         {/* INFO */}
         <div className="min-w-0 pr-4">
-          <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100 truncate flex items-center gap-2">
+          <h3 className="flex items-center gap-2 truncate text-base font-semibold tracking-tight md:text-lg">
             {displayName(employee.name)}
-            {employee.rowColor === 'blue' && <span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Niebieski" />}
-            {employee.rowColor === 'red' && <span className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Czerwony" />}
-            {employee.rowColor === 'green' && <span className="w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-slate-900 shadow-sm" title="Zielony" />}
+            {employee.rowColor === 'blue' && <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-sm ring-2 ring-white dark:ring-[#14121f]" title="Niebieski" />}
+            {employee.rowColor === 'red' && <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-sm ring-2 ring-white dark:ring-[#14121f]" title="Czerwony" />}
+            {employee.rowColor === 'green' && <span className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-sm ring-2 ring-white dark:ring-[#14121f]" title="Zielony" />}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">{employee.role}</p>
+          <p className="mt-0.5 truncate text-xs font-medium text-indigo-950/50 dark:text-indigo-100/50">{employee.role}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 shrink-0 pl-4 border-l border-slate-100 dark:border-slate-800">
-        <div className="text-right hidden sm:block w-24">
-          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Miesiąc</p>
-          <div className="flex items-center justify-end gap-1.5 text-slate-700 dark:text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-brand-500" />
-            <span className="text-sm font-mono font-bold">{hours}h</span>
+      <div className="flex shrink-0 items-center gap-3 border-l border-indigo-950/10 pl-4 dark:border-white/10 md:gap-4">
+        <div className="hidden w-24 text-right sm:block">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-950/40 dark:text-indigo-100/45">Miesiąc</p>
+          <div className="flex items-center justify-end gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-indigo-500" />
+            <span className="font-mono text-sm font-bold">{hours}h</span>
           </div>
         </div>
+        <span
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/8 text-indigo-950/35 transition-all group-hover:rotate-90 group-hover:bg-indigo-500/15 group-hover:text-indigo-600 dark:text-indigo-100/35"
+          title="Edytuj pracownika"
+          aria-hidden
+        >
+          <Settings className="h-4 w-4" />
+        </span>
       </div>
     </div>
   );
@@ -285,69 +296,59 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
 
   return (
     <MainLayout pageTitle="Mój Zespół">
-      <div className="relative h-full w-full bg-[#FAFAFA] dark:bg-slate-950 overflow-hidden flex flex-col">
-        <PageBackgroundPattern />
-          
-        {/* Main Content Area */}
-        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col min-h-0 relative z-10">
-            
-            {/* Page Header (Search + Buttons) */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
-                <div className="hidden md:block">
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Karta Zespołu</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Masz w sumie <span className="font-bold text-brand-600 dark:text-brand-400">{employees.length}</span> pracowników pod zarządem.</p>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                    <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Szukaj pracownika..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all placeholder:text-slate-400 font-medium shadow-sm"
-                        />
-                    </div>
-                
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <button
-                            onClick={() => setShowArchived(!showArchived)}
-                            className={cn(
-                                "flex items-center justify-center gap-2 px-4 py-2 border rounded-full text-sm font-bold transition-all shadow-sm shrink-0",
-                                showArchived 
-                                  ? "bg-brand-50 border-brand-200 text-brand-600 dark:bg-brand-900/30 dark:border-brand-800 dark:text-brand-400" 
-                                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                            )}
-                            title="Archiwum"
-                        >
-                            <Archive className="w-4 h-4" />
-                            <span className="hidden sm:inline">{showArchived ? 'Wróć' : 'Archiwum'}</span>
-                        </button>
-                        <button 
-                            onClick={() => handleOpenForm(null, true)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm font-bold transition-all shadow-sm"
-                            title="Dodaj separator grupy"
-                        >
-                            <Minus className="w-4 h-4" />
-                            Separator
-                        </button>
-                        <button 
-                            onClick={() => handleOpenForm(null)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-5 py-2 rounded-full text-sm font-bold transition-all shadow-md active:scale-95 whitespace-nowrap"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Dodaj
-                        </button>
-                    </div>
-                </div>
-            </div>
+      <div className="dash-modern">
+        <DashboardBackground />
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 md:pb-4">
+        {/* Main Content Area */}
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col p-4 md:p-6">
+
+            {/* Page Header (Search + Buttons) */}
+            <PageHeader
+              title="Karta Zespołu"
+              icon={UsersRound}
+              accent="#7c3aed"
+              subtitle={
+                <>
+                  Masz w sumie <span className="font-semibold text-indigo-600 dark:text-indigo-300">{employees.length}</span> pracowników pod zarządem.
+                </>
+              }
+              actions={
+                <>
+                  <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Szukaj pracownika..."
+                    className="sm:w-64"
+                  />
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={cn('dash-btn', showArchived ? 'dash-btn--active' : 'dash-btn--ghost')}
+                    title="Archiwum"
+                  >
+                    <Archive className="h-4 w-4" />
+                    <span className="hidden sm:inline">{showArchived ? 'Wróć' : 'Archiwum'}</span>
+                  </button>
+                  <button
+                    onClick={() => handleOpenForm(null, true)}
+                    className="dash-btn dash-btn--ghost"
+                    title="Dodaj separator grupy"
+                  >
+                    <Minus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Separator</span>
+                  </button>
+                  <button onClick={() => handleOpenForm(null)} className="dash-btn">
+                    <Plus className="h-4 w-4" />
+                    Dodaj
+                  </button>
+                </>
+              }
+            />
+
+            <div className="dash-scroll -mx-2 min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-2">
 
             {loading ? (
                 <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-indigo-500"></div>
                 </div>
             ) : filteredEmployees.length > 0 ? (
                 <div className="flex flex-col">
@@ -361,83 +362,99 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                       </DndContext>
                   ) : (
                       filteredEmployees.map((emp) => (
-                          <div 
+                          <div
                               key={emp.id}
                               onClick={() => handleOpenForm(emp)}
-                              className="group flex items-center justify-between p-4 mb-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all cursor-pointer relative"
+                              className="group relative mb-2 flex cursor-pointer items-center justify-between rounded-2xl border border-white/55 bg-white/60 p-5 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-indigo-400/40 hover:bg-white hover:shadow-[0_16px_30px_-18px_rgba(49,46,129,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
                           >
                               <div className="flex items-center gap-4">
-                                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shadow-sm", emp.avatarColor)}
-                                       style={!emp.avatarColor?.startsWith('bg-') ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}>
-                                      <span className="text-white drop-shadow-md text-lg">{displayName(emp.name).charAt(0).toUpperCase()}</span>
+                                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-white/30"
+                                       style={{ backgroundColor: getAvatarColor(emp.id || emp.name) }}>
+                                      <span className="text-lg font-semibold leading-none text-white">{displayName(emp.name).charAt(0).toUpperCase()}</span>
                                   </div>
                                   <div>
-                                      <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-slate-100">{displayName(emp.name)}</h3>
-                                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{emp.role}</p>
+                                      <h3 className="text-base font-semibold tracking-tight md:text-lg">{displayName(emp.name)}</h3>
+                                      <p className="mt-0.5 text-xs font-medium text-indigo-950/50 dark:text-indigo-100/50">{emp.role}</p>
                                   </div>
                               </div>
-                              <div className="flex items-center gap-4 border-l border-slate-100 dark:border-slate-800 pl-4 hidden sm:block">
-                                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Miesiąc</p>
-                                  <div className="flex items-center justify-end gap-1.5 text-slate-700 dark:text-slate-300">
-                                      <Clock className="w-3.5 h-3.5 text-brand-500" />
-                                      <span className="text-sm font-mono font-bold">{getMonthlyHours(emp.id)}h</span>
+                              <div className="flex shrink-0 items-center gap-3 border-l border-indigo-950/10 pl-4 dark:border-white/10">
+                                  <div className="hidden w-24 text-right sm:block">
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-950/40 dark:text-indigo-100/45">Miesiąc</p>
+                                      <div className="flex items-center justify-end gap-1.5">
+                                          <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                                          <span className="font-mono text-sm font-bold">{getMonthlyHours(emp.id)}h</span>
+                                      </div>
                                   </div>
+                                  <span
+                                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/8 text-indigo-950/35 transition-all group-hover:rotate-90 group-hover:bg-indigo-500/15 group-hover:text-indigo-600 dark:text-indigo-100/35"
+                                      title="Edytuj pracownika"
+                                      aria-hidden
+                                  >
+                                      <Settings className="h-4 w-4" />
+                                  </span>
                               </div>
                           </div>
                       ))
                   )}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 mt-8 shadow-sm">
-                    <User className="w-12 h-12 mb-3 text-slate-300 dark:text-slate-700" />
-                    <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Nic tu nie ma</h3>
-                    <p className="text-sm mt-1">Brak pracowników spełniających kryteria.</p>
+                <div className="dash-glass mt-8 flex h-64 flex-col items-center justify-center border-dashed text-indigo-950/50 dark:text-indigo-100/50">
+                    <User className="mb-3 h-12 w-12 text-indigo-950/25 dark:text-indigo-100/25" />
+                    <h3 className="text-lg font-semibold text-indigo-950/70 dark:text-indigo-100/70">Nic tu nie ma</h3>
+                    <p className="mt-1 text-sm">Brak pracowników spełniających kryteria.</p>
                 </div>
             )}
             </div>
         </div>
 
-        {/* Backdrop for mobile */}
+        {/* Przyciemnione tło — klik chowa menu */}
         {isFormOpen && (
-            <div 
-               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity lg:hidden"
+            <div
+               className="fixed inset-0 z-40 bg-indigo-950/30 backdrop-blur-[2px] transition-opacity"
                onClick={handleCloseForm}
             />
         )}
 
         {/* Slide-out Drawer Panel */}
-        <div 
+        <div
             className={cn(
-                "fixed inset-y-0 right-0 z-50 w-full md:w-[480px] bg-white dark:bg-slate-950 shadow-2xl border-l border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out flex flex-col",
+                "login-geist fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden border-l border-white/55 bg-white/80 text-indigo-950 shadow-[-24px_0_60px_-30px_rgba(49,46,129,0.6)] backdrop-blur-2xl transition-transform duration-300 ease-in-out md:w-[480px] dark:border-white/10 dark:bg-[#14121f]/88 dark:text-indigo-50",
                 isFormOpen ? "translate-x-0" : "translate-x-full"
             )}
         >
-            <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-100 dark:border-slate-800/50">
+            {/* Aurora za szkłem — głębia w stylu iOS / Windows 11 */}
+            <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden>
+                <div className="absolute -right-16 -top-10 h-56 w-56 rounded-full bg-indigo-400/30 blur-3xl" />
+                <div className="absolute -left-12 top-1/3 h-52 w-52 rounded-full bg-violet-400/25 blur-3xl" />
+                <div className="absolute -bottom-16 right-1/4 h-56 w-56 rounded-full bg-sky-400/25 blur-3xl" />
+            </div>
+
+            <div className="flex items-center justify-between border-b border-white/40 p-6 dark:border-white/10 md:p-8">
                 <div>
-                   <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                   <h2 className="text-2xl font-semibold leading-none tracking-tight">
                      {editingEmployee ? (editingEmployee.isArchived ? 'Zarchiwizowany' : 'Edycja Profilu') : isSeparatorMode ? 'Nowy Wiersz' : 'Dodaj Osobę'}
                    </h2>
-                   {editingEmployee && !isSeparatorMode && <p className="text-sm text-slate-500 mt-2 font-medium">Uaktualnij dane i uprawnienia widoczności widoków.</p>}
+                   {editingEmployee && !isSeparatorMode && <p className="mt-2 text-sm text-indigo-950/55 dark:text-indigo-100/60">Uaktualnij dane i uprawnienia widoczności widoków.</p>}
                 </div>
-                <button 
+                <button
                    type="button"
                    onClick={handleCloseForm}
-                   className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors"
+                   className="rounded-full p-2 text-indigo-950/55 transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/60"
                 >
-                   <X className="w-6 h-6" />
+                   <X className="h-6 w-6" />
                 </button>
             </div>
 
-            <div className="flex-1 overflow-hidden w-full py-2 md:py-4">
-              <div className="h-full overflow-y-auto custom-scrollbar px-6 md:px-8">
+            <div className="w-full flex-1 overflow-hidden py-2 md:py-4">
+              <div className="dash-scroll h-full overflow-y-auto px-6 md:px-8">
                 <form id="employee-form" onSubmit={handleSubmit} className="space-y-8 pb-4">
                     {isSeparatorMode ? (
-                        <div className="p-8 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 text-center w-full">
-                            <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-200 dark:border-slate-700">
-                                <Minus className="w-8 h-8 text-brand-500" />
+                        <div className="w-full rounded-3xl border border-dashed border-indigo-950/15 bg-white/50 p-8 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/55 bg-white/70 shadow-sm dark:border-white/10 dark:bg-white/5">
+                                <Minus className="h-8 w-8 text-indigo-500" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">Linia Oddzielająca</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            <h3 className="mb-2 text-xl font-semibold tracking-tight">Linia Oddzielająca</h3>
+                            <p className="text-sm text-indigo-950/55 dark:text-indigo-100/60">
                                 Przeciągnij separator w wybrane miejsce. Służy do wizualnego oddzielenia grup lub stanowisk w grafiku. Będzie trwale ukryty jako niewidoczny na innych widokach.
                             </p>
                         </div>
@@ -445,28 +462,28 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                         <>
                             {/* Dane Osobowe */}
                             <div className="space-y-4">
-                                <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400">Dane Osobowe</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5 cursor-text">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Imię</label>
+                                <h3 className="text-sm font-semibold uppercase tracking-widest text-indigo-950/40 dark:text-indigo-100/45">Dane Osobowe</h3>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="cursor-text space-y-1.5">
+                                        <label className="ml-1 text-xs font-semibold text-indigo-950/70 dark:text-indigo-100/70">Imię</label>
                                         <input
                                             autoFocus
                                             type="text"
                                             required
                                             value={firstName}
                                             onChange={(e) => setFirstName(e.target.value)}
-                                            placeholder="Główne widmowe..."
-                                            className="w-full px-4 py-3.5 rounded-2xl border-none outline-none text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 transition-all font-medium placeholder:text-slate-400"
+                                            placeholder="np. Anna"
+                                            className="w-full rounded-2xl border border-indigo-950/10 bg-white/70 px-4 py-3.5 font-medium text-indigo-950 outline-none transition-all placeholder:text-indigo-950/35 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-white/5 dark:text-indigo-50 dark:placeholder:text-indigo-100/35"
                                         />
                                     </div>
-                                    <div className="space-y-1.5 cursor-text">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1 flex items-center gap-2">Nazwisko <span className="opacity-50">(opcja)</span></label>
+                                    <div className="cursor-text space-y-1.5">
+                                        <label className="ml-1 flex items-center gap-2 text-xs font-semibold text-indigo-950/70 dark:text-indigo-100/70">Nazwisko <span className="opacity-50">(opcja)</span></label>
                                         <input
                                             type="text"
                                             value={lastName}
                                             onChange={(e) => setLastName(e.target.value)}
-                                            placeholder="Identyfikator..."
-                                            className="w-full px-4 py-3.5 rounded-2xl border-none outline-none text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 transition-all font-medium placeholder:text-slate-400"
+                                            placeholder="np. Kowalska"
+                                            className="w-full rounded-2xl border border-indigo-950/10 bg-white/70 px-4 py-3.5 font-medium text-indigo-950 outline-none transition-all placeholder:text-indigo-950/35 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-white/5 dark:text-indigo-50 dark:placeholder:text-indigo-100/35"
                                         />
                                     </div>
                                 </div>
@@ -474,7 +491,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
 
                             {/* Stanowisko */}
                             <div className="space-y-4">
-                                <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400">Dział / Specjalizacja</h3>
+                                <h3 className="text-sm font-semibold uppercase tracking-widest text-indigo-950/40 dark:text-indigo-100/45">Dział / Specjalizacja</h3>
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                                     {ROLES.map((role) => {
                                         const Icon = role.icon;
@@ -485,31 +502,31 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                                               type="button"
                                               onClick={() => setSelectedRole(role.label)}
                                               className={cn(
-                                                  "flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all text-center group",
-                                                  isSelected 
-                                                  ? "bg-brand-50 dark:bg-brand-900/20 border-brand-500 text-brand-700 dark:text-brand-400" 
-                                                  : "border-transparent bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                                                  "group flex flex-col items-center justify-center gap-2 rounded-2xl border p-3 text-center transition-all",
+                                                  isSelected
+                                                  ? "border-indigo-500/60 bg-indigo-500/12 text-indigo-700 dark:text-indigo-300"
+                                                  : "border-white/55 bg-white/55 text-indigo-950/55 hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-indigo-100/55 dark:hover:bg-white/[0.07]"
                                               )}
                                             >
-                                                <Icon className={cn("w-6 h-6", isSelected ? "text-brand-600 dark:text-brand-400" : "text-slate-400 group-hover:text-slate-500")} />
-                                                <span className={cn("text-xs font-bold", isSelected ? "text-brand-700 dark:text-brand-300" : "text-slate-600 dark:text-slate-400")}>{role.label}</span>
+                                                <Icon className={cn("h-6 w-6", isSelected ? "text-indigo-600 dark:text-indigo-300" : "text-indigo-950/40 group-hover:text-indigo-500 dark:text-indigo-100/40")} />
+                                                <span className={cn("text-xs font-semibold", isSelected ? "text-indigo-700 dark:text-indigo-300" : "text-indigo-950/60 dark:text-indigo-100/60")}>{role.label}</span>
                                             </button>
                                         );
                                     })}
                                 </div>
 
                                 {selectedRole === 'Inne' && (
-                                    <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300 cursor-text">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1 block mb-1.5">Ręczna nazwa specjalizacji</label>
+                                    <div className="mt-4 animate-in fade-in slide-in-from-top-2 cursor-text duration-300">
+                                        <label className="mb-1.5 ml-1 block text-xs font-semibold text-indigo-950/70 dark:text-indigo-100/70">Ręczna nazwa specjalizacji</label>
                                         <div className="relative">
-                                            <PenTool className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                            <PenTool className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-indigo-950/40 dark:text-indigo-100/40" />
                                             <input
                                                 type="text"
                                                 required={selectedRole === 'Inne'}
                                                 value={customRoleInputValue}
                                                 onChange={(e) => setCustomRoleInputValue(e.target.value)}
                                                 placeholder="Niestandardowe np. Zmiennik"
-                                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-none outline-none text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 transition-all font-medium placeholder:text-slate-400"
+                                                className="w-full rounded-2xl border border-indigo-950/10 bg-white/70 py-3.5 pl-12 pr-4 font-medium text-indigo-950 outline-none transition-all placeholder:text-indigo-950/35 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-white/10 dark:bg-white/5 dark:text-indigo-50 dark:placeholder:text-indigo-100/35"
                                             />
                                         </div>
                                     </div>
@@ -517,51 +534,47 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                             </div>
 
                             {/* Opcje Zaawansowane */}
-                            <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800/50">
+                            <div className="space-y-6 border-t border-white/40 pt-6 dark:border-white/10">
                                 <div>
-                                    <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400 mb-3">Kolor Flagowy</h3>
+                                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-950/40 dark:text-indigo-100/45">Kolor Flagowy</h3>
                                     <div className="flex gap-2">
                                         {[
-                                            { id: '', label: 'Aut', bg: 'bg-slate-200 dark:bg-slate-700', activeBg: 'bg-slate-50 dark:bg-slate-800' },
-                                            { id: 'blue', label: 'B', bg: 'bg-blue-500', activeBg: 'bg-blue-500/[0.08]' },
-                                            { id: 'red', label: 'C', bg: 'bg-red-500', activeBg: 'bg-red-500/[0.08]' },
-                                            { id: 'green', label: 'Z', bg: 'bg-green-500', activeBg: 'bg-green-500/[0.08]' },
+                                            { id: '', label: 'Aut', bg: 'bg-indigo-950/20 dark:bg-white/20' },
+                                            { id: 'blue', label: 'B', bg: 'bg-blue-500' },
+                                            { id: 'red', label: 'C', bg: 'bg-red-500' },
+                                            { id: 'green', label: 'Z', bg: 'bg-green-500' },
                                         ].map((color) => (
                                             <button
                                                 key={color.id}
                                                 type="button"
                                                 onClick={() => setRowColor(color.id)}
                                                 className={cn(
-                                                    "w-12 h-12 flex items-center justify-center rounded-2xl border-2 transition-all",
-                                                    rowColor === color.id ? `border-brand-500 ${color.activeBg}` : "border-transparent bg-slate-50 dark:bg-slate-900/80 hover:bg-slate-100"
+                                                    "flex h-12 w-12 items-center justify-center rounded-2xl border transition-all",
+                                                    rowColor === color.id ? "border-indigo-500/60 bg-indigo-500/12" : "border-white/55 bg-white/55 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
                                                 )}
                                                 title={color.label}
                                             >
-                                                <div className={cn("w-4 h-4 rounded-full shadow-sm", color.bg)}></div>
+                                                <div className={cn("h-4 w-4 rounded-full shadow-sm", color.bg)}></div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="text-sm uppercase tracking-widest font-bold text-slate-400 mb-3">Dostęp do Modułów</h3>
+                                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-widest text-indigo-950/40 dark:text-indigo-100/45">Dostęp do Modułów</h3>
                                     <div className="space-y-2">
-                                        <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer transition-all">
-                                            <div className="relative flex items-center">
-                                              <input type="checkbox" checked={isVisibleInSchedule} onChange={(e) => setIsVisibleInSchedule(e.target.checked)} className="peer w-6 h-6 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 bg-white" />
-                                            </div>
+                                        <label className="flex cursor-pointer items-center gap-4 rounded-2xl border border-white/50 bg-white/50 p-4 transition-all hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
+                                            <input type="checkbox" checked={isVisibleInSchedule} onChange={(e) => setIsVisibleInSchedule(e.target.checked)} className="h-6 w-6 shrink-0 rounded accent-indigo-600" />
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200">Grafik Zmian i Wolne Soboty</div>
-                                                <div className="text-xs text-slate-500 font-medium">Będzie można przypisywać zmiany i rozliczać soboty.</div>
+                                                <div className="font-semibold">Grafik Zmian i Wolne Soboty</div>
+                                                <div className="text-xs text-indigo-950/55 dark:text-indigo-100/55">Będzie można przypisywać zmiany i rozliczać soboty.</div>
                                             </div>
                                         </label>
-                                        <label className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer transition-all">
-                                            <div className="relative flex items-center">
-                                              <input type="checkbox" checked={isVisibleInVacations} onChange={(e) => setIsVisibleInVacations(e.target.checked)} className="peer w-6 h-6 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 bg-white" />
-                                            </div>
+                                        <label className="flex cursor-pointer items-center gap-4 rounded-2xl border border-white/50 bg-white/50 p-4 transition-all hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
+                                            <input type="checkbox" checked={isVisibleInVacations} onChange={(e) => setIsVisibleInVacations(e.target.checked)} className="h-6 w-6 shrink-0 rounded accent-indigo-600" />
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-slate-200">Urlopy</div>
-                                                <div className="text-xs text-slate-500 font-medium">Wyświetlanie w widoku całorocznych limitów urlopowych.</div>
+                                                <div className="font-semibold">Urlopy</div>
+                                                <div className="text-xs text-indigo-950/55 dark:text-indigo-100/55">Wyświetlanie w widoku całorocznych limitów urlopowych.</div>
                                             </div>
                                         </label>
                                     </div>
@@ -574,26 +587,26 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="p-6 md:p-8 border-t border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-950 flex gap-3 pb-8 md:pb-6">
+            <div className="flex gap-3 border-t border-white/40 bg-white/40 p-6 pb-8 dark:border-white/10 dark:bg-white/[0.02] md:p-8 md:pb-6">
                 {editingEmployee && (
                     <>
                         {editingEmployee.isArchived ? (
                             <button
                                 type="button"
                                 onClick={handleRestore}
-                                className="px-5 py-3.5 rounded-full font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200 dark:border-emerald-800 focus:outline-none flex-1 flex items-center justify-center gap-2"
+                                className="flex flex-1 items-center justify-center gap-2 rounded-full border border-emerald-300/50 bg-emerald-50/80 px-5 py-3.5 font-semibold text-emerald-600 transition-colors hover:bg-emerald-100/80 focus:outline-none dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-400"
                             >
-                                <RefreshCw className="w-5 h-5" />
+                                <RefreshCw className="h-5 w-5" />
                                 Przywróć pracownika
                             </button>
                         ) : (
                             <button
                                 type="button"
                                 onClick={() => setIsConfirmDeleteOpen(true)}
-                                className="px-5 py-3.5 rounded-full font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors border border-slate-200 dark:border-slate-800 group focus:outline-none"
+                                className="group rounded-full border border-white/55 px-5 py-3.5 font-semibold text-rose-500 transition-colors hover:bg-rose-50/80 focus:outline-none dark:border-white/10 dark:hover:bg-rose-500/10"
                                 title="Archiwizuj"
                             >
-                                <Archive className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                <Archive className="h-5 w-5 transition-transform group-hover:scale-110" />
                             </button>
                         )}
                     </>
@@ -602,7 +615,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({ session }) => {
                     <button
                         type="submit"
                         form="employee-form"
-                        className="flex-1 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 py-3.5 px-6 rounded-full font-bold shadow-xl shadow-slate-900/10 dark:shadow-white/10 transition-all active:scale-[0.98] focus:outline-none"
+                        className="flex-1 rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 px-6 py-3.5 font-semibold text-white shadow-[0_16px_30px_-12px_rgba(99,102,241,0.85)] transition-all hover:-translate-y-0.5 hover:brightness-105 focus:outline-none active:scale-[0.98]"
                     >
                         {editingEmployee ? 'Zachowaj Pozycję' : 'Zatrudnij / Utwórz'}
                     </button>

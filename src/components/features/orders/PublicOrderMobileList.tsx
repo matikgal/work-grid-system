@@ -15,9 +15,9 @@ export const PublicOrderMobileList: React.FC<PublicOrderMobileListProps> = ({
   onBlurCell,
 }) => {
   return (
-    <div className="md:hidden space-y-8">
+    <div className="space-y-5 md:hidden">
         {items.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 bg-white rounded-xl border border-gray-200">
+            <div className="dash-glass p-8 text-center text-indigo-950/45 dark:text-indigo-100/45">
                 Brak danych zamówienia.
             </div>
         ) : (
@@ -31,40 +31,40 @@ export const PublicOrderMobileList: React.FC<PublicOrderMobileListProps> = ({
                  });
 
                 return (
-                    <div key={item.id} className="relative">
-                        <div className="bg-white p-4 rounded-t-xl shadow-sm border border-gray-200 border-b-0 flex items-center justify-between">
+                    <div key={item.id} className="dash-glass overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-white/40 p-4 dark:border-white/10">
                             <div>
-                                <label className="text-xs font-bold uppercase text-gray-400 block mb-1 tracking-wider">
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-indigo-950/40 dark:text-indigo-100/45">
                                     Produkt {index + 1}
                                 </label>
-                                <div className="text-lg font-bold text-gray-900 break-words">
+                                <div className="break-words text-lg font-semibold">
                                     {item.name}
                                 </div>
                             </div>
                              <div className="text-right">
-                                <label className="text-xs font-bold uppercase text-gray-400 block mb-1">
+                                <label className="mb-1 block text-xs font-semibold uppercase text-indigo-950/40 dark:text-indigo-100/45">
                                     Suma
                                 </label>
-                                <div className="text-lg font-bold text-blue-600">
+                                <div className="text-lg font-bold text-indigo-600 dark:text-indigo-300">
                                      {sum > 0 ? Number(sum.toFixed(2)) : '-'}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-gray-50/50 p-4 rounded-b-xl border border-gray-200 shadow-sm">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="p-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {shops.map(n => {
                                     const shopResp = item.responses?.find((r: ShopResponse) => r.shopId === n.toString());
                                     return (
-                                        <div key={n} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all flex flex-col items-center">
-                                            <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1 text-center">
+                                        <div key={n} className="flex flex-col items-center rounded-xl border border-white/50 bg-white/55 p-3 transition-all focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-white/10 dark:bg-white/[0.04]">
+                                            <label className="mb-1 block text-center text-[10px] font-semibold uppercase text-indigo-950/40 dark:text-indigo-100/45">
                                                 Sklep {n}
                                             </label>
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 defaultValue={shopResp?.value || ''}
                                                 onBlur={(e) => onBlurCell(item.id, n, e.target.value)}
-                                                className="w-full h-10 p-2 text-center bg-gray-50 rounded-md font-medium text-gray-900 focus:outline-none focus:bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                className="h-10 w-full rounded-md bg-white/70 p-2 text-center font-medium text-indigo-950 focus:bg-white focus:outline-none disabled:bg-black/[0.04] disabled:text-indigo-950/40 dark:bg-white/5 dark:text-indigo-50 dark:disabled:bg-white/[0.03] dark:disabled:text-indigo-100/40"
                                                 placeholder="-"
                                                 disabled={isLocked}
                                             />

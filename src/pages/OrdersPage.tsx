@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { Plus, ShoppingCart } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
+import { PageHeader } from '../components/shared/PageHeader';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
 import { 
@@ -10,10 +11,13 @@ import {
   useDeleteOrder, 
   useUpdateOrderStatus 
 } from '../hooks/useOrders';
-import { Order } from '../types/schemas';
 import { OrderCard } from '../components/features/orders/OrderCard';
-import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
+import { DashboardBackground } from '../components/dashboard/DashboardBackground';
 import { PageFooter } from '../components/shared/PageFooter';
+import '../components/dashboard/dashboard-modern.css';
+import { buildPublicOrderUrl } from '../lib/orderAccess';
+import { Order } from '../types/schemas';
+import { APP_CONFIG } from '../config/app';
 
 interface OrdersPageProps {
   session: Session;
@@ -72,86 +76,81 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
     }
   };
 
-  const handleCopyLink = async (link: string) => {
+  const handleCopyLink = async (order: Order) => {
     try {
+      const link = buildPublicOrderUrl(order.id);
       await navigator.clipboard.writeText(link);
       toast.success('Link skopiowany do schowka!');
-    } catch (e) {
+    } catch {
       toast.error('Nie udało się skopiować linku');
     }
   };
 
-  const getPublicLink = (id: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const base = import.meta.env.BASE_URL.endsWith('/') 
-      ? import.meta.env.BASE_URL.slice(0, -1) 
-      : import.meta.env.BASE_URL;
-    return `${origin}${base}/order/${id}`;
+  const handleOpenPublic = (order: Order) => {
+    window.open(buildPublicOrderUrl(order.id), '_blank', 'noopener,noreferrer');
   };
 
   return (
 <MainLayout pageTitle="Zamówienia">
-      <div className="relative h-full w-full bg-[#FAFAFA] dark:bg-slate-950 overflow-hidden flex flex-col">
-        <PageBackgroundPattern />
+      <div className="dash-modern">
+        <DashboardBackground />
 
-        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col min-h-0 relative z-10">
-            
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col p-4 md:p-6">
+
             {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
-                <div className="hidden md:block">
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Zamówienia</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Masz <span className="font-bold text-brand-600 dark:text-brand-400">{orders.length}</span> zamówień w systemie.</p>
-                </div>
-                
-                {/* Inline Create Form */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                    <input 
-                        type="text" 
-                        value={newName}
-                        onChange={e => setNewName(e.target.value)}
-                        placeholder="Nazwa np. nabiał 28.02"
-                        maxLength={80}
-                        onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                        className="w-full sm:w-64 pl-4 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all placeholder:text-slate-400 font-medium shadow-sm"
-                    />
-                    <button 
-                        onClick={handleCreate}
-                        disabled={!newName.trim() || createOrder.isPending}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-500 text-white px-5 py-2 rounded-full text-sm font-bold transition-all shadow-md active:scale-95 whitespace-nowrap disabled:opacity-50"
-                    >
-                        <Plus className="w-4 h-4" />
-                        {createOrder.isPending ? 'Tworzenie...' : 'Utwórz'}
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+              title="Zamówienia"
+              icon={ShoppingCart}
+              accent="#d97706"
+              subtitle={
+                <>
+                  Masz <span className="font-semibold text-indigo-600 dark:text-indigo-300">{orders.length}</span> zamówień w systemie.
+                </>
+              }
+              actions={
+                <>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder="Nazwa np. nabiał 28.02"
+                    maxLength={80}
+                    onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                    className="dash-search__input w-full !pl-4 sm:w-64"
+                  />
+                  <button
+                    onClick={handleCreate}
+                    disabled={!newName.trim() || createOrder.isPending}
+                    className="dash-btn"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {createOrder.isPending ? 'Tworzenie...' : 'Utwórz'}
+                  </button>
+                </>
+              }
+            />
 
-            {createError && <p className="text-red-500 text-sm font-medium mb-4 shrink-0">{createError}</p>}
+            {createError && <p className="mb-4 shrink-0 text-sm font-medium text-rose-500">{createError}</p>}
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 md:pb-4">
+            <div className="dash-scroll -mx-2 min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-1">
                 {isLoading ? (
-                    <div className="flex justify-center items-center h-40">
-                        <div className="animate-spin text-brand-500">
-                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        </div>
+                    <div className="flex h-40 items-center justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-indigo-500"></div>
                     </div>
                 ) : orders.length > 0 ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2.5">
                         {orders.map((order: Order) => {
-                            const link = getPublicLink(order.id);
                             const filledCount = order.items?.reduce((acc: number, item) => acc + (item.responses?.length || 0), 0) || 0;
-                            const totalCount = (order.items?.length || 0) * 13;
+                            const totalCount = (order.items?.length || 0) * APP_CONFIG.ORDER_SHOP_COUNT;
                             
                             return (
                                 <OrderCard 
                                     key={order.id}
                                     order={order}
-                                    publicLink={link}
                                     filledCount={filledCount}
                                     totalCount={totalCount}
-                                    onCopyLink={handleCopyLink}
+                                    onCopyLink={() => handleCopyLink(order)}
+                                    onOpenPublic={() => handleOpenPublic(order)}
                                     onToggleLock={handleToggleLock}
                                     onDelete={initiateDelete}
                                 />
@@ -159,12 +158,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ session }) => {
                         })}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 mt-8 shadow-sm">
-                        <div className="w-16 h-16 bg-brand-50 gap-2 dark:bg-brand-900/20 rounded-full flex items-center justify-center flex-col text-brand-600 dark:text-brand-400 mb-4 shadow-sm animate-pulse">
-                            <ShoppingCart className="w-8 h-8 opacity-80" />
+                    <div className="dash-glass mt-8 flex h-64 flex-col items-center justify-center border-dashed text-indigo-950/50 dark:text-indigo-100/50">
+                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/15 to-violet-500/10 text-indigo-600 shadow-sm dark:text-indigo-300">
+                            <ShoppingCart className="h-8 w-8 opacity-90" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Brak zamówień</h3>
-                        <p className="text-sm mt-1 max-w-sm text-center">Strumień jest pusty. Wpisz nazwę u góry i utwórz pierwsze zamówienie w zaledwie kilka sekund.</p>
+                        <h3 className="text-lg font-semibold text-indigo-950/70 dark:text-indigo-100/70">Brak zamówień</h3>
+                        <p className="mt-1 max-w-sm text-center text-sm">Strumień jest pusty. Wpisz nazwę u góry i utwórz pierwsze zamówienie w zaledwie kilka sekund.</p>
                     </div>
                 )}
             </div>

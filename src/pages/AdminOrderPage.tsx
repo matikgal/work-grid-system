@@ -11,8 +11,11 @@ import {
   useDeleteItem 
 } from '../hooks/useOrders';
 import { orderService } from '../services/orderService';
+import { getOrderShopNumbers } from '../config/app';
 import { AdminOrderTable } from '../components/features/orders/AdminOrderTable';
 import { PrintOrderReport } from '../components/features/orders/PrintOrderReport';
+import { DashboardBackground } from '../components/dashboard/DashboardBackground';
+import '../components/dashboard/dashboard-modern.css';
 
 export const AdminOrderPage: React.FC = () => {
     const { id } = useParams<{ id: string }>(); 
@@ -74,7 +77,7 @@ export const AdminOrderPage: React.FC = () => {
         }
     };
 
-    const shops = Array.from({ length: 13 }, (_, i) => i + 1);
+    const shops = getOrderShopNumbers();
 
     const copyToClipboard = () => {
         const tableHtml = `
@@ -138,61 +141,62 @@ export const AdminOrderPage: React.FC = () => {
         }
     }, [isPrinting]);
 
-    if (isOrderLoading || isItemsLoading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">Ładowanie zamówienia...</div>;
-    if (orderError && !order) return <div className="flex items-center justify-center h-screen bg-slate-50 text-red-500">Błąd ładowania lub brak zamówienia.</div>;
+    if (isOrderLoading || isItemsLoading) return <div className="flex h-screen items-center justify-center bg-[#eef0fb] text-indigo-950/60 dark:bg-[#0a0a14] dark:text-indigo-100/60">Ładowanie zamówienia...</div>;
+    if (orderError && !order) return <div className="flex h-screen items-center justify-center bg-[#eef0fb] text-rose-500 dark:bg-[#0a0a14]">Błąd ładowania lub brak zamówienia.</div>;
 
     return (
         <MainLayout pageTitle="Edycja Zamówienia">
-            <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-                <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 flex-none flex items-center justify-between">
+            <div className="dash-modern">
+                <DashboardBackground />
+                <div className="relative z-10 flex flex-none items-center justify-between border-b border-white/40 bg-white/40 p-6 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03]">
                     <div>
-                        <div className="flex items-center gap-4 mb-2">
-                             <Link to="/orders" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                                <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                        <div className="mb-2 flex items-center gap-4">
+                             <Link to="/orders" className="rounded-xl border border-white/55 bg-white/55 p-2 text-indigo-950/60 transition-colors hover:bg-white hover:text-indigo-600 dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/60">
+                                <ArrowLeft className="h-5 w-5" />
                             </Link>
-                            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
-                                Edycja: {order?.name}
+                            <h1 className="text-2xl font-semibold tracking-tight">
+                                Edycja: <span className="dash-gradient-text">{order?.name}</span>
                             </h1>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 ml-11">
+                        <p className="ml-11 text-sm text-indigo-950/55 dark:text-indigo-100/60">
                             Zarządzaj strukturą tabeli – dodawaj, usuwaj produkty i edytuj ich nazwy przed udostępnieniem.
                         </p>
                     </div>
                      <div className="flex items-center gap-3">
                         <button
                             onClick={copyToClipboard}
-                            className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
+                            className="flex items-center gap-2 rounded-xl border border-white/55 bg-white/55 px-3 py-2 text-sm font-medium text-indigo-950/65 transition-all hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/65"
                         >
-                            <Clipboard className="w-4 h-4" />
+                            <Clipboard className="h-4 w-4" />
                             <span className="hidden sm:inline">Kopiuj</span>
                         </button>
                         <button
                             onClick={handlePrint}
-                            className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-2 rounded-lg transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700"
+                            className="flex items-center gap-2 rounded-xl border border-white/55 bg-white/55 px-3 py-2 text-sm font-medium text-indigo-950/65 transition-all hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/65"
                             title="Drukuj zamówienie jako A4"
                         >
-                            <Printer className="w-4 h-4" />
+                            <Printer className="h-4 w-4" />
                             <span className="hidden sm:inline">Drukuj</span>
                         </button>
-                        {saving && <span className="text-blue-600 font-medium text-sm animate-pulse">Zapisywanie...</span>}
+                        {saving && <span className="animate-pulse text-sm font-medium text-indigo-600 dark:text-indigo-300">Zapisywanie...</span>}
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6">
-                    <AdminOrderTable 
-                      items={items} 
-                      shops={shops} 
-                      onBlurName={handleBlurName} 
-                      onDeleteItem={initiateDelete} 
+                <div className="dash-scroll relative z-10 min-h-0 flex-1 overflow-y-auto p-6">
+                    <AdminOrderTable
+                      items={items}
+                      shops={shops}
+                      onBlurName={handleBlurName}
+                      onDeleteItem={initiateDelete}
                     />
 
                     <div className="mt-6">
-                         <button 
+                         <button
                             onClick={handleAddItem}
                             disabled={addItemMutation.isPending}
-                            className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_-10px_rgba(99,102,241,0.8)] transition-all hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-50"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="h-4 w-4" />
                             Dodaj kolejny produkt
                         </button>
                     </div>

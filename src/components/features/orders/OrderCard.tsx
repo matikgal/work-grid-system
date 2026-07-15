@@ -6,99 +6,102 @@ import { cn } from '../../../utils';
 
 interface OrderCardProps {
   order: Order;
-  publicLink: string;
   filledCount: number;
   totalCount: number;
-  onCopyLink: (link: string) => void;
+  onCopyLink: () => void;
+  onOpenPublic: () => void;
   onToggleLock: (order: Order) => void;
   onDelete: (id: string) => void;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({
   order,
-  publicLink,
   filledCount,
   totalCount,
   onCopyLink,
+  onOpenPublic,
   onToggleLock,
-  onDelete
+  onDelete,
 }) => {
+  const isComplete = filledCount === totalCount && totalCount > 0;
+
   return (
-    <div className={cn(
-        "bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border flex flex-col md:flex-row md:items-center gap-4 group transition-colors",
-        order.isLocked 
-            ? "border-green-200 dark:border-green-900/30 bg-green-50/30 dark:bg-green-900/10" 
-            : "border-slate-200 dark:border-slate-800"
-    )}>
-        <div className="flex-1">
-            <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white break-all">{order.name}</h3>
-                {order.isLocked && <CheckCircle className="w-5 h-5 text-green-600" />}
-            </div>
-            <div className="flex flex-wrap items-center gap-4 mt-1">
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Calendar className="w-4 h-4" />
-                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'}
-                </div>
-                <div className={cn(
-                    "text-xs font-bold px-2 py-1 rounded-full",
-                    filledCount === totalCount && totalCount > 0 
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                )}>
-                    Uzupełniono: {filledCount}/{totalCount}
-                </div>
-            </div>
+    <div
+      className={cn(
+        'dash-glass group flex flex-col gap-4 p-5 transition-all hover:-translate-y-0.5 md:flex-row md:items-center',
+        order.isLocked && 'ring-1 ring-emerald-400/40',
+      )}
+    >
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <h3 className="break-all text-lg font-semibold tracking-tight">{order.name}</h3>
+          {order.isLocked && <CheckCircle className="h-5 w-5 text-emerald-500" />}
         </div>
-
-        <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto mt-2 md:pt-0 pt-2 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-            <button 
-                onClick={() => onCopyLink(publicLink)}
-                className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
-                title="Kopiuj link"
-            >
-                <Copy className="w-5 h-5" />
-            </button>
-
-            <Link 
-                to={`/orders/${order.id}`}
-                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                title="Edytuj strukturę"
-            >
-                <Edit2 className="w-5 h-5" />
-            </Link>
-            
-            <a 
-                href={publicLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-                <ExternalLink className="w-4 h-4" />
-                Otwórz
-            </a>
-            
-            <button 
-                onClick={() => onToggleLock(order)}
-                className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    order.isLocked 
-                        ? "text-green-600 hover:bg-green-100" 
-                        : "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
-                )}
-                title={order.isLocked ? "Odblokuj" : "Zakończ/Zablokuj"}
-            >
-                {order.isLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-            </button>
-
-            <button 
-                onClick={() => onDelete(order.id)}
-                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Usuń"
-            >
-                <Trash2 className="w-5 h-5" />
-            </button>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 text-sm text-indigo-950/50 dark:text-indigo-100/55">
+            <Calendar className="h-4 w-4" />
+            {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-'}
+          </div>
+          <div
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-semibold',
+              isComplete
+                ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-400'
+                : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+            )}
+          >
+            Uzupełniono: {filledCount}/{totalCount}
+          </div>
         </div>
+      </div>
+
+      <div className="mt-2 flex w-full items-center justify-between gap-2 border-t border-white/40 pt-3 dark:border-white/10 md:mt-0 md:w-auto md:justify-end md:border-t-0 md:pt-0">
+        <button
+          onClick={onCopyLink}
+          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/50"
+          title="Kopiuj link"
+        >
+          <Copy className="h-5 w-5" />
+        </button>
+
+        <Link
+          to={`/orders/${order.id}`}
+          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-sky-500/10 hover:text-sky-600 dark:text-indigo-100/50"
+          title="Edytuj strukturę"
+        >
+          <Edit2 className="h-5 w-5" />
+        </Link>
+
+        <button
+          type="button"
+          onClick={onOpenPublic}
+          className="dash-btn dash-btn--ghost flex-1 md:flex-none"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Otwórz
+        </button>
+
+        <button
+          onClick={() => onToggleLock(order)}
+          className={cn(
+            'rounded-xl p-2 transition-colors',
+            order.isLocked
+              ? 'text-emerald-600 hover:bg-emerald-500/12'
+              : 'text-indigo-950/45 hover:bg-amber-500/12 hover:text-amber-600 dark:text-indigo-100/50',
+          )}
+          title={order.isLocked ? 'Odblokuj' : 'Zakończ/Zablokuj'}
+        >
+          {order.isLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+        </button>
+
+        <button
+          onClick={() => onDelete(order.id)}
+          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-rose-500/12 hover:text-rose-500 dark:text-indigo-100/50"
+          title="Usuń"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
+      </div>
     </div>
   );
 };

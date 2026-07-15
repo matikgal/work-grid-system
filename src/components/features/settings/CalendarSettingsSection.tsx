@@ -1,6 +1,7 @@
 import React from 'react';
-import { CalendarCheck, CaretDown, Check } from '@phosphor-icons/react';
+import { CalendarCheck, ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../../utils';
+import { SettingsSection } from './SettingsSection';
 
 interface CalendarSettingsSectionProps {
   viewMode: 'week' | 'month';
@@ -11,85 +12,96 @@ interface CalendarSettingsSectionProps {
   setIsViewSelectOpen: (open: boolean) => void;
 }
 
-export const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ 
-  viewMode, 
-  setViewMode, 
-  showWeekends, 
+export const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({
+  viewMode,
+  setViewMode,
+  showWeekends,
   setShowWeekends,
   isViewSelectOpen,
-  setIsViewSelectOpen
-}) => {
-  return (
-    <section className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 md:p-8 shadow-sm border border-gray-100 dark:border-slate-800 space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-slate-800">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
-                <CalendarCheck className="w-6 h-6" weight="duotone" />
-            </div>
-            <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Kalendarz</h2>
-                <p className="text-xs text-gray-400 font-medium">Opcje wyświetlania grafiku</p>
-            </div>
+  setIsViewSelectOpen,
+}) => (
+  <SettingsSection title="Kalendarz" subtitle="Opcje wyświetlania grafiku" icon={CalendarCheck} accent="#0284c7">
+    <div className="space-y-3">
+      <div className="settings-row">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Domyślny widok</p>
+          <p className="settings-hint mt-1">Widok otwierany przy starcie grafiku.</p>
         </div>
-
-        <div className="space-y-4 w-full">
-            <div className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-700 transition-colors bg-gray-50/50 dark:bg-slate-950/30 gap-4">
-                <div className="space-y-1">
-                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 block">Domyślny widok</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-medium">Widok otwierany przy starcie grafiku.</span>
-                </div>
-                <div className="relative w-full md:w-auto">
-                    <button 
-                        onClick={() => setIsViewSelectOpen(!isViewSelectOpen)}
-                        className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-xl px-4 py-3 w-full md:min-w-[200px] justify-between hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
-                    >
-                        <span>{viewMode === 'week' ? 'Widok Tygodniowy' : 'Widok Miesięczny'}</span>
-                        <CaretDown className="w-4 h-4 text-gray-400" weight="bold" />
-                    </button>
-                    
-                    {isViewSelectOpen && (
-                        <>
-                            <div className="fixed inset-0 z-10" onClick={() => setIsViewSelectOpen(false)} />
-                            <div className="absolute top-full right-0 mt-2 w-full bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100 p-1">
-                                {[
-                                    { value: 'week', label: 'Widok Tygodniowy' },
-                                    { value: 'month', label: 'Widok Miesięczny' }
-                                ].map((opt) => (
-                                    <div
-                                        key={opt.value}
-                                        onClick={() => {
-                                            setViewMode(opt.value as any);
-                                            setIsViewSelectOpen(false);
-                                        }}
-                                        className={cn(
-                                            "px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between rounded-lg transition-colors",
-                                            viewMode === opt.value
-                                                ? "bg-brand-50 dark:bg-brand-500/20 text-brand-700 dark:text-brand-300 font-bold"
-                                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 font-medium"
-                                        )}
-                                    >
-                                        {opt.label}
-                                        {viewMode === opt.value && <Check className="w-4 h-4 text-brand-600 dark:text-brand-400" weight="bold" />}
-                                    </div>
-                                ))}
-                            </div>
-                        </>
+        <div className="relative w-full sm:w-52">
+          <button
+            type="button"
+            onClick={() => setIsViewSelectOpen(!isViewSelectOpen)}
+            className="settings-input flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+          >
+            <span className="text-sm font-medium">{viewMode === 'week' ? 'Tydzień' : 'Miesiąc'}</span>
+            <ChevronDown className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+          </button>
+          {isViewSelectOpen && (
+            <>
+              <button
+                type="button"
+                className="fixed inset-0 z-10 cursor-default"
+                aria-label="Zamknij listę"
+                onClick={() => setIsViewSelectOpen(false)}
+              />
+              <div className="absolute top-full right-0 z-20 mt-1.5 w-full overflow-hidden rounded-xl border border-indigo-950/10 bg-white/90 shadow-[0_16px_32px_-16px_rgba(49,46,129,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-[#14121f]/90">
+                {[
+                  { value: 'week' as const, label: 'Widok tygodniowy' },
+                  { value: 'month' as const, label: 'Widok miesięczny' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setViewMode(opt.value);
+                      setIsViewSelectOpen(false);
+                    }}
+                    className={cn(
+                      'flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-indigo-50 dark:hover:bg-white/5',
+                      viewMode === opt.value && 'bg-indigo-50 dark:bg-white/5',
                     )}
-                </div>
-            </div>
-
-            <div onClick={() => setShowWeekends(!showWeekends)} className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-gray-200 dark:hover:border-slate-700 transition-colors bg-gray-50/50 dark:bg-slate-950/30 cursor-pointer gap-4 group">
-                <div className="space-y-1">
-                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Pokazuj weekendy</span>
-                        {!showWeekends && <span className="text-[10px] bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Ukryte</span>}
-                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-medium">Uwzględnij soboty i niedziele w widoku grafiku.</span>
-                </div>
-                <div className={cn("w-14 h-8 bg-gray-200 dark:bg-slate-800 rounded-full relative transition-colors duration-300", showWeekends ? "bg-brand-600 dark:bg-brand-500" : "")}>
-                    <div className={cn("absolute top-[4px] left-[4px] bg-white rounded-full h-6 w-6 transition-transform duration-300 shadow-md", showWeekends ? "translate-x-6" : "")}></div>
-                </div>
-            </div>
+                  >
+                    {opt.label}
+                    {viewMode === opt.value && <Check className="h-4 w-4 text-indigo-600" strokeWidth={2} />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-    </section>
-  );
-};
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowWeekends(!showWeekends)}
+        className="settings-row w-full cursor-pointer text-left transition-colors hover:bg-white"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold">Pokazuj weekendy</p>
+            {!showWeekends && (
+              <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600">
+                Ukryte
+              </span>
+            )}
+          </div>
+          <p className="settings-hint mt-1">Soboty i niedziele w widoku grafiku.</p>
+        </div>
+        <div
+          className={cn(
+            'relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300',
+            showWeekends ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-indigo-950/15',
+          )}
+          aria-hidden
+        >
+          <div
+            className={cn(
+              'absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-300',
+              showWeekends ? 'translate-x-[1.375rem]' : 'translate-x-0.5',
+            )}
+          />
+        </div>
+      </button>
+    </div>
+  </SettingsSection>
+);

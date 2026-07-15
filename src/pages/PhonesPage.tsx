@@ -1,15 +1,17 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
 import { Session } from "@supabase/supabase-js";
-import { Lock, Unlock, Loader2, Printer } from "lucide-react";
+import { Lock, Unlock, Loader2, Printer, Phone } from "lucide-react";
 import { MainLayout } from "../components/layout/MainLayout";
+import { PageHeader } from "../components/shared/PageHeader";
 import { cn } from "../utils";
 import { useMobile } from "../hooks/useMobile";
 import { useEmployees } from "../hooks/useEmployees";
 import { PhonesMobileList } from "../components/features/phones/PhonesMobileList";
 import { PhonesDesktopTable } from "../components/features/phones/PhonesDesktopTable";
 import { PrintPhones } from "../components/features/phones/PrintPhones";
-import { PageBackgroundPattern } from "../components/shared/PageBackgroundPattern";
+import { DashboardBackground } from "../components/dashboard/DashboardBackground";
 import { PageFooter } from "../components/shared/PageFooter";
+import "../components/dashboard/dashboard-modern.css";
 
 interface PhonesPageProps {
   session: Session;
@@ -47,70 +49,59 @@ export const PhonesPage: React.FC<PhonesPageProps> = ({ session }) => {
 
   return (
     <MainLayout pageTitle="Numery telefonów">
-      <div className="relative h-full w-full bg-[#FAFAFA] dark:bg-slate-950 overflow-hidden flex flex-col">
-        <PageBackgroundPattern />
+      <div className="dash-modern">
+        <DashboardBackground />
 
-        <div className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col min-h-0 relative z-10 print:hidden">
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col p-4 md:p-6 print:hidden">
           {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
-            <div className="hidden md:block">
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                Książka telefoniczna
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
+          <PageHeader
+            title="Książka telefoniczna"
+            icon={Phone}
+            accent="#db2777"
+            subtitle={
+              <>
                 Baza kontaktów dla{" "}
-                <span className="font-bold text-brand-600 dark:text-brand-400">
+                <span className="font-semibold text-indigo-600 dark:text-indigo-300">
                   {processedEmployees.length}
                 </span>{" "}
                 pracowników.
-              </p>
-            </div>
+              </>
+            }
+            actions={
+              <>
+                {/* Print Button */}
+                <button onClick={handlePrint} className="dash-btn dash-btn--ghost">
+                  <Printer className="h-4 w-4" />
+                  <span className="hidden sm:inline">Drukuj</span>
+                </button>
 
-            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-              {/* Print Button */}
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm font-bold text-sm"
-              >
-                <Printer className="w-4 h-4" />
-                <span className="hidden sm:inline">Drukuj</span>
-              </button>
-
-              {/* Lock Toggle */}
-              <button
-                onClick={() => setIsLocked(!isLocked)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all shadow-sm",
-                  isLocked
-                    ? "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    : "bg-orange-500 text-white border border-orange-500 hover:bg-orange-600",
-                )}
-                title={isLocked ? "Odblokuj edycję" : "Zablokuj edycję"}
-              >
-                {isLocked ? (
-                  <Lock className="w-4 h-4" />
-                ) : (
-                  <Unlock className="w-4 h-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {isLocked ? "Zablokowane" : "Edycja"}
-                </span>
-              </button>
-            </div>
-          </div>
+                {/* Lock Toggle */}
+                <button
+                  onClick={() => setIsLocked(!isLocked)}
+                  className={cn("dash-btn", isLocked ? "dash-btn--ghost" : "dash-btn--warn")}
+                  title={isLocked ? "Odblokuj edycję" : "Zablokuj edycję"}
+                >
+                  {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{isLocked ? "Zablokowane" : "Edycja"}</span>
+                </button>
+              </>
+            }
+          />
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-2 md:pb-4">
+          <div className="flex min-h-0 flex-1 flex-col pb-2 md:pb-4">
             {loading ? (
-              <div className="flex items-center justify-center h-40">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+              <div className="flex h-40 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
               </div>
             ) : isMobile ? (
-              <PhonesMobileList
-                employees={processedEmployees}
-                isLocked={isLocked}
-                onUpdatePhone={handleUpdatePhone}
-              />
+              <div className="dash-scroll min-h-0 flex-1 overflow-y-auto">
+                <PhonesMobileList
+                  employees={processedEmployees}
+                  isLocked={isLocked}
+                  onUpdatePhone={handleUpdatePhone}
+                />
+              </div>
             ) : (
               <PhonesDesktopTable
                 employees={processedEmployees}

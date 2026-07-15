@@ -19,43 +19,53 @@ export const ScheduleHeaderLeft: React.FC<ScheduleHeaderLeftProps> = ({
   zoomLevel,
   onPrev,
   onNext,
-  onToday
+  onToday,
 }) => {
   return (
-    <div className="flex items-center gap-1 md:gap-3" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'left center' }}>
-      <button 
-        onClick={onPrev} 
-        aria-label="Wstecz"
-        className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
-      >
-        <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+    <div
+      className="schedule-header-left"
+      style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'left center' }}
+    >
+      <button type="button" onClick={onPrev} aria-label="Wstecz" className="schedule-header-nav-btn">
+        <ChevronLeft className="schedule-header-nav-btn__icon" strokeWidth={2} />
       </button>
-      <div 
-        className="text-center min-w-[100px] md:min-w-[120px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg p-1 transition-all active:scale-95 group/today"
+
+      <div
+        className="schedule-header-date group/today"
         onClick={onToday}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToday();
+          }
+        }}
+        role="button"
+        tabIndex={0}
         title="Powrót do dzisiaj"
       >
-        <div className="flex flex-col items-center justify-center -space-y-0.5">
-          <h2 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-100 capitalize whitespace-nowrap leading-tight group-hover/today:text-brand-600 dark:group-hover/today:text-brand-400">
+        <div className="schedule-header-date__inner">
+          <p className="schedule-header-date__title">
             {viewMode === 'week' ? (
-              <>{format(currentDate, 'LLLL', { locale: pl })} <span className="text-slate-400 dark:text-slate-500 font-normal">Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}</span></>
-            ) : format(currentDate, 'LLLL yyyy', { locale: pl })}
-          </h2>
-          <span className="text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 lowercase">
-            {viewMode === 'week' ? (
-              `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: pl })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: pl })}`
+              <>
+                {format(currentDate, 'LLLL', { locale: pl })}{' '}
+                <span className="schedule-header-date__week">
+                  Tydz. {getWeekOfMonth(currentDate, { weekStartsOn: 1 })}
+                </span>
+              </>
             ) : (
-              `${format(startOfMonth(currentDate), 'd', { locale: pl })} - ${format(endOfMonth(currentDate), 'd MMM', { locale: pl })}`
+              format(currentDate, 'LLLL yyyy', { locale: pl })
             )}
-          </span>
+          </p>
+          <p className="schedule-header-date__range">
+            {viewMode === 'week'
+              ? `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: pl })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: pl })}`
+              : `${format(startOfMonth(currentDate), 'd', { locale: pl })} - ${format(endOfMonth(currentDate), 'd MMM', { locale: pl })}`}
+          </p>
         </div>
       </div>
-      <button 
-        onClick={onNext} 
-        aria-label="Dalej"
-        className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
-      >
-        <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+
+      <button type="button" onClick={onNext} aria-label="Dalej" className="schedule-header-nav-btn">
+        <ChevronRight className="schedule-header-nav-btn__icon" strokeWidth={2} />
       </button>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Employee } from '../../../types';
-import { cn, stringToColor, displayName } from '../../../utils';
+import { cn, getAvatarColor, displayName } from '../../../utils';
 import { Phone, Check, Loader2 } from 'lucide-react';
 
 interface PhonesDesktopTableProps {
@@ -48,9 +48,9 @@ const PhoneInput: React.FC<PhoneInputProps> = ({ value, onCommit, isSaving }) =>
   );
 
   return (
-    <div className="relative flex items-center w-full max-w-[200px]">
-        <div className="absolute left-3 text-slate-400">
-             <Phone className="w-4 h-4" />
+    <div className="relative flex w-full max-w-[200px] items-center">
+        <div className="absolute left-3 text-indigo-950/40 dark:text-indigo-100/40">
+             <Phone className="h-4 w-4" />
         </div>
         <input
             type="tel"
@@ -61,11 +61,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({ value, onCommit, isSaving }) =>
             onKeyDown={handleKeyDown}
             placeholder="np. 123 456 789"
             maxLength={20}
-            className="w-full pl-9 pr-8 py-2 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 transition-all text-center"
+            className="w-full rounded-xl border border-indigo-950/12 bg-white/70 py-2 pl-9 pr-8 text-center text-sm font-semibold text-indigo-950 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-white/12 dark:bg-white/5 dark:text-indigo-50"
         />
         {isSaving && (
-            <div className="absolute right-3 text-brand-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
+            <div className="absolute right-3 text-indigo-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
             </div>
         )}
         {!isSaving && draft === value && draft.trim() !== '' && !isFocused && (
@@ -92,39 +92,39 @@ export const PhonesDesktopTable: React.FC<PhonesDesktopTableProps> = ({
 
   if (employees.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
-          <Phone className="w-8 h-8 text-slate-400" />
+      <div className="dash-glass flex flex-col items-center justify-center border-dashed p-12 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+          <Phone className="h-8 w-8" />
         </div>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">Brak pracowników w systemie.</p>
+        <p className="font-medium text-indigo-950/55 dark:text-indigo-100/55">Brak pracowników w systemie.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-      <div className="overflow-x-auto min-h-[400px]">
-        <table className="w-full text-left border-collapse relative">
-          <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-20 backdrop-blur-md">
+    <div className="dash-glass flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="dash-scroll min-h-0 flex-1 overflow-auto">
+        <table className="dash-table relative">
+          <thead className="dash-thead">
             <tr>
-              <th className="font-bold py-3 px-4 pl-6 border-b border-r border-slate-200 dark:border-slate-700/50 w-[80px]">Lp.</th>
-              <th className="font-bold py-3 px-4 border-b border-r border-slate-200 dark:border-slate-700/50 min-w-[300px]">Pracownik</th>
-              <th className="font-bold py-3 px-4 border-b border-slate-200 dark:border-slate-700/50 min-w-[200px] text-center">Numer telefonu</th>
+              <th className="dash-th w-[80px] !pl-6">Lp.</th>
+              <th className="dash-th min-w-[300px]">Pracownik</th>
+              <th className="dash-th dash-th--center min-w-[200px]">Numer telefonu</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium">
+          <tbody className="text-sm font-medium">
             {employees.map((emp, index) => {
               if (emp.isSeparator) {
                 return (
-                  <tr key={emp.id} className="bg-slate-50/50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500">
-                    <td className="py-2.5 px-4 pl-6 border-r border-slate-100 dark:border-slate-800 font-mono text-xs">{index + 1}</td>
-                    <td colSpan={2} className="py-2.5 px-4 border-r border-slate-100 dark:border-slate-800">
+                  <tr key={emp.id} className="text-indigo-950/40 dark:text-indigo-100/40">
+                    <td className="dash-td !py-2.5 !pl-6 font-mono text-xs">{index + 1}</td>
+                    <td colSpan={2} className="dash-td !py-2.5">
                       <div className="flex items-center gap-3">
-                        <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
-                        <span className="font-bold tracking-widest uppercase text-xs px-2 opacity-50">
+                        <div className="h-px flex-1 bg-indigo-950/12 dark:bg-white/10"></div>
+                        <span className="px-2 text-xs font-bold uppercase tracking-widest opacity-70">
                           {emp.name === 'separator' ? 'SEPARATOR' : emp.name}
                         </span>
-                        <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+                        <div className="h-px flex-1 bg-indigo-950/12 dark:bg-white/10"></div>
                       </div>
                     </td>
                   </tr>
@@ -134,28 +134,26 @@ export const PhonesDesktopTable: React.FC<PhonesDesktopTableProps> = ({
               const phoneValue = emp.phone || '';
 
               return (
-                <tr
-                  key={emp.id}
-                  className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group"
-                >
-                  <td className="py-2 px-4 pl-6 border-r border-slate-100 dark:border-slate-800 text-slate-400 font-mono text-xs group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+                <tr key={emp.id} className="group dash-trow">
+                  <td className="dash-td !py-2 !pl-6 font-mono text-xs text-indigo-950/35 transition-colors group-hover:text-indigo-600 dark:text-indigo-100/35">
                     {index + 1}
                   </td>
-                  <td className="py-2 px-4 border-r border-slate-100 dark:border-slate-800">
+                  <td className="dash-td !py-2">
                     <div className="flex items-center gap-4">
                       <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-sm shadow-sm border-[3px] border-white dark:border-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 bg-slate-100 dark:bg-slate-800/50"
+                        className="dash-table-avatar"
+                        style={{ backgroundColor: getAvatarColor(emp.id) }}
                       >
-                        {displayName(emp.name).substring(0, 2).toUpperCase()}
+                        {displayName(emp.name).charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 dark:text-white text-base">
+                        <span className="text-sm font-semibold tracking-tight">
                           {displayName(emp.name)}
                         </span>
                       </div>
                     </div>
                   </td>
-                  <td className="py-2 px-4 border-slate-100 dark:border-slate-800">
+                  <td className="dash-td !py-2">
                     <div className={cn(
                         "flex items-center justify-center transition-all duration-300",
                         isLocked ? "opacity-60 scale-95 pointer-events-none filter select-none" : "opacity-100 scale-100"

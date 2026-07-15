@@ -10,7 +10,7 @@ import Holidays from 'date-holidays';
 import { ChevronLeft, ChevronRight, Printer, Minimize2, Maximize2, Loader2, ZoomIn, ZoomOut, MoreHorizontal } from 'lucide-react';
 
 import { MobileDayView } from '../components/shared/MobileDayView';
-import CalendarGrid from '../components/shared/CalendarGrid';
+import CalendarGrid, { type SumDisplay } from '../components/shared/CalendarGrid';
 import ShiftModal from '../components/shared/ShiftModal';
 import { useMobile } from '../hooks/useMobile';
 import { PrintReport } from '../components/shared/PrintReport';
@@ -26,6 +26,10 @@ import { ScheduleHeaderRight } from '../components/features/schedule/ScheduleHea
 import { Employee, Shift, ModalState, ViewMode, ShiftTemplate } from '../types';
 import { SHIFT_TEMPLATES, SHIFT_TYPES } from '../constants';
 import { calculateDuration, cn, getShiftStyle } from '../utils';
+import { exportScheduleToExcel } from '../lib/excelExport';
+import { findShiftConflicts } from '../lib/shiftConflicts';
+import { ShiftConflictBanner } from '../components/features/schedule/ShiftConflictBanner';
+import { toast } from 'sonner';
 
 // Hooks
 import { useEmployees } from '../hooks/useEmployees';
@@ -56,7 +60,7 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
     saveShift, 
     saveMultipleShifts,
     deleteShift 
-  } = useShifts(employees, currentDate);
+  } = useShifts(employees, currentDate, session.user.id);
 
   const loading = employeesLoading || (shiftsLoading && employees.length > 0);
 
@@ -77,8 +81,22 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
   });
 
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const isMobile = useMobile();
+
+  // Limit WS na miesiąc + co pokazywać w kolumnie SUMA (zapis lokalny w przeglądarce)
+  const [wsTargets, setWsTargets] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('schedule-ws-targets') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const [sumDisplay, setSumDisplay] = useState<SumDisplay>(() => {
+    const v = localStorage.getItem('schedule-sum-display');
+    return v === 'ws' || v === 'both' ? v : 'days';
+  });
   
   const { manualWorkingDays, saveConfig } = useMonthlyConfigs(session);
   const [bulkConfirmState, setBulkConfirmState] = useState<{
@@ -125,6 +143,24 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
     }).length;
   }, [currentDate, manualWorkingDays]);
 
+  const wsTarget = wsTargets[format(currentDate, 'yyyy-MM')] ?? 0;
+
+  const shiftConflicts = useMemo(() => findShiftConflicts(shifts), [shifts]);
+
+  const periodLabel = format(currentDate, viewMode === 'week' ? "'Tydzień' w MMMM yyyy" : 'MMMM yyyy', { locale: pl });
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      await exportScheduleToExcel(employees, shifts, daysToDisplay, periodLabel);
+      toast.success('Grafik wyeksportowany do Excel');
+    } catch {
+      toast.error('Błąd eksportu do Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // --- HANDLERS ---
   const handleWorkingDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = parseInt(e.target.value);
@@ -138,6 +174,30 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
       if (val >= 0 && val <= 31) {
           saveConfig(monthKey, val);
       }
+  };
+
+  const handleWsTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const monthKey = format(currentDate, 'yyyy-MM');
+    const raw = parseInt(e.target.value, 10);
+    const val = isNaN(raw) ? 0 : Math.min(31, Math.max(0, raw));
+    setWsTargets((prev) => {
+      const next = { ...prev, [monthKey]: val };
+      try {
+        localStorage.setItem('schedule-ws-targets', JSON.stringify(next));
+      } catch {
+        /* localStorage niedostępny — pomijamy */
+      }
+      return next;
+    });
+  };
+
+  const handleSumDisplayChange = (mode: SumDisplay) => {
+    setSumDisplay(mode);
+    try {
+      localStorage.setItem('schedule-sum-display', mode);
+    } catch {
+      /* localStorage niedostępny — pomijamy */
+    }
   };
 
   const handlePrev = () => {
@@ -283,22 +343,29 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
       }
       headerRight={
         !isMobile ? (
-          <ScheduleHeaderRight 
+          <ScheduleHeaderRight
             workingDaysCount={workingDaysCount}
             onWorkingDaysChange={handleWorkingDaysChange}
+            wsTarget={wsTarget}
+            onWsTargetChange={handleWsTargetChange}
+            sumDisplay={sumDisplay}
+            onSumDisplayChange={handleSumDisplayChange}
             zoomLevel={zoomLevel}
             onZoomChange={setZoomLevel}
             isCompactMode={isCompactMode}
             onCompactModeToggle={() => setIsCompactMode(!isCompactMode)}
             isPrinting={isPrinting}
             onPrint={handlePrint}
+            onExportExcel={handleExportExcel}
+            isExporting={isExporting}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
           />
         ) : null
       }
     >
-        <div className="flex h-full w-full flex-col bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
+        <div className="schedule-page flex h-full w-full flex-col relative overflow-hidden">
+          <ShiftConflictBanner conflicts={shiftConflicts} employees={employees} />
           {/* Print Report */}
           {isPrinting && (
             <div className="print-container">
@@ -323,7 +390,7 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
                 height: `${100 / zoomLevel}%` 
               } : {}}
             >
-              <div className="absolute inset-0 z-0 bg-white dark:bg-slate-900 overflow-hidden custom-scrollbar flex flex-col">
+              <div className="schedule-grid-viewport absolute inset-0 z-0 overflow-hidden custom-scrollbar flex flex-col">
               {isMobile ? (
                   <MobileDayView
                     currentDate={currentDate}
@@ -343,6 +410,9 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ session }) => {
                     onSlotClick={handleSlotClick}
                     onDayClick={handleDayHeaderClick}
                     workingDaysCount={workingDaysCount}
+                    wsTarget={wsTarget}
+                    sumDisplay={sumDisplay}
+                    paintEnabled={!!activeTemplate}
                     onReorder={reorderEmployees}
                   />
               )}

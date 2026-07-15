@@ -1,271 +1,447 @@
-import React, { useState } from "react";
-import { supabase } from "../lib/supabase";
+import React, { useState, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
+import { pl } from 'date-fns/locale';
+import { supabase } from '../lib/supabase';
 import {
   Loader2,
   Eye,
   EyeOff,
-  User,
-  Mail,
-  Lock,
+  X,
   AlertCircle,
   Github,
-} from "lucide-react";
-import { APP_CONFIG } from "../config/app";
+  CalendarDays,
+  Palmtree,
+  ShoppingCart,
+  Users,
+  ArrowRight,
+  Clock,
+  type LucideIcon,
+} from 'lucide-react';
+import { APP_CONFIG, publicAssetUrl } from '../config/app';
+import '../components/dashboard/dashboard-modern.css';
+
+type Feature = { icon: LucideIcon; title: string; desc: string };
+
+const FEATURES: Feature[] = [
+  { icon: CalendarDays, title: 'Grafik zmian', desc: 'Planowanie tygodnia i miesiąca, wykrywanie konfliktów.' },
+  { icon: Palmtree, title: 'Urlopy', desc: 'Salda, nieobecności i kolizje z grafikiem.' },
+  { icon: ShoppingCart, title: 'Zamówienia', desc: 'Zestawienia towaru i linki dla sklepów.' },
+  { icon: Users, title: 'Zespół', desc: 'Pracownicy, kontakty i przypisania do zmian.' },
+];
+
+const capitalize = (value: string) =>
+  value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [isRegulaminOpen, setIsRegulaminOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const loginInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    document.title = `Logowanie · ${APP_CONFIG.APP_NAME}`;
+    const timer = window.setTimeout(() => loginInputRef.current?.focus(), 80);
+    const clock = window.setInterval(() => setNow(new Date()), 1000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(clock);
+    };
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const loginEmail = email.includes("@") ? email : `${email}@example.com`;
+    const loginEmail = email.includes('@') ? email : `${email}@example.com`;
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password,
       });
-
-      if (error) throw error;
-    } catch (err: any) {
-      console.error("Login error:", err);
-      setError("Nieprawidłowy login lub hasło.");
+      if (authError) throw authError;
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Nieprawidłowy login lub hasło.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center relative overflow-hidden font-sans bg-[#1B1D24] text-white selection:bg-[#0EA5E9] selection:text-white">
-      {/* Tło jako obraz (prawa strona / spód pod wszystkim) */}
+    <div className="login-aurora flex min-h-[100dvh] w-full flex-col overflow-hidden selection:bg-indigo-500/20">
+      {/* Zdjęcie w tle */}
+      <img
+        src={publicAssetUrl('sklep.webp')}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
+      />
+      {/* Ciemne przyciemnienie zdjęcia — głęboki granat/indygo, spójny z trybem ciemnym aplikacji */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#070611]/88 via-[#0d0b1f]/72 to-[#070611]/92"
+        aria-hidden
+      />
+      {/* Akcent aurory — spójny z resztą aplikacji */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(58%_46%_at_100%_0%,rgba(99,102,241,0.3),transparent_60%),radial-gradient(48%_42%_at_0%_100%,rgba(56,189,248,0.22),transparent_58%)]"
+        aria-hidden
+      />
 
-      {/* Folia dla czytelności na urządzeniach mobilnych, kiedy lewy background zostanie ukryty */}
-      <div className="absolute inset-0 bg-[#1c1e26]/90 backdrop-blur-md lg:hidden z-10"></div>
-
-      {/* Główny kontener na pozycjonowanie nałożony nad z-10 */}
-      <div className="relative z-20 w-full h-[100dvh] max-w-[1400px] flex flex-col px-6 md:px-12 py-8 overflow-y-auto overflow-x-hidden pt-8">
-        {/* Górny Pasek i Nazwa Apki */}
-        <div className="flex items-center gap-2 mb-10 md:mb-0">
-          {/* Kulka imitująca ikonę ze screena */}
-          <div className="w-6 h-6 rounded-full bg-[#0EA5E9] shadow-[0_0_15px_rgba(14,165,233,0.3)]"></div>
-          <span className="font-bold text-lg tracking-tight">Work Grid.</span>
-        </div>
-
-        {/* Panel Logowania wymodelowany ściśle do zdjęcia */}
-        <div className="flex-1 flex flex-col justify-center w-full max-w-[400px]">
-          <div className="text-[#848C9E] text-[10px] font-black tracking-widest uppercase mb-3 text-center">
-            WITAJ W SYSTEMIE
+      <div className="relative z-10 flex min-h-[100dvh] flex-col">
+        {/* Górny pasek — logo + zegar */}
+        <header className="flex items-center justify-between gap-3 px-5 py-5 sm:px-8">
+          <div className="flex items-center gap-2.5">
+            <img
+              src={publicAssetUrl(APP_CONFIG.LOGO_PATH)}
+              alt=""
+              className="h-9 w-9 object-contain"
+              width={36}
+              height={36}
+            />
+            <div className="leading-tight">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-300">
+                System
+              </p>
+              <p className="text-base font-semibold tracking-tight text-white">Grafik Pracy</p>
+            </div>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 tracking-tight flex justify-center items-baseline gap-1 text-center">
-            Zaloguj się
-            <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E9] inline-block mb-1 shadow-[0_0_10px_rgba(14,165,233,0.5)]"></span>
-          </h1>
-
-          <div className="flex items-center justify-center gap-2 mb-10 text-sm font-medium">
-            <span className="text-[#848C9E]">Potrzebujesz konta?</span>
-            <button
-              onClick={() => setIsAccessModalOpen(true)}
-              className="text-[#0EA5E9] font-bold hover:text-[#5abdf6] transition-colors outline-none cursor-pointer"
-            >
-              Zapytaj o dostęp
-            </button>
+          <div className="hidden items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2 text-white backdrop-blur-xl sm:flex">
+            <Clock className="size-4 text-indigo-300" strokeWidth={2} aria-hidden />
+            <div className="text-right leading-tight">
+              <p className="tnum text-sm font-semibold tracking-tight">{format(now, 'HH:mm:ss')}</p>
+              <p className="text-[10px] text-white/55">
+                {capitalize(format(now, 'EEEE, d MMMM', { locale: pl }))}
+              </p>
+            </div>
           </div>
+        </header>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            {/* Input Login/ID */}
-            <div className="bg-[#292C38] rounded-2xl p-4 flex flex-col border border-transparent focus-within:border-[#0EA5E9]/50 focus-within:ring-1 focus-within:ring-[#0EA5E9]/20 transition-all shadow-inner">
-              <label className="text-[10px] text-[#848C9E] font-bold mb-1 pl-1 uppercase tracking-wider">
-                ID PRACOWNIKA / LOGIN
-              </label>
-              <div className="flex items-center pr-2">
-                <input
-                  type="text"
-                  name="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-transparent text-white w-full text-sm outline-none px-1 placeholder:text-[#5B6071] font-semibold"
-                  placeholder="np. admin"
-                  autoComplete="username"
-                  required
-                />
-                <User className="w-5 h-5 text-[#848C9E]" strokeWidth={2} />
+        {/* Środek — karta logowania */}
+        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-6">
+          <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-white/55 bg-white/70 shadow-[0_36px_80px_-36px_rgba(49,46,129,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#14121f]/75 lg:grid-cols-2">
+            {/* Lewa — showcase */}
+            <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-500 p-10 text-white lg:flex">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0, transparent 35%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.25) 0, transparent 40%)',
+                }}
+                aria-hidden
+              />
+              <div className="relative">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
+                  {APP_CONFIG.APP_NAME}
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight">
+                  Wszystko, czego potrzebuje kierownik sklepu — w jednym miejscu.
+                </h2>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80">
+                  {APP_CONFIG.APP_DESCRIPTION}
+                </p>
               </div>
+
+              <ul className="relative mt-8 space-y-3">
+                {FEATURES.map((f) => (
+                  <li key={f.title} className="flex items-start gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+                      <f.icon className="size-5" strokeWidth={2} aria-hidden />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">{f.title}</p>
+                      <p className="text-xs leading-snug text-white/70">{f.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="relative mt-8 text-xs text-white/65">
+                Wewnętrzny panel dla sieci sklepów · konta zakłada administrator (ok. 14 użytkowników).
+              </p>
             </div>
 
-            {/* Input Hasło */}
-            <div className="bg-[#292C38] rounded-2xl p-4 flex flex-col border border-transparent focus-within:border-[#0EA5E9]/50 focus-within:ring-1 focus-within:ring-[#0EA5E9]/20 transition-all shadow-inner">
-              <label className="text-[10px] text-[#A0A6B5] font-bold mb-1 pl-1 uppercase tracking-wider">
-                Hasło
-              </label>
-              <div className="flex items-center pr-2">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-transparent text-[#0EA5E9] w-full text-sm outline-none px-1 placeholder:text-[#5B6071] font-black tracking-[0.2em]"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  required
-                />
+            {/* Prawa — formularz */}
+            <div className="flex flex-col justify-center p-7 sm:p-10">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Witaj <span className="dash-gradient-text">ponownie</span>
+              </h1>
+              <p className="mt-1.5 text-sm text-indigo-950/55 dark:text-indigo-100/60">
+                Zaloguj się do panelu kierownika sklepu.
+              </p>
+
+              <form onSubmit={handleLogin} className="mt-7 space-y-4" noValidate>
+                <div>
+                  <label htmlFor="login-email" className="sr-only">
+                    Login
+                  </label>
+                  <input
+                    ref={loginInputRef}
+                    id="login-email"
+                    type="text"
+                    name="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="login-input"
+                    placeholder="Login"
+                    autoComplete="username"
+                    required
+                  />
+                </div>
+
+                <div className="relative">
+                  <label htmlFor="login-password" className="sr-only">
+                    Hasło
+                  </label>
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="login-input pr-12"
+                    placeholder="Hasło"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-0 flex h-full cursor-pointer items-center px-3.5 text-indigo-950/45 transition-colors hover:text-indigo-600 focus:outline-none dark:text-indigo-100/50"
+                    aria-label={showPassword ? 'Ukryj hasło' : 'Pokaż hasło'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" strokeWidth={2} />
+                    ) : (
+                      <Eye className="h-4 w-4" strokeWidth={2} />
+                    )}
+                  </button>
+                </div>
+
+                {error && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-xl border border-rose-300/50 bg-rose-50/80 px-3.5 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-300"
+                  >
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="focus:outline-none hover:opacity-80 transition-opacity"
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-12px_rgba(99,102,241,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  {showPassword ? (
-                    <EyeOff
-                      className="w-5 h-5 text-[#848C9E]"
-                      strokeWidth={2}
-                    />
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      Logowanie…
+                    </>
                   ) : (
-                    <Eye className="w-5 h-5 text-[#848C9E]" strokeWidth={2} />
+                    <>
+                      Zaloguj się
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </>
                   )}
                 </button>
-              </div>
+              </form>
+
+              <p className="mt-6 text-center text-sm text-indigo-950/55 dark:text-indigo-100/60">
+                Nie masz konta?{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsAccessModalOpen(true)}
+                  className="cursor-pointer font-semibold text-indigo-600 underline-offset-4 transition-colors hover:text-indigo-700 hover:underline focus:outline-none dark:text-indigo-300"
+                >
+                  Zapytaj o dostęp
+                </button>
+              </p>
+            </div>
+          </div>
+        </main>
+
+        {/* Stopka */}
+        <footer className="flex flex-col items-center justify-between gap-3 px-5 py-5 sm:flex-row sm:px-8">
+          <a
+            href={APP_CONFIG.APP_AUTHOR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
+          >
+            <span className="flex size-7 items-center justify-center rounded-lg bg-white/10 text-indigo-200 shadow-sm transition-transform group-hover:-translate-y-0.5">
+              <Github className="size-4" aria-hidden />
+            </span>
+            matikgal
+            <span className="tnum text-white/45">· v{APP_CONFIG.APP_VERSION}</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => setIsRegulaminOpen(true)}
+            className="cursor-pointer rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-medium text-white/80 backdrop-blur-xl transition-colors hover:bg-white/20 hover:text-white"
+          >
+            Regulamin
+          </button>
+        </footer>
+      </div>
+
+      {isRegulaminOpen && (
+        <Modal
+          titleId="regulamin-title"
+          onClose={() => setIsRegulaminOpen(false)}
+          title="Regulamin"
+          subtitle="Grafik Pracy — zasady korzystania"
+          maxWidth="max-w-2xl"
+        >
+          <div className="mt-6 space-y-3 text-sm leading-relaxed">
+            {[
+              {
+                h: '§1. Postanowienia ogólne',
+                p: 'System Grafik Pracy służy do planowania zmian, zarządzania urlopami i obsługi zamówień towaru w sieci sklepów. Korzystanie z systemu wymaga konta kierownika lub administratora.',
+              },
+              {
+                h: '§2. Dane i poufność',
+                p: 'Dane pracowników są poufne. Użytkownik zobowiązuje się wykorzystywać je wyłącznie w celach służbowych. Udostępnianie loginu osobom trzecim jest zabronione.',
+              },
+              {
+                h: '§3. Odpowiedzialność',
+                p: 'Kierownik sklepu odpowiada za poprawność wpisów w grafiku i zamówieniach. Administrator sieci nadzoruje konta użytkowników i dostęp do modułów.',
+              },
+              {
+                h: '§4. Dostęp techniczny',
+                p: 'W razie problemów z logowaniem skontaktuj się z administratorem systemu lub autorem oprogramowania (matikgal).',
+              },
+            ].map((s) => (
+              <section
+                key={s.h}
+                className="rounded-2xl border border-indigo-950/10 bg-white/55 p-4 dark:border-white/10 dark:bg-white/[0.04]"
+              >
+                <h3 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{s.h}</h3>
+                <p className="mt-1.5 text-indigo-950/70 dark:text-indigo-100/70">{s.p}</p>
+              </section>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsRegulaminOpen(false)}
+            className="mt-6 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_-12px_rgba(99,102,241,0.8)] transition-all hover:-translate-y-0.5 hover:brightness-105 sm:w-auto"
+          >
+            Zamknij
+          </button>
+        </Modal>
+      )}
+
+      {isAccessModalOpen && (
+        <Modal
+          titleId="access-modal-title"
+          onClose={() => setIsAccessModalOpen(false)}
+          title="Dostęp do systemu"
+          subtitle="Wypełnij formularz — odezwiemy się w sprawie konta"
+          maxWidth="max-w-lg"
+        >
+          <form
+            className="mt-6 space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setIsAccessModalOpen(false);
+            }}
+          >
+            <div>
+              <label htmlFor="access-name" className="mb-1.5 block text-xs font-semibold text-indigo-950/60 dark:text-indigo-100/60">
+                Imię i nazwisko / firma
+              </label>
+              <input id="access-name" type="text" required className="login-input" placeholder="Jan Kowalski" />
+            </div>
+            <div>
+              <label htmlFor="access-reason" className="mb-1.5 block text-xs font-semibold text-indigo-950/60 dark:text-indigo-100/60">
+                Powód
+              </label>
+              <textarea
+                id="access-reason"
+                required
+                rows={3}
+                className="login-input resize-none"
+                placeholder="Krótko opisz potrzebę…"
+              />
+            </div>
+            <div>
+              <label htmlFor="access-source" className="mb-1.5 block text-xs font-semibold text-indigo-950/60 dark:text-indigo-100/60">
+                Skąd wiesz o systemie?
+              </label>
+              <input id="access-source" type="text" required className="login-input" placeholder="Od kierownika regionu" />
             </div>
 
-            {error && (
-              <div className="mt-2 text-rose-400 text-xs font-bold px-4 py-3 bg-rose-500/10 rounded-xl border border-rose-500/20 flex items-center gap-2">
-                <AlertCircle size={15} />
-                {error}
-              </div>
-            )}
-
-            {/* Dual Buttons z designu */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 mt-6">
+            <div className="flex flex-col gap-2 border-t border-indigo-950/10 pt-5 dark:border-white/10 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={() => setIsAccessModalOpen(true)}
-                className="w-full sm:w-1/2 px-6 py-4 rounded-full bg-[#343846] hover:bg-[#3D4252] text-[#B0B6CB] text-sm font-bold transition-colors active:scale-95 flex justify-center"
+                onClick={() => setIsAccessModalOpen(false)}
+                className="cursor-pointer rounded-xl border border-indigo-950/12 bg-white/60 px-5 py-2.5 text-sm font-medium text-indigo-950/70 transition-colors hover:bg-white dark:border-white/12 dark:bg-white/5 dark:text-indigo-100/70"
               >
-                Zapytaj o dostęp
+                Anuluj
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full sm:w-1/2 px-6 py-4 rounded-full bg-[#0EA5E9] hover:bg-[#129ADD] text-white text-sm font-bold shadow-[0_8px_25px_-5px_rgba(14,165,233,0.6)] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_-12px_rgba(99,102,241,0.8)] transition-all hover:-translate-y-0.5 hover:brightness-105"
               >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Zaloguj się
+                Wyślij
               </button>
             </div>
           </form>
-        </div>
-
-        {/* Stopka na dole przyklejona jako elastyczna */}
-        <div className="w-full p-2 mt-auto mb-4 border-t border-white/5 opacity-80 pt-6 z-30 relative block">
-          <div className="w-full flex flex-col md:flex-row items-center justify-between text-[11px] font-medium text-[#727685] gap-4 text-center md:text-left">
-            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-4 flex-1">
-              <span className="text-[10px] sm:text-xs flex items-center justify-center md:justify-start gap-1.5">
-                Autor:
-                <a
-                  href="https://github.com/matikgal"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[#B0B6CB] hover:text-[#0EA5E9] transition-colors font-bold"
-                >
-                  <Github className="w-3.5 h-3.5" />
-                  {APP_CONFIG.APP_AUTHOR}
-                </a>
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 justify-center md:justify-end flex-1">
-              <span className="opacity-50 hidden sm:block">
-                {APP_CONFIG.APP_NAME}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-white/5 rounded-[4px] border border-white/5 font-mono text-[10px] text-gray-400">
-                  v{APP_CONFIG.APP_VERSION}
-                </span>
-                <span>&copy; {APP_CONFIG.APP_YEAR}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal - Dodany na żądanie z gładkim tłem */}
-      {isAccessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-[#0F1116]/80 backdrop-blur-sm"
-            onClick={() => setIsAccessModalOpen(false)}
-          />
-          <div className="relative w-full max-w-lg bg-[#1c1e26] border border-[#292C38] p-8 rounded-[20px] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 z-50">
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">
-              Formularz zgłoszeniowy
-            </h2>
-
-            <form
-              className="flex flex-col gap-5 text-sm"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsAccessModalOpen(false);
-              }}
-            >
-              <div className="flex flex-col gap-1.5 focus-within:text-[#0EA5E9] transition-colors">
-                <label className="text-[11px] font-bold text-[#A0A6B5] uppercase tracking-wider pl-1">
-                  Imię i nazwisko / Firma
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="bg-[#292C38] border border-transparent rounded-xl px-4 py-3 outline-none focus:border-[#0EA5E9]/50 focus:ring-1 focus:ring-[#0EA5E9]/20 text-white placeholder:text-[#5B6071] transition-all"
-                  placeholder="np. Jan Kowalski"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 focus-within:text-[#0EA5E9] transition-colors">
-                <label className="text-[11px] font-bold text-[#A0A6B5] uppercase tracking-wider pl-1">
-                  Dlaczego potrzebujesz dostępu?
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  className="bg-[#292C38] border border-transparent rounded-xl px-4 py-3 outline-none focus:border-[#0EA5E9]/50 focus:ring-1 focus:ring-[#0EA5E9]/20 text-white placeholder:text-[#5B6071] transition-all resize-none"
-                  placeholder="Oczekuję nadania praw do zarządzania..."
-                ></textarea>
-              </div>
-              <div className="flex flex-col gap-1.5 focus-within:text-[#0EA5E9] transition-colors">
-                <label className="text-[11px] font-bold text-[#A0A6B5] uppercase tracking-wider pl-1">
-                  Od kogo dowiedziałeś się o systemie?
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="bg-[#292C38] border border-transparent rounded-xl px-4 py-3 outline-none focus:border-[#0EA5E9]/50 focus:ring-1 focus:ring-[#0EA5E9]/20 text-white placeholder:text-[#5B6071] transition-all"
-                  placeholder="np. Od menedżera regionu"
-                />
-              </div>
-
-              <div className="mt-5 flex gap-3 justify-end items-center border-t border-[#292C38] pt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsAccessModalOpen(false)}
-                  className="px-5 py-3 rounded-full text-[#A0A6B5] hover:text-white hover:bg-[#292C38] text-sm font-bold transition-colors"
-                >
-                  Anuluj krok
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#0EA5E9] hover:bg-[#129ADD] text-white px-6 py-3 rounded-full text-sm font-bold transition-all shadow-[0_5px_15px_-5px_rgba(14,165,233,0.5)]"
-                >
-                  Zgłoś zapytanie
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
 };
+
+type ModalProps = {
+  titleId: string;
+  title: string;
+  subtitle: string;
+  maxWidth: string;
+  onClose: () => void;
+  children: React.ReactNode;
+};
+
+const Modal = ({ titleId, title, subtitle, maxWidth, onClose, children }: ModalProps) => (
+  <div
+    className="login-geist fixed inset-0 z-50 flex items-center justify-center p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby={titleId}
+  >
+    <button
+      type="button"
+      className="absolute inset-0 cursor-pointer bg-indigo-950/40 backdrop-blur-sm"
+      onClick={onClose}
+      aria-label="Zamknij okno"
+    />
+    <div
+      className={`relative z-10 max-h-[85dvh] w-full ${maxWidth} overflow-y-auto rounded-3xl border border-white/55 bg-white/85 p-6 shadow-[0_40px_90px_-40px_rgba(49,46,129,0.6)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#14121f]/90 sm:p-8`}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-indigo-950/10 bg-white/60 text-indigo-950/55 transition-colors hover:bg-white hover:text-indigo-700 dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/60"
+        aria-label="Zamknij"
+      >
+        <X className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+
+      <h2 id={titleId} className="pr-12 text-2xl font-semibold tracking-tight">
+        {title}
+      </h2>
+      <p className="mt-1.5 text-sm text-indigo-950/55 dark:text-indigo-100/60">{subtitle}</p>
+
+      {children}
+    </div>
+  </div>
+);

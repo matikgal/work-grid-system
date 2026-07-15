@@ -1,6 +1,6 @@
 import React from 'react';
 import { Employee } from '../../../types';
-import { cn, stringToColor, displayName } from '../../../utils';
+import { cn, getAvatarColor, displayName } from '../../../utils';
 import { WsAdjustment } from '../../../services/adjustmentService';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -52,45 +52,44 @@ export const FreeSaturdaysMobileList: React.FC<FreeSaturdaysMobileListProps> = (
     <div className="space-y-3">
       {employees.map((emp) => {
         const adjDates = adjustments.find(a => a.employeeId === emp.id)?.dates || [];
-        const isTailwindClass = emp.avatarColor?.startsWith('bg-');
 
         return (
-          <div key={emp.id} className="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div key={emp.id} className="dash-glass p-4">
+            <div className="mb-4 flex items-center gap-3 border-b border-white/40 pb-3 dark:border-white/10">
               <div
-                className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white shadow-sm', emp.avatarColor)}
-                style={!isTailwindClass ? { backgroundColor: emp.avatarColor || stringToColor(emp.name) } : {}}
+                className="dash-table-avatar dash-table-avatar--lg"
+                style={{ backgroundColor: getAvatarColor(emp.id) }}
               >
                 {displayName(emp.name).charAt(0).toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-800 dark:text-white truncate">{displayName(emp.name)}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{emp.role}</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-semibold tracking-tight">{displayName(emp.name)}</h3>
+                <p className="truncate text-xs text-indigo-950/50 dark:text-indigo-100/50">{emp.role}</p>
               </div>
               {!isLocked && (
                  <button
                    onClick={() => handleAddDate(emp.id)}
-                   className="w-8 h-8 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400 flex items-center justify-center hover:bg-brand-100 transition-colors shrink-0"
+                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/12 text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-300"
                  >
-                   <Plus className="w-5 h-5" />
+                   <Plus className="h-5 w-5" />
                  </button>
               )}
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs uppercase font-bold text-slate-400 mb-2">Daty wolnych sobót ({adjDates.filter(d => d).length})</div>
+              <div className="mb-2 text-xs font-semibold uppercase text-indigo-950/40 dark:text-indigo-100/45">Daty wolnych sobót ({adjDates.filter(d => d).length})</div>
               {adjDates.length === 0 ? (
-                <div className="text-sm text-slate-400 italic">Brak wpisanych dat</div>
+                <div className="text-sm italic text-indigo-950/40 dark:text-indigo-100/45">Brak wpisanych dat</div>
               ) : (
                 <div className="flex flex-col gap-2">
                    {adjDates.map((dateVal, i) => (
                      <div key={i} className="flex items-center gap-2">
                         {isLocked ? (
                            <div className={cn(
-                             "flex-1 h-10 px-3 rounded-xl border text-sm font-medium transition-all flex items-center",
-                             dateVal 
-                               ? "bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/20 dark:border-brand-800 dark:text-brand-300"
-                               : "bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-500 border-dashed"
+                             "flex h-10 flex-1 items-center rounded-xl border px-3 text-sm font-medium transition-all",
+                             dateVal
+                               ? "border-indigo-500/25 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+                               : "border-dashed border-indigo-950/15 bg-white/40 text-indigo-950/35 dark:border-white/10 dark:bg-white/[0.03] dark:text-indigo-100/35"
                            )}>
                               {dateVal || '—'}
                            </div>
@@ -100,13 +99,13 @@ export const FreeSaturdaysMobileList: React.FC<FreeSaturdaysMobileListProps> = (
                                type="date"
                                value={dateVal}
                                onChange={(e) => handleDateChange(emp.id, i, e.target.value)}
-                               className="flex-1 appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-300 focus:border-brand-500 text-slate-700 dark:text-slate-200 rounded-xl px-3 py-2 outline-none transition-all shadow-sm focus:ring-2 focus:ring-brand-500/20 text-sm font-medium"
+                               className="flex-1 appearance-none rounded-xl border border-indigo-950/12 bg-white/70 px-3 py-2 text-sm font-medium text-indigo-950 shadow-sm outline-none transition-all hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-white/12 dark:bg-white/5 dark:text-indigo-50"
                              />
                              <button
                                onClick={() => handleRemoveDate(emp.id, i)}
-                               className="w-10 h-10 flex items-center justify-center shrink-0 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors shrink-0"
+                               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-600"
                              >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="h-4 w-4" />
                              </button>
                            </>
                         )}

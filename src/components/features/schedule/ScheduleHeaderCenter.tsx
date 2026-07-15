@@ -12,26 +12,33 @@ interface ScheduleHeaderCenterProps {
 export const ScheduleHeaderCenter: React.FC<ScheduleHeaderCenterProps> = ({
   activeTemplate,
   onSelectTemplate,
-  zoomLevel
+  zoomLevel,
 }) => {
   return (
-    <div className="flex flex-nowrap items-center gap-1.5 px-3 py-1.5 overflow-x-auto no-scrollbar whitespace-nowrap max-w-full bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}>
+    <div
+      className="schedule-header-shifts no-scrollbar"
+      style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}
+    >
       {SHIFT_TEMPLATES.map((template, index) => {
         const style = getShiftStyle(template.label);
+        const isActive = activeTemplate?.id === template.id;
+
         return (
           <button
             key={template.id}
-            onClick={() => onSelectTemplate(activeTemplate?.id === template.id ? null : template)}
+            type="button"
+            onClick={() => onSelectTemplate(isActive ? null : template)}
             className={cn(
-               "px-2.5 py-1.5 rounded-lg text-[10px] font-bold border-2 transition-all active:scale-95 text-center relative group shrink-0",
-              style.bg, 
-              activeTemplate?.id === template.id ? "border-slate-950 dark:border-white ring-2 ring-slate-900/20 dark:ring-white/40 shadow-md scale-105 z-10" : cn(style.border, "border-opacity-50 shadow-sm opacity-90 hover:opacity-100 hover:border-opacity-100"),
-              style.text
+              'schedule-header-shift-btn group px-2.5 py-1.5',
+              style.bg,
+              style.border,
+              style.text,
+              isActive
+                ? 'schedule-header-shift-btn--active'
+                : 'border-opacity-50 opacity-90 hover:border-opacity-100 hover:opacity-100',
             )}
           >
-            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-slate-800 text-white text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity font-bold border border-white shadow-sm">
-              {index + 1}
-            </span>
+            <span className="schedule-header-shift-kbd">{index + 1}</span>
             <span className="whitespace-nowrap">{template.displayLabel || template.label}</span>
           </button>
         );

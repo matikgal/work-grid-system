@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { Lock, Unlock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Lock, Unlock, ChevronLeft, ChevronRight, Loader2, Palmtree } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
+import { PageHeader } from '../components/shared/PageHeader';
 import { useMobile } from '../hooks/useMobile';
 import { useEmployees } from '../hooks/useEmployees';
 import { useVacations } from '../hooks/useVacations';
 import { cn } from '../utils';
 import { VacationsMobileList } from '../components/features/vacations/VacationsMobileList';
 import { VacationsDesktopTable } from '../components/features/vacations/VacationsDesktopTable';
-import { PageBackgroundPattern } from '../components/shared/PageBackgroundPattern';
+import { exportVacationsToExcel } from '../lib/excelExport';
+import { DashboardBackground } from '../components/dashboard/DashboardBackground';
 import { PageFooter } from '../components/shared/PageFooter';
+import '../components/dashboard/dashboard-modern.css';
+import { FileSpreadsheet } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface VacationsPageProps {
   session: Session;
@@ -35,6 +40,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
   
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isLocked, setIsLocked] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const isMobile = useMobile();
 
   const employeeIds = React.useMemo(() => employees.map(e => e.id), [employees]);
@@ -55,79 +61,101 @@ export const VacationsPage: React.FC<VacationsPageProps> = ({ session }) => {
       return counts.reduce((a, b, i) => a + b + (manuals[i] || 0), 0);
   };
 
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      await exportVacationsToExcel(employees, vacationCounts, vacationBalances, selectedYear);
+      toast.success('Urlopy wyeksportowane do Excel');
+    } catch {
+      toast.error('Błąd eksportu do Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <MainLayout pageTitle="Urlopy">
-      <div className="relative h-full w-full bg-[#FAFAFA] dark:bg-slate-950 overflow-hidden flex flex-col">
-        <PageBackgroundPattern />
+      <div className="dash-modern">
+        <DashboardBackground />
 
-        <div className="flex-1 w-full max-w-[1920px] mx-auto p-4 md:p-8 flex flex-col min-h-0 relative z-10">
-            
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 flex-col p-4 md:p-6">
+
             {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 shrink-0">
-                <div className="hidden md:block">
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Urlopy</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-                      Podsumowanie wykorzystanych urlopów dla <span className="font-bold text-brand-600 dark:text-brand-400">{employees.length}</span> pracowników.
-                    </p>
-                </div>
-                
-                <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                    {/* Year Picker */}
-                    <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full p-1 shadow-sm">
-                        <button 
-                          onClick={() => setSelectedYear(selectedYear - 1)} 
-                          aria-label="Poprzedni rok"
-                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
-                        >
-                          <ChevronLeft className="w-4 h-4 text-slate-500" />
-                        </button>
-                        <span className="px-3 font-bold text-slate-700 dark:text-slate-200 text-sm tabular-nums">{selectedYear}</span>
-                        <button 
-                          onClick={() => setSelectedYear(selectedYear + 1)} 
-                          aria-label="Następny rok"
-                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
-                        >
-                          <ChevronRight className="w-4 h-4 text-slate-500" />
-                        </button>
-                    </div>
-
-                    {/* Lock Toggle */}
+            <PageHeader
+              title="Urlopy"
+              icon={Palmtree}
+              accent="#0284c7"
+              subtitle={
+                <>
+                  Podsumowanie wykorzystanych urlopów dla{' '}
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-300">{employees.length}</span> pracowników.
+                </>
+              }
+              actions={
+                <>
+                  {/* Year Picker */}
+                  <div className="flex items-center rounded-full border border-indigo-500/18 bg-white/60 p-1 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
                     <button
-                        onClick={() => setIsLocked(!isLocked)}
-                        className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all shadow-sm",
-                            isLocked 
-                                ? "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                                : "bg-orange-500 text-white border border-orange-500 hover:bg-orange-600"
-                        )}
-                        title={isLocked ? "Odblokuj edycję" : "Zablokuj edycję"}
+                      onClick={() => setSelectedYear(selectedYear - 1)}
+                      aria-label="Poprzedni rok"
+                      className="rounded-full p-1.5 text-indigo-950/55 transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/60"
                     >
-                        {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                        <span className="hidden sm:inline">{isLocked ? "Zablokowane" : "Edycja"}</span>
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
-                </div>
-            </div>
+                    <span className="px-3 text-sm font-semibold tabular-nums tracking-tight">{selectedYear}</span>
+                    <button
+                      onClick={() => setSelectedYear(selectedYear + 1)}
+                      aria-label="Następny rok"
+                      className="rounded-full p-1.5 text-indigo-950/55 transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/60"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Lock Toggle */}
+                  <button
+                    onClick={() => setIsLocked(!isLocked)}
+                    className={cn('dash-btn', isLocked ? 'dash-btn--ghost' : 'dash-btn--warn')}
+                    title={isLocked ? 'Odblokuj edycję' : 'Zablokuj edycję'}
+                  >
+                    {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                    <span className="hidden sm:inline">{isLocked ? 'Zablokowane' : 'Edycja'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={isExporting}
+                    className="dash-btn dash-btn--success"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span className="hidden sm:inline">{isExporting ? 'Eksport...' : 'Excel'}</span>
+                  </button>
+                </>
+              }
+            />
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-2 md:pb-4">
+            <div className="flex min-h-0 flex-1 flex-col pb-2 md:pb-4">
                 {employeesLoading ? (
-                    <div className="flex items-center justify-center h-40">
-                        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+                    <div className="flex h-40 items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
                     </div>
                 ) : isMobile ? (
-                    <VacationsMobileList 
-                        employees={employees}
-                        isLocked={isLocked}
-                        MONTHS={MONTHS}
-                        vacationCounts={vacationCounts}
-                        vacationBalances={vacationBalances}
-                        vacationManual={vacationManual}
-                        highlightedEmployees={highlightedEmployees}
-                        onUpdateBalance={updateBalance}
-                        onUpdateManualDays={updateManualDays}
-                        onToggleHighlight={toggleHighlight}
-                        calculateTotal={calculateTotal}
-                    />
+                    <div className="dash-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+                      <VacationsMobileList
+                          employees={employees}
+                          isLocked={isLocked}
+                          MONTHS={MONTHS}
+                          vacationCounts={vacationCounts}
+                          vacationBalances={vacationBalances}
+                          vacationManual={vacationManual}
+                          highlightedEmployees={highlightedEmployees}
+                          onUpdateBalance={updateBalance}
+                          onUpdateManualDays={updateManualDays}
+                          onToggleHighlight={toggleHighlight}
+                          calculateTotal={calculateTotal}
+                      />
+                    </div>
                 ) : (
                     <VacationsDesktopTable
                         employees={employees}
