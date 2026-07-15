@@ -192,3 +192,54 @@ export const stringToColor = (str: string) => {
   const c = (hash & 0x00ffffff).toString(16).toUpperCase();
   return '#' + '00000'.substring(0, 6 - c.length) + c;
 };
+
+/**
+ * Spójna paleta awatarów — żywe kolory na jednym poziomie nasycenia/jasności
+ * (czytelne z białą literą). Deterministyczny wybór po nazwie/ID, więc dana
+ * osoba zawsze ma ten sam kolor, a wszystkie awatary mają jeden styl.
+ */
+const AVATAR_PALETTE = [
+  '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e',
+  '#f97316', '#f59e0b', '#14b8a6', '#10b981', '#22c55e', '#0ea5e9',
+  '#06b6d4', '#3b82f6',
+];
+
+export const getAvatarColor = (seed: string): string => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+};
+
+/**
+ * Awatar pracownika — ujednolicony, spójny styl w całej aplikacji:
+ * żywy kolor z palety (seed = stabilne ID, w razie braku nazwa) + biała litera.
+ * Parametr `avatarColor` zostaje dla zgodności wywołań, ale nie wpływa na kolor.
+ */
+export function resolveEmployeeAvatar(
+  avatarColor?: string,
+  name = '',
+  seed?: string,
+): { className: string; style?: { backgroundColor?: string; color?: string } } {
+  return {
+    className: '',
+    style: {
+      backgroundColor: getAvatarColor(seed || name || ''),
+      color: '#ffffff',
+    },
+  };
+}
+
+export type MonthlyHoursStatus = 'ok' | 'low' | 'high';
+
+/** Kolor kolumny SUMA: norma = dni robocze × 8h. */
+export function getMonthlyHoursStatus(
+  totalHours: number,
+  targetHours: number,
+): MonthlyHoursStatus {
+  if (targetHours <= 0) return 'ok';
+  if (totalHours === targetHours) return 'ok';
+  if (totalHours < targetHours) return 'low';
+  return 'high';
+}
