@@ -26,10 +26,14 @@ export const OrderSchema = z.object({
   userId: z.string().uuid(),
   name: z.string(),
   isLocked: z.boolean().default(false),
+  accessPin: z.string().optional(),
   items: z.array(ItemSchema).optional().default([]),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
 });
+
+export const PublicOrderSchema = OrderSchema.omit({ userId: true, accessPin: true, items: true });
+export type PublicOrder = z.infer<typeof PublicOrderSchema>;
 
 // TYPESCRIPT
 export type ShopResponse = z.infer<typeof ShopResponseSchema>;

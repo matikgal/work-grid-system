@@ -1,25 +1,50 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ViewMode } from '../types';
+import {
+  APP_CONFIG,
+  normalizeWeatherLocation,
+  storeToWeatherLocation,
+  type WeatherLocation,
+} from '../config/app';
+import { DEFAULT_PROFILE_AVATAR_ID, isProfileAvatarId, type ProfileAvatarId } from '../config/profileAvatars';
 
 interface AppSettings {
   viewMode: ViewMode;
   isCompactMode: boolean;
   showWeekends: boolean;
   userName: string;
+  userAvatarId: ProfileAvatarId;
+  weatherLocation: WeatherLocation;
   setViewMode: (mode: ViewMode) => void;
   setIsCompactMode: (isCompact: boolean) => void;
   setShowWeekends: (show: boolean) => void;
   setUserName: (name: string) => void;
+  setUserAvatarId: (id: ProfileAvatarId) => void;
+  setWeatherLocation: (location: WeatherLocation) => void;
+}
+
+const WEATHER_STORAGE_KEY = 'grafik_weatherLocation';
+const USER_AVATAR_STORAGE_KEY = 'grafik_userAvatarId';
+
+function loadWeatherLocation(): WeatherLocation {
+  try {
+    const stored = localStorage.getItem(WEATHER_STORAGE_KEY);
+    if (stored) {
+      return storeToWeatherLocation(normalizeWeatherLocation(JSON.parse(stored) as WeatherLocation));
+    }
+  } catch {
+    /* ignore */
+  }
+  return APP_CONFIG.WEATHER_DEFAULT;
 }
 
 const AppContext = createContext<AppSettings | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize from localStorage or defaults
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
     return (localStorage.getItem('grafik_viewMode') as ViewMode) || 'week';
   });
-  
+
   const [isCompactMode, setIsCompactModeState] = useState(() => {
     return localStorage.getItem('grafik_isCompactMode') === 'true';
   });
@@ -33,7 +58,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return localStorage.getItem('grafik_userName') || '';
   });
 
-  // Persistence wrappers
+  const [userAvatarId, setUserAvatarIdState] = useState<ProfileAvatarId>(() => {
+    const stored = localStorage.getItem(USER_AVATAR_STORAGE_KEY);
+    return stored && isProfileAvatarId(stored) ? stored : DEFAULT_PROFILE_AVATAR_ID;
+  });
+
+  const [weatherLocation, setWeatherLocationState] = useState<WeatherLocation>(loadWeatherLocation);
+
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
     localStorage.setItem('grafik_viewMode', mode);
@@ -54,17 +85,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('grafik_userName', name);
   };
 
+  const setUserAvatarId = (id: ProfileAvatarId) => {
+    setUserAvatarIdState(id);
+    localStorage.setItem(USER_AVATAR_STORAGE_KEY, id);
+  };
+
+  const setWeatherLocation = (location: WeatherLocation) => {
+    const normalized = storeToWeatherLocation(normalizeWeatherLocation(location));
+    setWeatherLocationState(normalized);
+    localStorage.setItem(WEATHER_STORAGE_KEY, JSON.stringify(normalized));
+  };
+
   return (
-    <AppContext.Provider value={{ 
-      viewMode, 
-      isCompactMode, 
-      showWeekends, 
-      userName,
-      setViewMode, 
-      setIsCompactMode, 
-      setShowWeekends,
-      setUserName
-    }}>
+    <AppContext.Provider
+      value={{
+        viewMode,
+        isCompactMode,
+        showWeekends,
+        userName,
+        userAvatarId,
+        weatherLocation,
+        setViewMode,
+        setIsCompactMode,
+        setShowWeekends,
+        setUserName,
+        setUserAvatarId,
+        setWeatherLocation,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

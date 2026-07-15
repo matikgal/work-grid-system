@@ -10,39 +10,31 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'grafik-theme';
+
+// Tryb ciemny jest tymczasowo wyłączony — wymuszamy jasny motyw w całej aplikacji.
+// Aby ponownie go włączyć, przywróć logikę odczytu/zapisu motywu i usuń to wymuszenie.
+const DARK_MODE_ENABLED = false;
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    // Check localStorage first
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const savedTheme = window.localStorage.getItem('grafik-theme');
-      if (savedTheme === 'dark' || savedTheme === 'light') {
-        return savedTheme;
-      }
-    }
-    // Default to light as per requirements for now, or check system preference
-    return 'light';
-  });
+  const [theme, setThemeState] = useState<Theme>('light');
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-       // Future proofing for system preference
-       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-       root.classList.add(systemTheme);
-       return;
+    root.classList.remove('dark');
+    root.classList.add('light');
+    if (window.localStorage) {
+      localStorage.setItem(STORAGE_KEY, 'light');
     }
-
-    root.classList.add(theme);
-    localStorage.setItem('grafik-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setThemeState(prev => (prev === 'light' ? 'dark' : 'light'));
+    if (!DARK_MODE_ENABLED) return;
+    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const setTheme = (t: Theme) => {
+    if (!DARK_MODE_ENABLED) return;
     setThemeState(t);
   };
 
