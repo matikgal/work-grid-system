@@ -1,5 +1,92 @@
 import { supabase } from '../lib/supabase';
-import { Order, Item, ShopResponse, OrderSchema, ItemSchema } from '../types/schemas';
+import { Order, Item, OrderSchema, ItemSchema, PublicOrderSchema } from '../types/schemas';
+
+export class OrderAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OrderAccessError';
+  }
+}
+
+interface DbShopResponse {
+  id: string;
+  item_id: string;
+  shop_id: string;
+  value: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface DbItemRow {
+  id: string;
+  order_id: string;
+  name: string;
+  created_at: string | null;
+  updated_at: string | null;
+  shop_responses?: DbShopResponse[];
+}
+
+interface DbOrderRow {
+  id: string;
+  user_id: string;
+  name: string;
+  is_locked: boolean;
+  access_pin?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  items?: DbItemRow[];
+}
+
+function mapShopResponses(responses: DbShopResponse[] | undefined) {
+  return (responses || []).map((r) => ({
+    id: r.id,
+    itemId: r.item_id,
+    shopId: r.shop_id,
+    value: r.value,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+function mapItemRow(i: DbItemRow): Item {
+  return ItemSchema.parse({
+    id: i.id,
+    orderId: i.order_id,
+    name: i.name,
+    createdAt: i.created_at,
+    updatedAt: i.updated_at,
+    responses: mapShopResponses(i.shop_responses),
+  });
+}
+
+function mapOrderRow(o: DbOrderRow, includeItems = false): Order {
+  return OrderSchema.parse({
+    id: o.id,
+    userId: o.user_id,
+    name: o.name,
+    isLocked: o.is_locked,
+    accessPin: o.access_pin ?? undefined,
+    createdAt: o.created_at,
+    updatedAt: o.updated_at,
+    items: includeItems
+      ? (o.items || []).map((i) => ({
+          id: i.id,
+          orderId: i.order_id,
+          name: i.name,
+          createdAt: i.created_at,
+          updatedAt: i.updated_at,
+          responses: mapShopResponses(i.shop_responses),
+        }))
+      : [],
+  });
+}
+
+function isInvalidAccessError(error: { message?: string; code?: string }): boolean {
+  return (
+    error.message?.includes('invalid_order_access') === true ||
+    error.code === 'P0001'
+  );
+}
 
 export const orderService = {
   // --- ADMIN FUNCTIONS ---
@@ -18,43 +105,7 @@ export const orderService = {
 
     if (error) throw new Error(error.message);
 
-    // Map and validate with Zod
-    return (data || []).map((o: any) => {
-      // Calculate filled responses across all items
-      let filledCount = 0;
-      let totalCount = 0;
-
-      if (o.items && o.items.length > 0) {
-        // Example logic: number of total responses
-        filledCount = o.items.reduce((acc: number, item: any) => acc + (item.shop_responses?.length || 0), 0);
-        // Assuming 13 shops are expected to fill each item
-        totalCount = o.items.length * 13;
-      }
-
-      return OrderSchema.parse({
-        id: o.id,
-        userId: o.user_id,
-        name: o.name,
-        isLocked: o.is_locked,
-        createdAt: o.created_at,
-        updatedAt: o.updated_at,
-        items: (o.items || []).map((i: any) => ({
-          id: i.id,
-          orderId: i.order_id,
-          name: i.name,
-          createdAt: i.created_at,
-          updatedAt: i.updated_at,
-          responses: (i.shop_responses || []).map((r: any) => ({
-            id: r.id,
-            itemId: r.item_id,
-            shopId: r.shop_id,
-            value: r.value,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-          }))
-        }))
-      });
-    });
+    return ((data || []) as DbOrderRow[]).map((o) => mapOrderRow(o, true));
   },
 
   async createOrder(name: string, userId: string): Promise<Order> {
@@ -66,14 +117,7 @@ export const orderService = {
 
     if (error) throw new Error(error.message);
 
-    return OrderSchema.parse({
-      id: data.id,
-      userId: data.user_id,
-      name: data.name,
-      isLocked: data.is_locked,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-    });
+    return mapOrderRow(data as DbOrderRow);
   },
 
   async updateOrderStatus(id: string, isLocked: boolean): Promise<void> {
@@ -81,7 +125,7 @@ export const orderService = {
       .from('orders')
       .update({ is_locked: isLocked })
       .eq('id', id);
-      
+
     if (error) throw new Error(error.message);
   },
 
@@ -90,25 +134,84 @@ export const orderService = {
     if (error) throw new Error(error.message);
   },
 
-  // --- PUBLIC FUNCTIONS ---
+  // --- PUBLIC FUNCTIONS (legacy RPC — nieużywane w UI, kolumna access_pin zostaje w DB) ---
+  async getPublicOrder(orderId: string, accessPin: string): Promise<Order> {
+    const { data, error } = await supabase.rpc('get_public_order', {
+      p_order_id: orderId,
+      p_pin: accessPin,
+    });
+
+    if (error) {
+      if (isInvalidAccessError(error)) throw new OrderAccessError('INVALID_ACCESS');
+      throw new Error(error.message);
+    }
+
+    const row = data as {
+      id: string;
+      name: string;
+      is_locked: boolean;
+      created_at: string | null;
+      updated_at: string | null;
+    };
+
+    const publicOrder = PublicOrderSchema.parse({
+      id: row.id,
+      name: row.name,
+      isLocked: row.is_locked,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    });
+
+    return OrderSchema.parse({
+      ...publicOrder,
+      userId: '00000000-0000-0000-0000-000000000001',
+      items: [],
+    });
+  },
+
+  async getPublicOrderItems(orderId: string, accessPin: string): Promise<Item[]> {
+    const { data, error } = await supabase.rpc('get_public_order_items', {
+      p_order_id: orderId,
+      p_pin: accessPin,
+    });
+
+    if (error) {
+      if (isInvalidAccessError(error)) throw new OrderAccessError('INVALID_ACCESS');
+      throw new Error(error.message);
+    }
+
+    return ((data || []) as DbItemRow[]).map(mapItemRow);
+  },
+
+  async upsertPublicShopResponse(
+    orderId: string,
+    accessPin: string,
+    itemId: string,
+    shopId: string,
+    value: string,
+  ): Promise<void> {
+    const { error } = await supabase.rpc('upsert_public_shop_response', {
+      p_order_id: orderId,
+      p_pin: accessPin,
+      p_item_id: itemId,
+      p_shop_id: shopId,
+      p_value: value,
+    });
+
+    if (error) {
+      if (isInvalidAccessError(error)) throw new OrderAccessError('INVALID_ACCESS');
+      if (error.message?.includes('order_locked')) throw new OrderAccessError('ORDER_LOCKED');
+      throw new Error(error.message);
+    }
+  },
+
+  // --- LEGACY (admin / wewnętrzne) ---
   async getOrderById(id: string): Promise<Order> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('orders').select('*').eq('id', id).single();
 
     if (error) throw new Error(error.message);
-    
-    return OrderSchema.parse({
-      id: data.id,
-      userId: data.user_id,
-      name: data.name,
-      isLocked: data.is_locked,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      items: []
-    });
+
+    return mapOrderRow(data as DbOrderRow);
   },
 
   async getOrderItems(orderId: string): Promise<Item[]> {
@@ -120,21 +223,7 @@ export const orderService = {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((i: any) => ItemSchema.parse({
-      id: i.id,
-      orderId: i.order_id,
-      name: i.name,
-      createdAt: i.created_at,
-      updatedAt: i.updated_at,
-      responses: (i.shop_responses || []).map((r: any) => ({
-        id: r.id,
-        itemId: r.item_id,
-        shopId: r.shop_id,
-        value: r.value,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      })),
-    }));
+    return ((data || []) as DbItemRow[]).map(mapItemRow);
   },
 
   async addItem(orderId: string, name: string): Promise<Item> {
@@ -146,38 +235,24 @@ export const orderService = {
 
     if (error) throw new Error(error.message);
 
-    return ItemSchema.parse({
-      id: data.id,
-      orderId: data.order_id,
-      name: data.name,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      responses: []
-    });
+    return mapItemRow(data as DbItemRow);
   },
 
   async updateItemName(id: string, name: string): Promise<void> {
-    const { error } = await supabase
-      .from('items')
-      .update({ name })
-      .eq('id', id);
+    const { error } = await supabase.from('items').update({ name }).eq('id', id);
 
     if (error) throw new Error(error.message);
   },
-  
+
   async deleteItem(id: string): Promise<void> {
     const { error } = await supabase.from('items').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
 
   async upsertShopResponse(itemId: string, shopId: string, value: string): Promise<void> {
-    // We use upsert to insert or update the response
     const { error } = await supabase
       .from('shop_responses')
-      .upsert(
-        { item_id: itemId, shop_id: shopId, value },
-        { onConflict: 'item_id,shop_id' }
-      );
+      .upsert({ item_id: itemId, shop_id: shopId, value }, { onConflict: 'item_id,shop_id' });
 
     if (error) throw new Error(error.message);
   },
@@ -188,8 +263,8 @@ export const orderService = {
       .select('is_locked')
       .eq('id', id)
       .single();
-      
+
     if (error) throw new Error(error.message);
-    return data.is_locked;
-  }
+    return data.is_locked as boolean;
+  },
 };

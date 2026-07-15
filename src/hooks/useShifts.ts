@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shift, Employee } from '../types';
 import { shiftService } from '../services/shiftService';
+import { auditService } from '../services/auditService';
 import { startOfMonth, endOfMonth, format, subDays, addDays } from 'date-fns';
 
 export const shiftKeys = {
@@ -8,7 +9,7 @@ export const shiftKeys = {
   list: (empIds: string[], start: string, end: string) => [...shiftKeys.all(), { empIds, start, end }] as const,
 };
 
-export function useShifts(employees: Employee[], currentDate: Date) {
+export function useShifts(employees: Employee[], currentDate: Date, userId?: string) {
   const queryClient = useQueryClient();
 
   const start = format(subDays(startOfMonth(currentDate), 7), 'yyyy-MM-dd');
@@ -23,15 +24,21 @@ export function useShifts(employees: Employee[], currentDate: Date) {
 
   const { mutateAsync: saveShift } = useMutation({
     mutationFn: (shiftData: Shift | Omit<Shift, 'id'>) => shiftService.upsert(shiftData),
-    onSuccess: () => {
+    onSuccess: (result) => {
         queryClient.invalidateQueries({ queryKey: shiftKeys.all() });
+        if (userId) {
+          auditService.log(userId, 'shift_saved', 'shifts', result.id, { date: result.date });
+        }
     }
   });
 
   const { mutateAsync: deleteShift } = useMutation({
     mutationFn: (id: string) => shiftService.delete(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
         queryClient.invalidateQueries({ queryKey: shiftKeys.all() });
+        if (userId) {
+          auditService.log(userId, 'shift_deleted', 'shifts', id);
+        }
     }
   });
 

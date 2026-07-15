@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { orderService } from '../services/orderService';
+import { orderService, OrderAccessError } from '../services/orderService';
 import { CreateOrderDTO } from '../types/schemas';
 
 // Keys for RQ
@@ -10,6 +10,10 @@ export const orderKeys = {
   details: () => [...orderKeys.all, 'detail'] as const,
   detail: (id: string) => [...orderKeys.details(), id] as const,
   items: (orderId: string) => [...orderKeys.detail(orderId), 'items'] as const,
+  public: (orderId: string, accessPin: string) =>
+    [...orderKeys.all, 'public', orderId, accessPin] as const,
+  publicItems: (orderId: string, accessPin: string) =>
+    [...orderKeys.public(orderId, accessPin), 'items'] as const,
 };
 
 // --- CUSTOM HOOKS ---
@@ -37,6 +41,26 @@ export function useOrderItems(orderId: string) {
     enabled: !!orderId,
   });
 }
+
+export function usePublicOrder(orderId: string, accessPin: string) {
+  return useQuery({
+    queryKey: orderKeys.public(orderId, accessPin),
+    queryFn: () => orderService.getPublicOrder(orderId, accessPin),
+    enabled: !!orderId && !!accessPin,
+    retry: false,
+  });
+}
+
+export function usePublicOrderItems(orderId: string, accessPin: string) {
+  return useQuery({
+    queryKey: orderKeys.publicItems(orderId, accessPin),
+    queryFn: () => orderService.getPublicOrderItems(orderId, accessPin),
+    enabled: !!orderId && !!accessPin,
+    retry: false,
+  });
+}
+
+export { OrderAccessError };
 
 export function useOrderLockStatus(orderId: string) {
   return useQuery({
@@ -107,12 +131,28 @@ export function useDeleteItem() {
 export function useUpsertShopResponse() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, shopId, value }: { itemId: string; shopId: string; value: string }) => 
+    mutationFn: ({ itemId, shopId, value }: { itemId: string; shopId: string; value: string }) =>
       orderService.upsertShopResponse(itemId, shopId, value),
     onSuccess: () => {
-      // To keep things simple, invalidate all items. 
-      // Often you'd return the orderId to invalidate specific items, but a gloabl invalidation is safe.
       queryClient.invalidateQueries({ queryKey: orderKeys.all });
+    },
+  });
+}
+
+export function useUpsertPublicShopResponse(orderId: string, accessPin: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      shopId,
+      value,
+    }: {
+      itemId: string;
+      shopId: string;
+      value: string;
+    }) => orderService.upsertPublicShopResponse(orderId, accessPin, itemId, shopId, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orderKeys.publicItems(orderId, accessPin) });
     },
   });
 }

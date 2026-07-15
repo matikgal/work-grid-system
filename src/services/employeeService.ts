@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Employee } from '../types';
 import { getRandomColor } from '../utils';
+import { ImportEmployeeRow } from '../lib/employeeImport';
 
 interface CreateEmployeeParams {
   name: string;
@@ -153,5 +154,33 @@ export const employeeService = {
     await supabase.from('shifts').delete().eq('employee_id', id); 
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (error) throw error;
-  }
+  },
+
+  async importEmployees(
+    userId: string,
+    rows: ImportEmployeeRow[],
+    existingNames: Set<string>,
+  ): Promise<{ imported: number; skipped: number }> {
+    let imported = 0;
+    let skipped = 0;
+
+    for (const row of rows) {
+      const key = row.name.trim().toLowerCase();
+      if (existingNames.has(key)) {
+        skipped += 1;
+        continue;
+      }
+
+      await employeeService.create({
+        name: row.name,
+        role: row.role || 'none',
+        userId,
+        phone: row.phone || '',
+      });
+      existingNames.add(key);
+      imported += 1;
+    }
+
+    return { imported, skipped };
+  },
 };
