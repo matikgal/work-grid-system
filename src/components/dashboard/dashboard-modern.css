@@ -21,26 +21,24 @@
   background-color: #eef0fb;
 }
 
-/* ── Szkło ── */
+/* ── Panele (bez backdrop-filter — kosztowne na iGPU / software render) ── */
 .dash-glass {
   position: relative;
   border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.42));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 255, 0.88));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.75),
-    0 2px 8px -4px rgba(49, 46, 129, 0.18),
-    0 24px 48px -28px rgba(49, 46, 129, 0.5);
-  backdrop-filter: blur(28px) saturate(1.45);
-  -webkit-backdrop-filter: blur(28px) saturate(1.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 8px -4px rgba(49, 46, 129, 0.14),
+    0 18px 36px -24px rgba(49, 46, 129, 0.35);
 }
 
 .dash-glass--soft {
   border-radius: 1.1rem;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 255, 0.82));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 12px 28px -20px rgba(49, 46, 129, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 12px 28px -20px rgba(49, 46, 129, 0.35);
 }
 
 /* ── Spotlight: rozbłysk podążający za kursorem ── */
@@ -86,7 +84,8 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     0 2px 8px -4px rgba(49, 46, 129, 0.2),
-    0 30px 60px -30px color-mix(in srgb, var(--tile-accent, var(--acc)) 55%, rgba(49, 46, 129, 0.55));
+    0 30px 60px -30px
+      color-mix(in srgb, var(--tile-accent, var(--acc)) 55%, rgba(49, 46, 129, 0.55));
 }
 .dash-lift:focus-visible {
   outline: 2px solid var(--tile-accent, var(--acc));
@@ -96,15 +95,9 @@
 /* ── Tytuł z gradientem aurora ── */
 .dash-gradient-text {
   background: linear-gradient(108deg, #4f46e5 0%, #7c3aed 38%, #0ea5e9 78%, #06b6d4 100%);
-  background-size: 220% 220%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: dash-hue 9s ease-in-out infinite;
-}
-@keyframes dash-hue {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 /* ── Kafelek modułu (wypełnia panel, większa typografia) ── */
@@ -168,11 +161,12 @@
   align-items: center;
   gap: 0.7rem;
   border-radius: 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.38));
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 255, 0.88));
   padding: 0.6rem 0.95rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 22px -18px rgba(49, 46, 129, 0.5);
-  backdrop-filter: blur(20px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 10px 22px -18px rgba(49, 46, 129, 0.4);
 }
 
 /* ── Chip godzin ── */
@@ -238,12 +232,11 @@
 /* ── Warianty kolorystyczne przycisku (ujednolicone na wszystkich podstronach) ── */
 .dash-btn--ghost {
   color: #312e81;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.42));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 255, 0.9));
   border: 1px solid rgba(99, 102, 241, 0.18);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 8px 18px -14px rgba(49, 46, 129, 0.45);
-  backdrop-filter: blur(16px);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 18px -14px rgba(49, 46, 129, 0.35);
 }
 .dash-btn--ghost:hover {
   background: #fff;
@@ -273,12 +266,11 @@
 }
 .dash-btn--danger {
   color: #e11d48;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.42));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 255, 0.9));
   border: 1px solid rgba(225, 29, 72, 0.25);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 8px 18px -14px rgba(225, 29, 72, 0.4);
-  backdrop-filter: blur(16px);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 18px -14px rgba(225, 29, 72, 0.35);
 }
 .dash-btn--danger:hover {
   filter: none;
@@ -296,25 +288,19 @@
   cursor: pointer;
   border-radius: 0.95rem;
   color: #312e81;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.42));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 255, 0.9));
   border: 1px solid rgba(99, 102, 241, 0.18);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 8px 18px -14px rgba(49, 46, 129, 0.45);
-  backdrop-filter: blur(16px);
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 220ms ease,
-    filter 220ms ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 18px -14px rgba(49, 46, 129, 0.35);
+  transition: background 220ms ease;
 }
 .dash-iconbtn:hover {
-  transform: translateY(-1px);
   background: #fff;
 }
 .dash-iconbtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 .dash-iconbtn--primary {
   color: #fff;
@@ -349,13 +335,12 @@
   width: 100%;
   border-radius: 9999px;
   border: 1px solid rgba(99, 102, 241, 0.18);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.95);
   padding: 0.6rem 1rem 0.6rem 2.5rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: #1e1b4b;
-  box-shadow: 0 8px 18px -14px rgba(49, 46, 129, 0.45);
-  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 18px -14px rgba(49, 46, 129, 0.35);
   outline: none;
   transition:
     border-color 200ms ease,
@@ -381,12 +366,11 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #f8f9ff;
   box-shadow: 0 4px 16px -8px rgba(49, 46, 129, 0.35);
-  backdrop-filter: blur(16px);
 }
 .dark .dash-thead {
-  background-color: rgba(20, 18, 31, 0.92);
+  background-color: #14121f;
 }
 .dash-th {
   padding: 0.75rem;
@@ -409,12 +393,11 @@
   position: sticky;
   left: 0;
   z-index: 21;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #f8f9ff;
   box-shadow: 1px 0 0 0 rgba(49, 46, 129, 0.1);
-  backdrop-filter: blur(16px);
 }
 .dark .dash-th--sticky-left {
-  background-color: rgba(20, 18, 31, 0.92);
+  background-color: #14121f;
   box-shadow: 1px 0 0 0 rgba(255, 255, 255, 0.1);
 }
 .dash-th--sum {
@@ -458,12 +441,11 @@
   position: sticky;
   left: 0;
   z-index: 10;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #f8f9ff;
   box-shadow: 1px 0 0 0 rgba(49, 46, 129, 0.08);
-  backdrop-filter: blur(16px);
 }
 .dark .dash-td--sticky-left {
-  background-color: rgba(20, 18, 31, 0.9);
+  background-color: #14121f;
   box-shadow: 1px 0 0 0 rgba(255, 255, 255, 0.08);
 }
 .dash-td--sum {
@@ -553,16 +535,16 @@
 }
 .dark .dash-glass {
   border-color: rgba(255, 255, 255, 0.1);
-  background: linear-gradient(160deg, rgba(46, 41, 78, 0.55), rgba(20, 18, 38, 0.5));
+  background: linear-gradient(160deg, rgba(36, 32, 58, 0.96), rgba(20, 18, 38, 0.94));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 24px 48px -28px rgba(0, 0, 0, 0.8);
+    0 18px 36px -24px rgba(0, 0, 0, 0.7);
 }
 .dark .dash-glass--soft {
-  background: linear-gradient(160deg, rgba(46, 41, 78, 0.45), rgba(20, 18, 38, 0.4));
+  background: linear-gradient(160deg, rgba(36, 32, 58, 0.94), rgba(20, 18, 38, 0.9));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 28px -20px rgba(0, 0, 0, 0.7);
+    0 12px 28px -20px rgba(0, 0, 0, 0.6);
 }
 .dark .dash-tile {
   border-color: rgba(255, 255, 255, 0.08);
@@ -630,10 +612,8 @@
 @media (prefers-reduced-motion: reduce) {
   .dash-lift,
   .dash-tile__icon,
-  .dash-spotlight::after,
-  .dash-gradient-text {
+  .dash-spotlight::after {
     transition: none;
-    animation: none;
   }
   .dash-lift:hover,
   .dash-tile:hover .dash-tile__icon {

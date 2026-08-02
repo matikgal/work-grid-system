@@ -14,6 +14,9 @@ import { PhonesPage } from './pages/PhonesPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { AdminOrderPage } from './pages/AdminOrderPage';
 import { PublicOrderPage } from './pages/PublicOrderPage';
+import { OffersPage } from './pages/OffersPage';
+import { AdminOfferPage } from './pages/AdminOfferPage';
+import { PublicOfferPage } from './pages/PublicOfferPage';
 import { InstructionsPage } from './pages/InstructionsPage';
 import { EmployeesPage } from './pages/EmployeesPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -65,77 +68,110 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AppProvider>
-        <Toaster
-          richColors
-          position="bottom-right"
-          theme="system"
-          toastOptions={{ className: 'dash-toast' }}
-        />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <Toaster
+            richColors
+            position="bottom-right"
+            theme="system"
+            toastOptions={{ className: 'dash-toast' }}
+          />
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <Routes>
               {/* Public Route: Login */}
-              <Route 
-                path="/login" 
-                element={!session ? <LoginPage /> : <Navigate to="/" replace />} 
+              <Route
+                path="/login"
+                element={!session ? <LoginPage /> : <Navigate to="/" replace />}
               />
 
               {/* Protected Routes */}
-              <Route 
-                path="/" 
-                element={session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/"
+                element={
+                  session ? <DashboardPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/schedule" 
-                element={session ? <SchedulePage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/schedule"
+                element={
+                  session ? <SchedulePage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/free-saturdays" 
-                element={session ? <FreeSaturdaysPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/free-saturdays"
+                element={
+                  session ? (
+                    <FreeSaturdaysPage session={session} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
-              <Route 
-                path="/vacations" 
-                element={session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/vacations"
+                element={
+                  session ? <VacationsPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/phones" 
-                element={session ? <PhonesPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/phones"
+                element={
+                  session ? <PhonesPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/orders" 
-                element={session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/orders"
+                element={
+                  session ? <OrdersPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/orders/:id" 
-                element={session ? <AdminOrderPage /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/orders/:id"
+                element={session ? <AdminOrderPage /> : <Navigate to="/login" replace />}
               />
               <Route path="/order/:token" element={<PublicOrderPage />} />
-              <Route 
-                path="/instructions" 
-                element={session ? <InstructionsPage /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/offers"
+                element={
+                  session ? <OffersPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/employees" 
-                element={session ? <EmployeesPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/offers/:id"
+                element={session ? <AdminOfferPage /> : <Navigate to="/login" replace />}
               />
-              <Route 
-                path="/settings" 
-                element={session ? <SettingsPage /> : <Navigate to="/login" replace />} 
+              <Route path="/q/:token" element={<PublicOfferPage />} />
+              <Route
+                path="/instructions"
+                element={session ? <InstructionsPage /> : <Navigate to="/login" replace />}
               />
-              <Route 
-                path="/chat" 
-                element={session ? <ChatPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/employees"
+                element={
+                  session ? <EmployeesPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
-              <Route 
-                path="/network" 
-                element={session ? <NetworkPage session={session} /> : <Navigate to="/login" replace />} 
+              <Route
+                path="/settings"
+                element={session ? <SettingsPage /> : <Navigate to="/login" replace />}
+              />
+              <Route
+                path="/chat"
+                element={
+                  session ? <ChatPage session={session} /> : <Navigate to="/login" replace />
+                }
+              />
+              <Route
+                path="/network"
+                element={
+                  session ? <NetworkPage session={session} /> : <Navigate to="/login" replace />
+                }
               />
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </BrowserRouter>
-      </AppProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+          </BrowserRouter>
+        </AppProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 

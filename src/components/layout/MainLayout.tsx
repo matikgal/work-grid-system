@@ -14,6 +14,7 @@ import {
   Phone,
   MessageSquare,
   Building2,
+  Tags,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAppContext } from '../../context/AppContext';
@@ -178,6 +179,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       action: () => navigate('/orders'),
     },
     {
+      label: 'Oferty',
+      sub: 'Ceny hurtowni',
+      group: 'Sklep',
+      accent: '#b45309',
+      active: location.pathname.includes('offers'),
+      icon: Tags,
+      action: () => navigate('/offers'),
+    },
+    {
       label: 'Czat',
       sub: 'Komunikacja sklepów',
       group: 'Sklep',
@@ -240,53 +250,55 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <LayoutMenuContext.Provider value={menuContextValue}>
-    <div className={`app-shell flex h-screen w-full flex-col overflow-hidden supports-[height:100dvh]:h-[100dvh] ${headerless ? '' : 'app-brutal'}`}>
-      {!headerless && (
-        <AppHeader
-          headerRef={headerRef}
+      <div
+        className={`app-shell flex h-screen w-full flex-col overflow-hidden supports-[height:100dvh]:h-[100dvh] ${headerless ? '' : 'app-brutal'}`}
+      >
+        {!headerless && (
+          <AppHeader
+            headerRef={headerRef}
+            isMenuOpen={isMenuOpen}
+            onToggleMenu={() => setIsMenuOpen((open) => !open)}
+            onProfileClick={() => navigate('/settings')}
+            pageTitle={pageTitle}
+            userName={userName}
+            userAvatarId={userAvatarId}
+            userEmail={userEmail}
+            headerLeft={headerLeft}
+            headerCenter={headerCenter}
+            headerRight={headerRight}
+          />
+        )}
+
+        <SidebarMenu
           isMenuOpen={isMenuOpen}
-          onToggleMenu={() => setIsMenuOpen((open) => !open)}
-          onProfileClick={() => navigate('/settings')}
-          pageTitle={pageTitle}
-          userName={userName}
-          userAvatarId={userAvatarId}
-          userEmail={userEmail}
-          headerLeft={headerLeft}
-          headerCenter={headerCenter}
-          headerRight={headerRight}
+          setIsMenuOpen={setIsMenuOpen}
+          menuItems={menuItems}
+          headerOffset={headerOffset}
+          onLogout={handleLogout}
+          onShowAbout={() => setShowAbout(true)}
+          onShowTerms={() => setShowTerms(true)}
+          onShowChangelog={() => setShowChangelog(true)}
         />
-      )}
 
-      <SidebarMenu
-        isMenuOpen={isMenuOpen}
-        setIsMenuOpen={setIsMenuOpen}
-        menuItems={menuItems}
-        headerOffset={headerOffset}
-        onLogout={handleLogout}
-        onShowAbout={() => setShowAbout(true)}
-        onShowTerms={() => setShowTerms(true)}
-        onShowChangelog={() => setShowChangelog(true)}
-      />
+        <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
 
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
-
-      <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
-      <SystemResetModal
-        isOpen={isSystemResetOpen}
-        onClose={() => setIsSystemResetOpen(false)}
-        onConfirm={() => window.location.reload()}
-      />
-      <AboutModal
-        isOpen={showAbout}
-        onClose={() => setShowAbout(false)}
-        onOpenChangelog={() => {
-          setShowAbout(false);
-          setShowChangelog(true);
-        }}
-      />
-      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
-      <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
-    </div>
+        <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} />
+        <SystemResetModal
+          isOpen={isSystemResetOpen}
+          onClose={() => setIsSystemResetOpen(false)}
+          onConfirm={() => window.location.reload()}
+        />
+        <AboutModal
+          isOpen={showAbout}
+          onClose={() => setShowAbout(false)}
+          onOpenChangelog={() => {
+            setShowAbout(false);
+            setShowChangelog(true);
+          }}
+        />
+        <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+        <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
+      </div>
     </LayoutMenuContext.Provider>
   );
 };

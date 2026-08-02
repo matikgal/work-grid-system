@@ -1,6 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Copy, ExternalLink, Lock, Unlock, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import {
+  Calendar,
+  Copy,
+  ExternalLink,
+  Lock,
+  Unlock,
+  CheckCircle,
+  Edit2,
+  Trash2,
+} from 'lucide-react';
 import { Order } from '../../../types/schemas';
 import { cn } from '../../../utils';
 
@@ -28,7 +37,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   return (
     <div
       className={cn(
-        'dash-glass group flex flex-col gap-4 p-5 transition-all hover:-translate-y-0.5 md:flex-row md:items-center',
+        'dash-glass flex flex-col gap-4 p-5 md:flex-row md:items-center [content-visibility:auto] [contain-intrinsic-size:auto_7.5rem]',
         order.isLocked && 'ring-1 ring-emerald-400/40',
       )}
     >
@@ -55,10 +64,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </div>
       </div>
 
-      <div className="mt-2 flex w-full items-center justify-between gap-2 border-t border-white/40 pt-3 dark:border-white/10 md:mt-0 md:w-auto md:justify-end md:border-t-0 md:pt-0">
+      <div className="mt-2 flex w-full items-center justify-between gap-2 border-t border-indigo-950/8 pt-3 dark:border-white/10 md:mt-0 md:w-auto md:justify-end md:border-t-0 md:pt-0">
         <button
           onClick={onCopyLink}
-          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/50"
+          className="rounded-xl p-2 text-indigo-950/45 hover:bg-indigo-500/10 hover:text-indigo-600 dark:text-indigo-100/50"
           title="Kopiuj link"
         >
           <Copy className="h-5 w-5" />
@@ -66,7 +75,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
         <Link
           to={`/orders/${order.id}`}
-          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-sky-500/10 hover:text-sky-600 dark:text-indigo-100/50"
+          className="rounded-xl p-2 text-indigo-950/45 hover:bg-sky-500/10 hover:text-sky-600 dark:text-indigo-100/50"
           title="Edytuj strukturę"
         >
           <Edit2 className="h-5 w-5" />
@@ -84,7 +93,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <button
           onClick={() => onToggleLock(order)}
           className={cn(
-            'rounded-xl p-2 transition-colors',
+            'rounded-xl p-2',
             order.isLocked
               ? 'text-emerald-600 hover:bg-emerald-500/12'
               : 'text-indigo-950/45 hover:bg-amber-500/12 hover:text-amber-600 dark:text-indigo-100/50',
@@ -96,7 +105,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
         <button
           onClick={() => onDelete(order.id)}
-          className="rounded-xl p-2 text-indigo-950/45 transition-colors hover:bg-rose-500/12 hover:text-rose-500 dark:text-indigo-100/50"
+          className="rounded-xl p-2 text-indigo-950/45 hover:bg-rose-500/12 hover:text-rose-500 dark:text-indigo-100/50"
           title="Usuń"
         >
           <Trash2 className="h-5 w-5" />
