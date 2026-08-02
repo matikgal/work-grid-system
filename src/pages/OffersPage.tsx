@@ -76,11 +76,14 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
     }
   };
 
+  const actionBtn =
+    'inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1.5 text-xs font-semibold';
+
   return (
     <MainLayout pageTitle="Oferty">
-      <div className="flex h-full min-h-0 flex-col bg-slate-50 text-slate-900">
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 p-4 md:p-6">
-          <div>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50 text-slate-900">
+        <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-4 overflow-hidden p-4 md:p-6">
+          <div className="shrink-0">
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               <Tags className="h-6 w-6 text-slate-700" />
               Oferty
@@ -91,7 +94,7 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
             </p>
           </div>
 
-          <div className="flex items-stretch gap-2">
+          <div className="flex shrink-0 items-stretch gap-2">
             <input
               type="text"
               value={newName}
@@ -111,7 +114,7 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
               Utwórz
             </button>
           </div>
-          <p className="-mt-2 text-xs text-slate-500">
+          <p className="-mt-2 shrink-0 text-xs text-slate-500">
             Do nazwy automatycznie dopisze się dzisiejsza data.
           </p>
 
@@ -126,11 +129,11 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
                 </p>
               </div>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2 pb-2">
                 {quotes.map((q: Quote) => (
                   <li
                     key={q.id}
-                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4"
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -157,24 +160,24 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
                           : ''}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 flex-nowrap items-center gap-1.5 overflow-x-auto">
                       <button
                         type="button"
                         onClick={() => handleToggleLock(q)}
                         disabled={setLocked.isPending}
                         className={
                           q.isLocked
-                            ? 'inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50'
-                            : 'inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50'
+                            ? `${actionBtn} border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50`
+                            : `${actionBtn} border-slate-800 bg-slate-800 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50`
                         }
                       >
                         {q.isLocked ? (
                           <>
-                            <Unlock className="h-4 w-4" /> Odblokuj
+                            <Unlock className="h-3.5 w-3.5" /> Odblokuj
                           </>
                         ) : (
                           <>
-                            <Lock className="h-4 w-4" /> Zamknij
+                            <Lock className="h-3.5 w-3.5" /> Zamknij
                           </>
                         )}
                       </button>
@@ -182,24 +185,24 @@ export const OffersPage: React.FC<OffersPageProps> = ({ session }) => {
                         type="button"
                         onClick={() => handleDuplicate(q)}
                         disabled={duplicateQuote.isPending}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`${actionBtn} border-slate-300 bg-white text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50`}
                         title="Skopiuj strukturę bez cen"
                       >
-                        <Copy className="h-4 w-4" /> Kopiuj
+                        <Copy className="h-3.5 w-3.5" /> Kopiuj
                       </button>
                       <Link
                         to={`/offers/${q.id}`}
-                        className="cursor-pointer rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                        className={`${actionBtn} border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100`}
                       >
                         Otwórz
                       </Link>
                       <button
                         type="button"
                         onClick={() => setDeleteId(q.id)}
-                        className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                        className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                         title="Usuń"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </li>

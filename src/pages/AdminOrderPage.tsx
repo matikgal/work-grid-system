@@ -1,32 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Clipboard, Printer } from 'lucide-react';
+import { ArrowLeft, Plus, Clipboard, Printer, Trash2 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
 import { toast } from 'sonner';
 import { useOrder, useOrderItems, useAddItem, useDeleteItem } from '../hooks/useOrders';
 import { orderService } from '../services/orderService';
 import { getOrderShopNumbers } from '../config/app';
-import { AdminOrderTable } from '../components/features/orders/AdminOrderTable';
 import { PrintOrderReport } from '../components/features/orders/PrintOrderReport';
-import { DashboardBackground } from '../components/dashboard/DashboardBackground';
-import '../components/dashboard/dashboard-modern.css';
+import { Item, ShopResponse } from '../types/schemas';
 
 export const AdminOrderPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
-  // React Query
   const { data: order, isLoading: isOrderLoading, error: orderError } = useOrder(id || '');
   const { data: items = [], isLoading: isItemsLoading } = useOrderItems(id || '');
 
-  // Mutations
   const addItemMutation = useAddItem();
   const deleteItemMutation = useDeleteItem();
 
   const [saving, setSaving] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-
-  // Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -148,82 +142,173 @@ export const AdminOrderPage: React.FC = () => {
     }
   }, [isPrinting]);
 
-  if (isOrderLoading || isItemsLoading)
+  if (isOrderLoading || isItemsLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#eef0fb] text-indigo-950/60 dark:bg-[#0a0a14] dark:text-indigo-100/60">
-        Ładowanie zamówienia...
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-600">
+        Ładowanie zamówienia…
       </div>
     );
-  if (orderError && !order)
+  }
+
+  if (orderError && !order) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#eef0fb] text-rose-500 dark:bg-[#0a0a14]">
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-rose-600">
         Błąd ładowania lub brak zamówienia.
       </div>
     );
+  }
 
   return (
     <MainLayout pageTitle="Edycja Zamówienia">
-      <div className="dash-modern">
-        <DashboardBackground />
-        <div className="relative z-10 flex flex-none items-center justify-between border-b border-indigo-950/8 bg-[#f4f5fc] p-6 dark:border-white/10 dark:bg-[#12101c]">
-          <div>
-            <div className="mb-2 flex items-center gap-4">
+      <div className="flex h-full min-h-0 flex-col overflow-x-hidden bg-slate-50 text-slate-900">
+        <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-3 sm:px-4 md:px-6">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-start gap-2 sm:gap-3">
               <Link
                 to="/orders"
-                className="rounded-xl border border-indigo-950/10 bg-white p-2 text-indigo-950/60 hover:text-indigo-600 dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/60"
+                className="mt-0.5 shrink-0 cursor-pointer rounded-lg border border-slate-300 p-2 hover:bg-slate-50"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Link>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Edycja: <span className="dash-gradient-text">{order?.name}</span>
-              </h1>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold sm:text-xl md:text-2xl">
+                  Edycja: {order?.name}
+                </h1>
+                <p className="mt-0.5 text-sm text-slate-600">
+                  Dodawaj produkty i edytuj nazwy przed udostępnieniem.
+                </p>
+              </div>
             </div>
-            <p className="ml-11 text-sm text-indigo-950/55 dark:text-indigo-100/60">
-              Zarządzaj strukturą tabeli – dodawaj, usuwaj produkty i edytuj ich nazwy przed
-              udostępnieniem.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={copyToClipboard}
-              className="flex items-center gap-2 rounded-xl border border-indigo-950/10 bg-white px-3 py-2 text-sm font-medium text-indigo-950/65 hover:bg-indigo-50 dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/65"
-            >
-              <Clipboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Kopiuj</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 rounded-xl border border-indigo-950/10 bg-white px-3 py-2 text-sm font-medium text-indigo-950/65 hover:bg-indigo-50 dark:border-white/10 dark:bg-white/5 dark:text-indigo-100/65"
-              title="Drukuj zamówienie jako A4"
-            >
-              <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">Drukuj</span>
-            </button>
-            {saving && (
-              <span className="animate-pulse text-sm font-medium text-indigo-600 dark:text-indigo-300">
-                Zapisywanie...
-              </span>
-            )}
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={copyToClipboard}
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                <Clipboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Kopiuj</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                title="Drukuj zamówienie jako A4"
+              >
+                <Printer className="h-4 w-4" />
+                <span className="hidden sm:inline">Drukuj</span>
+              </button>
+              {saving && (
+                <span className="col-span-2 self-center text-center text-sm font-medium text-slate-500 sm:col-span-1">
+                  Zapisywanie…
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="dash-scroll relative z-10 min-h-0 flex-1 overflow-y-auto p-6">
-          <AdminOrderTable
-            items={items}
-            shops={shops}
-            onBlurName={handleBlurName}
-            onDeleteItem={initiateDelete}
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] border-collapse text-left text-base">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-100">
+                      <th className="sticky left-0 z-10 min-w-[12rem] bg-slate-100 px-3 py-3 font-semibold text-slate-700">
+                        Nazwa produktu
+                      </th>
+                      {shops.map((n) => (
+                        <th
+                          key={n}
+                          className="min-w-[4.5rem] px-2 py-3 text-center text-sm font-semibold text-slate-700"
+                        >
+                          Sklep {n}
+                        </th>
+                      ))}
+                      <th className="min-w-[5rem] bg-amber-50 px-2 py-3 text-center text-sm font-semibold text-amber-900">
+                        Suma
+                      </th>
+                      <th className="w-12 px-1 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={shops.length + 3}
+                          className="px-4 py-10 text-center text-slate-500"
+                        >
+                          Brak produktów — dodaj pierwszy poniżej.
+                        </td>
+                      </tr>
+                    ) : (
+                      items.map((item: Item) => {
+                        let sum = 0;
+                        shops.forEach((n) => {
+                          const shopResp = item.responses?.find(
+                            (r: ShopResponse) => r.shopId === n.toString(),
+                          );
+                          const num = parseFloat(shopResp?.value?.replace(',', '.') || '0');
+                          if (!isNaN(num)) sum += num;
+                        });
 
-          <div className="mt-6">
-            <button
-              onClick={handleAddItem}
-              disabled={addItemMutation.isPending}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-500 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" />
-              Dodaj kolejny produkt
-            </button>
+                        return (
+                          <tr key={item.id} className="border-b border-slate-100 last:border-0">
+                            <td className="sticky left-0 z-10 bg-white px-0 py-0">
+                              <input
+                                type="text"
+                                defaultValue={item.name === 'Nowy Produkt' ? '' : item.name}
+                                onFocus={(e) => e.target.select()}
+                                onBlur={(e) => handleBlurName(item.id, e.target.value)}
+                                className="h-full w-full bg-transparent px-3 py-3 font-semibold text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 focus:bg-slate-50"
+                                placeholder="Nowy Produkt"
+                              />
+                            </td>
+                            {shops.map((n) => {
+                              const shopResp = item.responses?.find(
+                                (r: ShopResponse) => r.shopId === n.toString(),
+                              );
+                              return (
+                                <td
+                                  key={n}
+                                  className="px-2 py-3 text-center text-sm tabular-nums text-slate-500"
+                                >
+                                  {shopResp?.value || '—'}
+                                </td>
+                              );
+                            })}
+                            <td className="bg-amber-50/60 px-2 py-3 text-center font-bold tabular-nums text-amber-950">
+                              {sum > 0 ? sum : '—'}
+                            </td>
+                            <td className="px-1 py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => initiateDelete(item.id)}
+                                className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                title="Usuń wiersz"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleAddItem}
+                disabled={addItemMutation.isPending}
+                className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg bg-sky-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                Dodaj kolejny produkt
+              </button>
+            </div>
           </div>
 
           {isPrinting && (

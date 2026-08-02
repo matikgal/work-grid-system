@@ -15,68 +15,75 @@ export const PublicOrderMobileList: React.FC<PublicOrderMobileListProps> = ({
   onBlurCell,
 }) => {
   return (
-    <div className="space-y-5 md:hidden">
-        {items.length === 0 ? (
-            <div className="dash-glass p-8 text-center text-indigo-950/45 dark:text-indigo-100/45">
-                Brak danych zamówienia.
+    <div className="space-y-3 md:hidden">
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-500">
+          Brak danych zamówienia.
+        </div>
+      ) : (
+        items.map((item, index) => {
+          let sum = 0;
+          shops.forEach((n) => {
+            const shopResp = item.responses?.find((r: ShopResponse) => r.shopId === n.toString());
+            const num = parseFloat(shopResp?.value?.replace(',', '.') || '0');
+            if (!isNaN(num)) sum += num;
+          });
+
+          return (
+            <div
+              key={item.id}
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
+                <div className="min-w-0">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Produkt {index + 1}
+                  </label>
+                  <div className="break-words text-lg font-semibold text-slate-900">
+                    {item.name}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-slate-400">
+                    Suma
+                  </label>
+                  <div className="text-lg font-bold tabular-nums text-amber-900">
+                    {sum > 0 ? Number(sum.toFixed(2)) : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {shops.map((n) => {
+                    const shopResp = item.responses?.find(
+                      (r: ShopResponse) => r.shopId === n.toString(),
+                    );
+                    return (
+                      <div
+                        key={n}
+                        className="flex flex-col items-center rounded-lg border border-slate-200 bg-slate-50 p-2.5"
+                      >
+                        <label className="mb-1 block text-center text-[10px] font-semibold uppercase text-slate-500">
+                          Sklep {n}
+                        </label>
+                        <input
+                          type="text"
+                          defaultValue={shopResp?.value || ''}
+                          onBlur={(e) => onBlurCell(item.id, n, e.target.value)}
+                          className="h-10 w-full rounded-md border border-slate-200 bg-white px-2 text-center font-medium tabular-nums text-slate-900 outline-none focus:border-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
+                          placeholder="—"
+                          disabled={isLocked}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-        ) : (
-            items.map((item, index) => {
-                 let sum = 0;
-                 shops.forEach(n => {
-                     const shopResp = item.responses?.find((r: ShopResponse) => r.shopId === n.toString());
-                     const val = shopResp?.value;
-                     const num = parseFloat(val?.replace(',', '.') || '0');
-                     if (!isNaN(num)) sum += num;
-                 });
-
-                return (
-                    <div key={item.id} className="dash-glass overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-white/40 p-4 dark:border-white/10">
-                            <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-indigo-950/40 dark:text-indigo-100/45">
-                                    Produkt {index + 1}
-                                </label>
-                                <div className="break-words text-lg font-semibold">
-                                    {item.name}
-                                </div>
-                            </div>
-                             <div className="text-right">
-                                <label className="mb-1 block text-xs font-semibold uppercase text-indigo-950/40 dark:text-indigo-100/45">
-                                    Suma
-                                </label>
-                                <div className="text-lg font-bold text-indigo-600 dark:text-indigo-300">
-                                     {sum > 0 ? Number(sum.toFixed(2)) : '-'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4">
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                {shops.map(n => {
-                                    const shopResp = item.responses?.find((r: ShopResponse) => r.shopId === n.toString());
-                                    return (
-                                        <div key={n} className="flex flex-col items-center rounded-xl border border-white/50 bg-white/55 p-3 transition-all focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <label className="mb-1 block text-center text-[10px] font-semibold uppercase text-indigo-950/40 dark:text-indigo-100/45">
-                                                Sklep {n}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                defaultValue={shopResp?.value || ''}
-                                                onBlur={(e) => onBlurCell(item.id, n, e.target.value)}
-                                                className="h-10 w-full rounded-md bg-white/70 p-2 text-center font-medium text-indigo-950 focus:bg-white focus:outline-none disabled:bg-black/[0.04] disabled:text-indigo-950/40 dark:bg-white/5 dark:text-indigo-50 dark:disabled:bg-white/[0.03] dark:disabled:text-indigo-100/40"
-                                                placeholder="-"
-                                                disabled={isLocked}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                );
-            })
-        )}
+          );
+        })
+      )}
     </div>
   );
 };
