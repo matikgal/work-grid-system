@@ -225,6 +225,26 @@ export function useUpdateQuoteRowShelfPrice() {
   });
 }
 
+export function useUpdateQuoteRowSummary() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      quoteId: _quoteId,
+      lowestPrice,
+      lowestWholesaler,
+    }: {
+      id: string;
+      quoteId: string;
+      lowestPrice?: string;
+      lowestWholesaler?: string;
+    }) => quoteService.updateRowSummary(id, { lowestPrice, lowestWholesaler }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: quoteKeys.detail(vars.quoteId) });
+    },
+  });
+}
+
 export function useDeleteQuoteRow() {
   const queryClient = useQueryClient();
   return useMutation({

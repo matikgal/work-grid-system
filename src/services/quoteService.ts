@@ -41,6 +41,8 @@ interface DbRow {
   name: string;
   ean?: string | null;
   shelf_price?: string | null;
+  lowest_price?: string | null;
+  lowest_wholesaler?: string | null;
   sort_order: number;
   created_at: string | null;
   updated_at: string | null;
@@ -88,6 +90,8 @@ function mapRow(r: DbRow): QuoteRow {
     name: r.name,
     ean: r.ean ?? '',
     shelfPrice: r.shelf_price ?? '',
+    lowestPrice: r.lowest_price ?? '',
+    lowestWholesaler: r.lowest_wholesaler ?? '',
     sortOrder: r.sort_order,
     cells: (r.quote_cells || []).map(mapCell),
     createdAt: r.created_at,
@@ -279,6 +283,25 @@ export const quoteService = {
       .from('quote_rows')
       .update({ shelf_price: shelfPrice.trim(), updated_at: new Date().toISOString() })
       .eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async updateRowSummary(
+    id: string,
+    values: { lowestPrice?: string; lowestWholesaler?: string },
+  ): Promise<void> {
+    const update: {
+      lowest_price?: string;
+      lowest_wholesaler?: string;
+      updated_at: string;
+    } = { updated_at: new Date().toISOString() };
+
+    if (values.lowestPrice !== undefined) update.lowest_price = values.lowestPrice.trim();
+    if (values.lowestWholesaler !== undefined) {
+      update.lowest_wholesaler = values.lowestWholesaler.trim();
+    }
+
+    const { error } = await supabase.from('quote_rows').update(update).eq('id', id);
     if (error) throw new Error(error.message);
   },
 

@@ -1,4 +1,4 @@
-import { computeQuoteRowMin } from './quoteMinPrice';
+import { computeQuoteRowMin, applyQuoteRowSummaryOverrides } from './quoteMinPrice';
 import type { QuoteColumn, QuoteRow } from '../types/quoteSchemas';
 
 /** Digits only — avoids Excel scientific notation / stray separators. */
@@ -24,12 +24,12 @@ export function buildOfferSummaryClipboard(
     for (const cell of row.cells || []) {
       byCol[cell.columnId] = cell.value;
     }
-    const min = computeQuoteRowMin(byCol, columns);
+    const summary = applyQuoteRowSummaryOverrides(computeQuoteRowMin(byCol, columns), row);
     return [
       row.name,
       normalizeEan(row.ean),
-      min.minLabel === '—' ? '' : formatPricePl(min.minLabel),
-      min.sourceLabel === '—' ? '' : min.sourceLabel,
+      summary.minLabel === '—' ? '' : formatPricePl(summary.minLabel),
+      summary.sourceLabel === '—' ? '' : summary.sourceLabel,
       formatPricePl(row.shelfPrice),
     ];
   });
@@ -96,8 +96,8 @@ export function buildOfferExcelClipboard(rows: QuoteRow[], columns: QuoteColumn[
       for (const cell of row.cells || []) {
         byCol[cell.columnId] = cell.value;
       }
-      const min = computeQuoteRowMin(byCol, columns);
-      const minPrice = min.minLabel === '—' ? '' : formatPricePl(min.minLabel);
+      const summary = applyQuoteRowSummaryOverrides(computeQuoteRowMin(byCol, columns), row);
+      const minPrice = summary.minLabel === '—' ? '' : formatPricePl(summary.minLabel);
       return [normalizeEan(row.ean), formatPricePl(row.shelfPrice), minPrice, '1', '1'].join('\t');
     })
     .join('\n');

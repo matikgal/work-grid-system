@@ -24,10 +24,11 @@ import {
   useRenameQuoteRow,
   useUpdateQuoteRowEan,
   useUpdateQuoteRowShelfPrice,
+  useUpdateQuoteRowSummary,
   useDeleteQuoteRow,
 } from '../hooks/useQuotes';
 import { buildPublicQuoteUrl } from '../lib/quoteAccess';
-import { computeQuoteRowMin } from '../lib/quoteMinPrice';
+import { applyQuoteRowSummaryOverrides, computeQuoteRowMin } from '../lib/quoteMinPrice';
 import {
   copyEanToClipboard,
   copyOfferExcelToClipboard,
@@ -48,6 +49,7 @@ export const AdminOfferPage: React.FC = () => {
   const renameRow = useRenameQuoteRow();
   const updateEan = useUpdateQuoteRowEan();
   const updateShelfPrice = useUpdateQuoteRowShelfPrice();
+  const updateSummary = useUpdateQuoteRowSummary();
   const deleteRow = useDeleteQuoteRow();
 
   const [newColName, setNewColName] = useState('');
@@ -375,6 +377,7 @@ export const AdminOfferPage: React.FC = () => {
                       byCol[cell.columnId] = cell.value;
                     }
                     const min = computeQuoteRowMin(byCol, columns);
+                    const summary = applyQuoteRowSummaryOverrides(min, row);
 
                     return (
                       <article
@@ -457,17 +460,46 @@ export const AdminOfferPage: React.FC = () => {
                         )}
 
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          <div className="rounded-lg bg-amber-50 px-3 py-2 text-center">
-                            <div className="text-xs font-semibold text-amber-800">Najniższa</div>
-                            <div className="text-base font-bold tabular-nums text-amber-950">
-                              {min.minLabel === '—' ? '—' : formatPricePl(min.minLabel)}
+                          <div className="rounded-lg bg-amber-50 px-2 py-1.5">
+                            <div className="mb-0.5 text-center text-xs font-semibold text-amber-800">
+                              Najniższa
                             </div>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              defaultValue={
+                                summary.minLabel === '—' ? '' : formatPricePl(summary.minLabel)
+                              }
+                              onChange={(e) => {
+                                void updateSummary.mutateAsync({
+                                  id: row.id,
+                                  lowestPrice: e.target.value,
+                                  quoteId: id,
+                                });
+                              }}
+                              placeholder="Automatycznie"
+                              title="Pozostaw puste, aby wyliczać automatycznie"
+                              className="w-full rounded border border-transparent bg-white px-2 py-1.5 text-center font-bold tabular-nums text-amber-950 outline-none hover:border-amber-300 focus:border-amber-400"
+                            />
                           </div>
-                          <div className="rounded-lg bg-amber-50 px-3 py-2 text-center">
-                            <div className="text-xs font-semibold text-amber-800">Hurtownia</div>
-                            <div className="truncate text-sm font-semibold text-amber-950">
-                              {min.sourceLabel}
+                          <div className="rounded-lg bg-amber-50 px-2 py-1.5">
+                            <div className="mb-0.5 text-center text-xs font-semibold text-amber-800">
+                              Hurtownia
                             </div>
+                            <input
+                              type="text"
+                              defaultValue={summary.sourceLabel === '—' ? '' : summary.sourceLabel}
+                              onChange={(e) => {
+                                void updateSummary.mutateAsync({
+                                  id: row.id,
+                                  lowestWholesaler: e.target.value,
+                                  quoteId: id,
+                                });
+                              }}
+                              placeholder="Automatycznie"
+                              title="Pozostaw puste, aby wyliczać automatycznie"
+                              className="w-full rounded border border-transparent bg-white px-2 py-1.5 text-center text-sm font-semibold text-amber-950 outline-none hover:border-amber-300 focus:border-amber-400"
+                            />
                           </div>
                           <div className="rounded-lg bg-emerald-50 px-2 py-1.5">
                             <div className="mb-0.5 text-center text-xs font-semibold text-emerald-800">
@@ -537,6 +569,7 @@ export const AdminOfferPage: React.FC = () => {
                             byCol[cell.columnId] = cell.value;
                           }
                           const min = computeQuoteRowMin(byCol, columns);
+                          const summary = applyQuoteRowSummaryOverrides(min, row);
 
                           return (
                             <tr key={row.id} className="border-b border-slate-100 last:border-0">
@@ -594,11 +627,40 @@ export const AdminOfferPage: React.FC = () => {
                                   {byCol[col.id]?.trim() ? formatPricePl(byCol[col.id]) : '—'}
                                 </td>
                               ))}
-                              <td className="bg-amber-50/60 px-2 py-2 text-center font-semibold tabular-nums text-amber-950">
-                                {min.minLabel === '—' ? '—' : formatPricePl(min.minLabel)}
+                              <td className="bg-amber-50/60 px-2 py-2">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  defaultValue={
+                                    summary.minLabel === '—' ? '' : formatPricePl(summary.minLabel)
+                                  }
+                                  onChange={(e) => {
+                                    void updateSummary.mutateAsync({
+                                      id: row.id,
+                                      lowestPrice: e.target.value,
+                                      quoteId: id,
+                                    });
+                                  }}
+                                  placeholder="Automatycznie"
+                                  title="Pozostaw puste, aby wyliczać automatycznie"
+                                  className="w-full rounded border border-transparent bg-transparent px-2 py-2 text-center font-semibold tabular-nums text-amber-950 hover:border-amber-300 focus:border-amber-400 focus:bg-white focus:outline-none"
+                                />
                               </td>
-                              <td className="bg-amber-50/60 px-2 py-2 text-center text-sm font-medium text-amber-950">
-                                {min.sourceLabel}
+                              <td className="bg-amber-50/60 px-2 py-2">
+                                <input
+                                  type="text"
+                                  defaultValue={summary.sourceLabel === '—' ? '' : summary.sourceLabel}
+                                  onChange={(e) => {
+                                    void updateSummary.mutateAsync({
+                                      id: row.id,
+                                      lowestWholesaler: e.target.value,
+                                      quoteId: id,
+                                    });
+                                  }}
+                                  placeholder="Automatycznie"
+                                  title="Pozostaw puste, aby wyliczać automatycznie"
+                                  className="w-full rounded border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-amber-950 hover:border-amber-300 focus:border-amber-400 focus:bg-white focus:outline-none"
+                                />
                               </td>
                               <td className="bg-emerald-50/70 px-2 py-2">
                                 <input

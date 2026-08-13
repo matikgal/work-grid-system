@@ -25,6 +25,8 @@ export const QuoteRowSchema = z.object({
   name: z.string(),
   ean: z.string().default(''),
   shelfPrice: z.string().default(''),
+  lowestPrice: z.string().default(''),
+  lowestWholesaler: z.string().default(''),
   sortOrder: z.number().int().default(0),
   cells: z.array(QuoteCellSchema).optional().default([]),
   createdAt: z.string().nullable().optional(),

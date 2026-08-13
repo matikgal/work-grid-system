@@ -41,3 +41,14 @@ export function computeQuoteRowMin(
 
   return { minLabel, sourceLabel: winners[0].name };
 }
+
+/** Uses administrator-provided values when present; otherwise keeps the calculated result. */
+export function applyQuoteRowSummaryOverrides(
+  calculated: QuoteMinResult,
+  overrides: { lowestPrice?: string | null; lowestWholesaler?: string | null },
+): QuoteMinResult {
+  return {
+    minLabel: overrides.lowestPrice?.trim() || calculated.minLabel,
+    sourceLabel: overrides.lowestWholesaler?.trim() || calculated.sourceLabel,
+  };
+}
