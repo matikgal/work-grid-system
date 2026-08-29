@@ -33,9 +33,9 @@ interface ScheduleHeaderRightProps {
 }
 
 const SUM_DISPLAY_OPTIONS: { value: SumDisplay; label: string }[] = [
-  { value: 'days', label: 'Dni' },
+  { value: 'days', label: 'DNI' },
   { value: 'ws', label: 'WS' },
-  { value: 'both', label: 'Oba' },
+  { value: 'both', label: 'Wszystko' },
 ];
 
 export const ScheduleHeaderRight: React.FC<ScheduleHeaderRightProps> = ({
@@ -123,16 +123,22 @@ export const ScheduleHeaderRight: React.FC<ScheduleHeaderRightProps> = ({
                 />
               </div>
 
-              <div className="schedule-header-menu-row">
-                <span className="text-xs font-semibold">Suma pokazuje</span>
-                <div className="schedule-header-view-toggle" role="group" aria-label="Co pokazać w sumie">
+              <div className="schedule-header-menu-row schedule-header-menu-row--stack">
+                <span className="schedule-header-tool-label">Kolumna SUMA</span>
+                <div
+                  className="schedule-header-sum-switch"
+                  role="radiogroup"
+                  aria-label="Co pokazać w kolumnie SUMA"
+                >
                   {SUM_DISPLAY_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
+                      role="radio"
+                      aria-checked={sumDisplay === opt.value}
                       onClick={() => onSumDisplayChange(opt.value)}
                       className={cn(
-                        'schedule-header-view-btn',
+                        'schedule-header-view-btn schedule-header-sum-switch__btn',
                         sumDisplay === opt.value && 'schedule-header-view-btn--active',
                       )}
                     >

@@ -21,7 +21,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Employee, Shift, ViewMode } from "../../types";
-import { getShiftStyle, cn, displayName, resolveEmployeeAvatar, getMonthlyHoursStatus } from "../../utils";
+import {
+  getShiftStyle,
+  cn,
+  displayName,
+  resolveEmployeeAvatar,
+  getMonthlyHoursStatus,
+  isWsShift,
+  formatScheduleSum,
+} from "../../utils";
 import { SHIFT_TYPES } from "../../constants";
 
 interface CalendarGridProps {
@@ -251,11 +259,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         if (shift) {
           h += getShiftHours(shift);
           if (shift.type === SHIFT_TYPES.VACATION) v++;
-          if (
-            shift.type === SHIFT_TYPES.WS ||
-            shift.type === SHIFT_TYPES.WS_ON_DEMAND
-          )
-            ws++;
+          if (isWsShift(shift.type)) ws++;
         }
       });
 
@@ -266,20 +270,13 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   }, [employees, daysInfo, shiftsLookup, viewMode]);
 
   // Dynamic column width based on view mode
-  const colWidthClass =
-    viewMode === "week"
-      ? "flex-1 min-w-0" // Week view: Fit to screen, no scroll
-      : isCompactMode
-      ? "min-w-[28px] flex-1"
-      : "min-w-[40px] flex-1";
+  const colWidthClass = "flex-1 min-w-0";
 
   const activeEmployeesCount = employees.filter(e => !e.isSeparator).length;
 
   return (
-    <div className="schedule-grid flex-1 overflow-auto relative custom-scrollbar h-full overscroll-contain">
-      <div
-        className={cn(viewMode === "week" ? "min-w-0 w-full" : "min-w-full w-max")}
-      >
+    <div className="schedule-grid flex-1 overflow-y-auto overflow-x-hidden relative custom-scrollbar h-full overscroll-contain">
+      <div className="min-w-0 w-full">
         {/* Header Row */}
         <div className="schedule-grid__header flex sticky top-0 z-20">
           <div
@@ -381,7 +378,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             )}
 
             {viewMode === "month" && (
-              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 sticky right-0 z-30 p-2 flex items-center justify-center flex-shrink-0 text-xs text-center leading-tight">
+              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 min-w-0 max-w-20 md:max-w-24 overflow-hidden sticky right-0 z-30 p-2 flex items-center justify-center flex-shrink-0 text-xs text-center leading-tight">
                 SUMA
               </div>
             )}
@@ -670,10 +667,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         {viewMode === "month" && (
                           <div
                             className={cn(
-                              "schedule-grid__sum-col w-20 md:w-24 sticky right-0 z-10 flex items-center justify-center flex-shrink-0 transition-colors",
+                              "schedule-grid__sum-col w-20 md:w-24 min-w-0 max-w-20 md:max-w-24 overflow-hidden sticky right-0 z-10 flex items-center justify-center flex-shrink-0 transition-colors",
                               isCompactMode
-                                ? "py-1 text-xs"
-                                : "p-2 flex-col gap-1",
+                                ? "px-1 py-1 text-xs"
+                                : "px-1 py-1.5 flex-col gap-0.5",
                               employee.isSeparator
                                 ? "bg-slate-50 dark:bg-slate-900"
                                 : (() => {
@@ -690,25 +687,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 <span className="text-slate-300 dark:text-slate-600">-</span>
                             ) : (
                                 <div
-                                  className="flex w-full flex-col items-center justify-center leading-tight"
+                                  className="flex w-full min-w-0 flex-col items-center justify-center overflow-hidden text-center leading-tight"
                                   title={`Norma: ${targetMonthlyHours}h${sumDisplay !== 'days' ? ` • WS: ${wsCount}${wsTarget ? `/${wsTarget}` : ''}` : ''}`}
                                 >
-                                    {!isCompactMode && (
-                                      <span className="text-[8px] font-semibold uppercase tracking-wide opacity-45">
-                                        {[sumDisplay !== 'ws' && 'h/d', sumDisplay !== 'days' && 'ws']
-                                          .filter(Boolean)
-                                          .join('/')}
-                                      </span>
-                                    )}
-                                    <span className="schedule-grid__sum-values whitespace-nowrap font-bold tabular-nums text-[10px] md:text-[11px]">
-                                      {[
-                                        sumDisplay !== 'ws' &&
-                                          `${totalHours}h/${parseFloat((totalHours / 8).toFixed(2))}d`,
-                                        sumDisplay !== 'days' &&
-                                          `${wsCount}${wsTarget ? `/${wsTarget}` : ''}ws`,
-                                      ]
-                                        .filter(Boolean)
-                                        .join('/')}
+                                    <span className="schedule-grid__sum-values w-full min-w-0 text-center font-bold tabular-nums text-[10px] md:text-[11px]">
+                                      {formatScheduleSum(sumDisplay, totalHours, wsCount, wsTarget).map((line) => (
+                                        <span key={line} className="block truncate text-center">
+                                          {line}
+                                        </span>
+                                      ))}
                                     </span>
                                     {sumDisplay !== 'ws' && !isCompactMode && vacationDays > 0 && (
                                       <span className="schedule-grid__vac-badge mt-0.5">
@@ -799,7 +786,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
             })}
 
             {viewMode === "month" && (
-              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 sticky right-0 z-30 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
+              <div className="schedule-grid__sum-col schedule-grid__sum-head w-20 md:w-24 min-w-0 max-w-20 md:max-w-24 overflow-hidden sticky right-0 z-30 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
                 {activeEmployeesCount} os.
               </div>
             )}

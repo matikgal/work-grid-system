@@ -71,17 +71,7 @@ export async function copyOfferSummaryToClipboard(
   columns: QuoteColumn[],
 ): Promise<void> {
   const { html, text } = buildOfferSummaryClipboard(rows, columns);
-  if (typeof ClipboardItem !== 'undefined') {
-    const data = [
-      new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
-        'text/plain': new Blob([text], { type: 'text/plain' }),
-      }),
-    ];
-    await navigator.clipboard.write(data);
-    return;
-  }
-  await navigator.clipboard.writeText(text);
+  await copyHtmlAndText(html, text);
 }
 
 /**
@@ -115,4 +105,122 @@ export async function copyEanToClipboard(ean: string): Promise<void> {
   const digits = normalizeEan(ean);
   if (!digits) throw new Error('EMPTY_EAN');
   await navigator.clipboard.writeText(digits);
+}
+
+export type WholesalerOrderLine = {
+  name: string;
+  ean: string;
+  price: string;
+};
+
+function rowValuesByColumn(row: QuoteRow): Record<string, string> {
+  const byCol: Record<string, string> = {};
+  for (const cell of row.cells || []) {
+    byCol[cell.columnId] = cell.value;
+  }
+  return byCol;
+}
+
+function sameWholesalerName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** Products where this wholesaler has the lowest price (Hurtownia column). */
+export function collectWholesalerWinningRows(
+  rows: QuoteRow[],
+  columns: QuoteColumn[],
+  wholesalerName: string,
+): WholesalerOrderLine[] {
+  const column = columns.find((c) => sameWholesalerName(c.name, wholesalerName));
+  const lines: WholesalerOrderLine[] = [];
+
+  for (const row of rows) {
+    const byCol = rowValuesByColumn(row);
+    const summary = applyQuoteRowSummaryOverrides(computeQuoteRowMin(byCol, columns), row);
+    if (!sameWholesalerName(summary.sourceLabel, wholesalerName)) continue;
+
+    const cellPrice = column ? byCol[column.id] : '';
+    const priceRaw = cellPrice?.trim() || (summary.minLabel === '—' ? '' : summary.minLabel);
+    lines.push({
+      name: row.name,
+      ean: normalizeEan(row.ean),
+      price: formatPricePl(priceRaw),
+    });
+  }
+
+  return lines;
+}
+
+export function buildWholesalerOrderClipboard(lines: WholesalerOrderLine[]): {
+  html: string;
+  text: string;
+} {
+  const header = ['Produkt', 'Kod EAN', 'Cena'];
+  const body = lines.map((line) => [line.name, line.ean, line.price]);
+
+  const th = header
+    .map(
+      (h) =>
+        `<th style="background-color:#f3f4f6;padding:8px;text-align:left;border:1px solid #d1d5db;">${escapeHtml(h)}</th>`,
+    )
+    .join('');
+
+  const trs = body
+    .map((cells) => {
+      const tds = cells
+        .map(
+          (c, i) =>
+            `<td style="padding:8px;border:1px solid #d1d5db;${i === 2 ? 'text-align:center;' : ''}">${escapeHtml(c)}</td>`,
+        )
+        .join('');
+      return `<tr>${tds}</tr>`;
+    })
+    .join('');
+
+  const html = `<table border="1" style="border-collapse:collapse;width:100%;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+  const text = [header.join('\t'), ...body.map((r) => r.join('\t'))].join('\n');
+  return { html, text };
+}
+
+async function copyHtmlAndText(html: string, text: string): Promise<void> {
+  if (typeof ClipboardItem !== 'undefined') {
+    const data = [
+      new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+      }),
+    ];
+    await navigator.clipboard.write(data);
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+}
+
+export function openMailWithBody(subject: string, body: string): void {
+  const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const link = document.createElement('a');
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/** Copy an order table and open the mail client for one wholesaler. */
+export async function sendWholesalerOrderMail(
+  rows: QuoteRow[],
+  columns: QuoteColumn[],
+  wholesalerName: string,
+  offerName?: string,
+): Promise<number> {
+  const lines = collectWholesalerWinningRows(rows, columns, wholesalerName);
+  if (lines.length === 0) throw new Error('NO_ROWS');
+
+  const { html, text } = buildWholesalerOrderClipboard(lines);
+  await copyHtmlAndText(html, text);
+
+  const subject = offerName?.trim()
+    ? `${offerName.trim()} — ${wholesalerName}`
+    : `Zamówienie — ${wholesalerName}`;
+  openMailWithBody(subject, text);
+  return lines.length;
 }

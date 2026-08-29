@@ -233,6 +233,32 @@ export function resolveEmployeeAvatar(
 
 export type MonthlyHoursStatus = 'ok' | 'low' | 'high';
 
+/** Any schedule cell shown as WS: gray (Wolna Sobota), green (WS), red (WS-NŻ). */
+export function isWsShift(type?: string): boolean {
+  return (
+    type === SHIFT_TYPES.FREE_SATURDAY ||
+    type === SHIFT_TYPES.WS ||
+    type === SHIFT_TYPES.WS_ON_DEMAND
+  );
+}
+
+export type SumDisplayMode = 'days' | 'ws' | 'both';
+
+/** Lines shown in the schedule SUMA column, e.g. "H: 120 D: 15" and "WS: 6/6". */
+export function formatScheduleSum(
+  sumDisplay: SumDisplayMode,
+  totalHours: number,
+  wsCount: number,
+  wsTarget = 0,
+): string[] {
+  const days = parseFloat((totalHours / 8).toFixed(2));
+  const hoursDaysLine = `H: ${totalHours} D: ${days}`;
+  const wsLine = `WS: ${wsCount}${wsTarget ? `/${wsTarget}` : ''}`;
+  if (sumDisplay === 'ws') return [wsLine];
+  if (sumDisplay === 'days') return [hoursDaysLine];
+  return [hoursDaysLine, wsLine];
+}
+
 /** Kolor kolumny SUMA: norma = dni robocze × 8h. */
 export function getMonthlyHoursStatus(
   totalHours: number,

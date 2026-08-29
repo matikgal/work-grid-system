@@ -6,6 +6,7 @@ import {
   Copy,
   FileSpreadsheet,
   Lock,
+  Mail,
   Unlock,
   Plus,
   Trash2,
@@ -34,6 +35,7 @@ import {
   copyOfferExcelToClipboard,
   copyOfferSummaryToClipboard,
   formatPricePl,
+  sendWholesalerOrderMail,
 } from '../lib/offerClipboard';
 
 export const AdminOfferPage: React.FC = () => {
@@ -130,6 +132,21 @@ export const AdminOfferPage: React.FC = () => {
       toast.success('Dane skopiowane — wklej do Excela');
     } catch {
       toast.error('Nie udało się skopiować do Excela');
+    }
+  };
+
+  const handleMailWholesaler = async (wholesalerName: string) => {
+    try {
+      const count = await sendWholesalerOrderMail(rows, columns, wholesalerName, quote?.name);
+      toast.success(
+        `Poczta: ${count} ${count === 1 ? 'produkt' : 'produktów'} dla ${wholesalerName} — wklej tabelę (Ctrl+V)`,
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message === 'NO_ROWS') {
+        toast.error(`Brak produktów z najniższą ceną u ${wholesalerName}`);
+        return;
+      }
+      toast.error('Nie udało się przygotować wiadomości');
     }
   };
 
@@ -339,6 +356,14 @@ export const AdminOfferPage: React.FC = () => {
                       <div className="flex shrink-0 items-center gap-2">
                         <button
                           type="button"
+                          onClick={() => void handleMailWholesaler(col.name)}
+                          className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-sky-50 hover:text-sky-700"
+                          title={`Wyślij do ${col.name} produkty z najniższą ceną`}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleCopyLink(col.accessToken, col.name)}
                           className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 text-sm font-semibold text-white hover:bg-slate-700 sm:flex-none"
                           title="Kopiuj link dla hurtowni"
@@ -448,8 +473,18 @@ export const AdminOfferPage: React.FC = () => {
                                 key={col.id}
                                 className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-2 text-center"
                               >
-                                <div className="truncate text-xs font-medium text-slate-500">
-                                  {col.name}
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className="truncate text-xs font-medium text-slate-500">
+                                    {col.name}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleMailWholesaler(col.name)}
+                                    className="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-slate-400 hover:bg-sky-50 hover:text-sky-700"
+                                    title={`Wyślij do ${col.name} produkty z najniższą ceną`}
+                                  >
+                                    <Mail className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                                 <div className="mt-0.5 text-base font-semibold tabular-nums text-slate-900">
                                   {byCol[col.id]?.trim() ? formatPricePl(byCol[col.id]) : '—'}
@@ -544,10 +579,20 @@ export const AdminOfferPage: React.FC = () => {
                           {columns.map((col) => (
                             <th
                               key={col.id}
-                              className="min-w-[5rem] max-w-[8rem] px-2 py-3 text-center text-sm font-semibold text-slate-800"
+                              className="min-w-[6.5rem] max-w-[9rem] px-2 py-3 text-center text-sm font-semibold text-slate-800"
                               title={col.name}
                             >
-                              <span className="line-clamp-2 break-words">{col.name}</span>
+                              <span className="inline-flex items-center justify-center gap-1">
+                                <span className="line-clamp-2 break-words">{col.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleMailWholesaler(col.name)}
+                                  className="inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-500 hover:bg-sky-50 hover:text-sky-700"
+                                  title={`Wyślij do ${col.name} produkty z najniższą ceną`}
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                </button>
+                              </span>
                             </th>
                           ))}
                           <th className="min-w-[5rem] bg-amber-50 px-2 py-3 text-center text-sm font-semibold text-amber-900">
