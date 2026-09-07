@@ -80,10 +80,14 @@ describe('collectWholesalerWinningRows', () => {
 });
 
 describe('buildWholesalerOrderClipboard', () => {
-  it('builds a 3-column table', () => {
-    const { text } = buildWholesalerOrderClipboard([
+  it('builds a compact 3-column HTML table without full width', () => {
+    const { html, text } = buildWholesalerOrderClipboard([
       { name: 'Mleko', ean: '5901234567890', price: '2,95' },
     ]);
     expect(text).toBe('Produkt\tKod EAN\tCena\nMleko\t5901234567890\t2,95');
+    expect(html).toContain('width:auto');
+    expect(html).not.toContain('width:100%');
+    expect(html).toContain('Mleko');
+    expect(html).toContain('2,95');
   });
 });

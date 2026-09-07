@@ -66,6 +66,20 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+async function copyHtmlAndText(html: string, text: string): Promise<void> {
+  if (typeof ClipboardItem !== 'undefined') {
+    const data = [
+      new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+      }),
+    ];
+    await navigator.clipboard.write(data);
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+}
+
 export async function copyOfferSummaryToClipboard(
   rows: QuoteRow[],
   columns: QuoteColumn[],
@@ -161,39 +175,28 @@ export function buildWholesalerOrderClipboard(lines: WholesalerOrderLine[]): {
   const th = header
     .map(
       (h) =>
-        `<th style="background-color:#f3f4f6;padding:8px;text-align:left;border:1px solid #d1d5db;">${escapeHtml(h)}</th>`,
+        `<th style="background-color:#1e293b;color:#ffffff;padding:6px 10px;text-align:left;border:1px solid #334155;font-weight:700;white-space:nowrap;">${escapeHtml(h)}</th>`,
     )
     .join('');
 
   const trs = body
-    .map((cells) => {
+    .map((cells, rowIdx) => {
+      const bg = rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
       const tds = cells
-        .map(
-          (c, i) =>
-            `<td style="padding:8px;border:1px solid #d1d5db;${i === 2 ? 'text-align:center;' : ''}">${escapeHtml(c)}</td>`,
-        )
+        .map((c, i) => {
+          const align = i === 2 ? 'center' : 'left';
+          const mono = i === 1 ? 'font-family:Consolas,monospace;' : '';
+          return `<td style="padding:5px 10px;border:1px solid #cbd5e1;text-align:${align};background-color:${bg};white-space:nowrap;${mono}">${escapeHtml(c)}</td>`;
+        })
         .join('');
       return `<tr>${tds}</tr>`;
     })
     .join('');
 
-  const html = `<table border="1" style="border-collapse:collapse;width:100%;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
+  // width:auto — Outlook/Gmail stretch width:100% across the whole message pane
+  const html = `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:auto;font-family:'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.35;"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`;
   const text = [header.join('\t'), ...body.map((r) => r.join('\t'))].join('\n');
   return { html, text };
-}
-
-async function copyHtmlAndText(html: string, text: string): Promise<void> {
-  if (typeof ClipboardItem !== 'undefined') {
-    const data = [
-      new ClipboardItem({
-        'text/html': new Blob([html], { type: 'text/html' }),
-        'text/plain': new Blob([text], { type: 'text/plain' }),
-      }),
-    ];
-    await navigator.clipboard.write(data);
-    return;
-  }
-  await navigator.clipboard.writeText(text);
 }
 
 export function openMailWithBody(subject: string, body: string): void {
@@ -205,7 +208,7 @@ export function openMailWithBody(subject: string, body: string): void {
   document.body.removeChild(link);
 }
 
-/** Copy an order table and open the mail client for one wholesaler. */
+/** Copy a compact HTML order table and open the mail client for one wholesaler. */
 export async function sendWholesalerOrderMail(
   rows: QuoteRow[],
   columns: QuoteColumn[],
@@ -221,6 +224,10 @@ export async function sendWholesalerOrderMail(
   const subject = offerName?.trim()
     ? `${offerName.trim()} — ${wholesalerName}`
     : `Zamówienie — ${wholesalerName}`;
-  openMailWithBody(subject, text);
+  // mailto supports only plain text — leave a short prompt; user pastes the HTML table (Ctrl+V)
+  openMailWithBody(
+    subject,
+    'Dzień dobry,\n\nPoniżej zamówienie (wklej tabelę: Ctrl+V):\n\n',
+  );
   return lines.length;
 }

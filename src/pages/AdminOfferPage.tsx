@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,12 +7,14 @@ import {
   FileSpreadsheet,
   Lock,
   Mail,
+  Printer,
   Unlock,
   Plus,
   Trash2,
 } from 'lucide-react';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ConfirmModal } from '../components/shared/ConfirmModal';
+import { PrintOfferReport } from '../components/features/offers/PrintOfferReport';
 import { toast } from 'sonner';
 import {
   useQuote,
@@ -57,6 +59,7 @@ export const AdminOfferPage: React.FC = () => {
   const [newColName, setNewColName] = useState('');
   const [newRowName, setNewRowName] = useState('');
   const [newRowEan, setNewRowEan] = useState('');
+  const [isPrinting, setIsPrinting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<null | {
     type: 'column' | 'row';
     id: string;
@@ -139,7 +142,7 @@ export const AdminOfferPage: React.FC = () => {
     try {
       const count = await sendWholesalerOrderMail(rows, columns, wholesalerName, quote?.name);
       toast.success(
-        `Poczta: ${count} ${count === 1 ? 'produkt' : 'produktów'} dla ${wholesalerName} — wklej tabelę (Ctrl+V)`,
+        `Skopiowano tabelę (${count}) — w poczcie wciśnij Ctrl+V`,
       );
     } catch (err) {
       if (err instanceof Error && err.message === 'NO_ROWS') {
@@ -149,6 +152,17 @@ export const AdminOfferPage: React.FC = () => {
       toast.error('Nie udało się przygotować wiadomości');
     }
   };
+
+  const handlePrint = () => setIsPrinting(true);
+
+  useEffect(() => {
+    if (!isPrinting) return;
+    const timer = setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isPrinting]);
 
   const handleRenameQuote = async (value: string) => {
     if (!quote) return;
@@ -229,7 +243,7 @@ export const AdminOfferPage: React.FC = () => {
                 title="Kliknij, aby zmienić nazwę"
               />
             </div>
-            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 lg:w-auto lg:flex lg:shrink-0 lg:flex-nowrap">
+            <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 lg:w-auto lg:flex lg:shrink-0 lg:flex-nowrap">
               <button
                 type="button"
                 onClick={() => void handleCopySummary()}
@@ -250,6 +264,15 @@ export const AdminOfferPage: React.FC = () => {
                 <FileSpreadsheet className="h-4 w-4" />
                 <span className="sm:hidden">Excel</span>
                 <span className="hidden sm:inline">Kopiuj do Excel</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                disabled={rows.length === 0 || isPrinting}
+                className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 lg:w-auto lg:px-4"
+              >
+                <Printer className="h-4 w-4" />
+                Drukuj
               </button>
               <button
                 type="button"
@@ -617,8 +640,11 @@ export const AdminOfferPage: React.FC = () => {
                           const summary = applyQuoteRowSummaryOverrides(min, row);
 
                           return (
-                            <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                              <td className="sticky left-0 z-10 bg-white px-2 py-2">
+                            <tr
+                              key={row.id}
+                              className="group border-b border-slate-100 last:border-0"
+                            >
+                              <td className="sticky left-0 z-10 bg-white px-2 py-2 transition-colors group-hover:bg-sky-50">
                                 <input
                                   type="text"
                                   defaultValue={row.name}
@@ -632,10 +658,10 @@ export const AdminOfferPage: React.FC = () => {
                                       });
                                     }
                                   }}
-                                  className="w-full rounded border border-transparent px-2 py-2 font-medium hover:border-slate-300 focus:border-slate-400 focus:outline-none"
+                                  className="w-full rounded border border-transparent bg-transparent px-2 py-2 font-medium hover:border-slate-300 focus:border-slate-400 focus:outline-none"
                                 />
                               </td>
-                              <td className="px-2 py-2">
+                              <td className="px-2 py-2 transition-colors group-hover:bg-sky-50">
                                 <div className="flex items-center gap-1.5">
                                   <input
                                     type="text"
@@ -651,7 +677,7 @@ export const AdminOfferPage: React.FC = () => {
                                       }
                                     }}
                                     placeholder="EAN"
-                                    className="min-w-0 flex-1 rounded border border-transparent px-2 py-2 font-mono text-sm tabular-nums hover:border-slate-300 focus:border-slate-400 focus:outline-none"
+                                    className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-2 py-2 font-mono text-sm tabular-nums hover:border-slate-300 focus:border-slate-400 focus:outline-none"
                                   />
                                   <button
                                     type="button"
@@ -667,12 +693,12 @@ export const AdminOfferPage: React.FC = () => {
                               {columns.map((col) => (
                                 <td
                                   key={col.id}
-                                  className="px-2 py-2 text-center tabular-nums text-slate-800"
+                                  className="px-2 py-2 text-center tabular-nums text-slate-800 transition-colors group-hover:bg-sky-50"
                                 >
                                   {byCol[col.id]?.trim() ? formatPricePl(byCol[col.id]) : '—'}
                                 </td>
                               ))}
-                              <td className="bg-amber-50/60 px-2 py-2">
+                              <td className="bg-amber-50/60 px-2 py-2 transition-colors group-hover:bg-amber-100">
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -691,7 +717,7 @@ export const AdminOfferPage: React.FC = () => {
                                   className="w-full rounded border border-transparent bg-transparent px-2 py-2 text-center font-semibold tabular-nums text-amber-950 hover:border-amber-300 focus:border-amber-400 focus:bg-white focus:outline-none"
                                 />
                               </td>
-                              <td className="bg-amber-50/60 px-2 py-2">
+                              <td className="bg-amber-50/60 px-2 py-2 transition-colors group-hover:bg-amber-100">
                                 <input
                                   type="text"
                                   defaultValue={summary.sourceLabel === '—' ? '' : summary.sourceLabel}
@@ -707,7 +733,7 @@ export const AdminOfferPage: React.FC = () => {
                                   className="w-full rounded border border-transparent bg-transparent px-2 py-2 text-center text-sm font-medium text-amber-950 hover:border-amber-300 focus:border-amber-400 focus:bg-white focus:outline-none"
                                 />
                               </td>
-                              <td className="bg-emerald-50/70 px-2 py-2">
+                              <td className="bg-emerald-50/70 px-2 py-2 transition-colors group-hover:bg-emerald-100">
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -726,7 +752,7 @@ export const AdminOfferPage: React.FC = () => {
                                   className="w-full rounded border border-transparent bg-transparent px-2 py-2 text-center font-semibold tabular-nums text-emerald-950 hover:border-emerald-300 focus:border-emerald-400 focus:bg-white focus:outline-none"
                                 />
                               </td>
-                              <td className="px-1 py-2 text-center">
+                              <td className="px-1 py-2 text-center transition-colors group-hover:bg-sky-50">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -750,6 +776,10 @@ export const AdminOfferPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {isPrinting && (
+        <PrintOfferReport offerName={quote.name} rows={rows} columns={columns} />
+      )}
 
       <ConfirmModal
         isOpen={!!deleteTarget}
