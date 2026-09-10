@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { APP_CONFIG, getOrderShopNumbers } from '../config/app';
+import { NETWORK_STORE_DEFAULTS } from '../config/networkStores';
 
 export interface Store {
   id: string;
@@ -7,8 +7,14 @@ export interface Store {
   number: number;
   name: string | null;
   address: string | null;
+  phone: string | null;
+  email: string | null;
   managerName: string | null;
 }
+
+export type StoreContactFields = Partial<
+  Pick<Store, 'name' | 'address' | 'phone' | 'email' | 'managerName'>
+>;
 
 export const storeService = {
   async getAll(userId: string): Promise<Store[]> {
@@ -22,35 +28,72 @@ export const storeService = {
     return (data || []).map(mapStore);
   },
 
-  /** Uzupełnia brakujące sklepy wg ORDER_SHOP_COUNT */
+  /**
+   * Seeds the official list only when the user has no stores yet.
+   * Never re-inserts deleted numbers. Fills empty phone/email on existing rows.
+   */
   async ensureDefaults(userId: string): Promise<Store[]> {
     const existing = await this.getAll(userId);
-    const existingNumbers = new Set(existing.map((s) => s.number));
-    const missing = getOrderShopNumbers().filter((n) => !existingNumbers.has(n));
 
-    if (missing.length > 0) {
-      const rows = missing.map((n) => ({
+    if (existing.length === 0) {
+      const rows = NETWORK_STORE_DEFAULTS.map((d) => ({
         user_id: userId,
-        number: n,
-        name: `Sklep ${n}`,
+        number: d.number,
+        name: d.name,
+        address: d.address,
+        phone: d.phone,
+        email: d.email,
       }));
-      await supabase.from('stores').insert(rows);
+      const { error } = await supabase.from('stores').insert(rows);
+      if (error) throw error;
+      return this.getAll(userId);
     }
 
+    const needsSeed = existing.filter(
+      (s) => (s.phone == null || s.phone === '') && (s.email == null || s.email === ''),
+    );
+
+    for (const store of needsSeed) {
+      const d = NETWORK_STORE_DEFAULTS.find((x) => x.number === store.number);
+      if (!d) continue;
+      await this.update(store.id, {
+        name: d.name,
+        address: d.address,
+        phone: d.phone,
+        email: d.email,
+      });
+    }
+
+    return needsSeed.length > 0 ? this.getAll(userId) : existing;
+  },
+
+  /** Force-replace contact fields from the official network list (existing rows only). */
+  async replaceWithDefaults(userId: string): Promise<Store[]> {
+    const existing = await this.ensureDefaults(userId);
+    for (const store of existing) {
+      const d = NETWORK_STORE_DEFAULTS.find((x) => x.number === store.number);
+      if (!d) continue;
+      await this.update(store.id, {
+        name: d.name,
+        address: d.address,
+        phone: d.phone,
+        email: d.email,
+      });
+    }
     return this.getAll(userId);
   },
 
-  async update(
-    id: string,
-    fields: Partial<Pick<Store, 'name' | 'address' | 'managerName'>>,
-  ) {
+  async update(id: string, fields: StoreContactFields) {
+    const update: Record<string, string | null | undefined> = {};
+    if (fields.name !== undefined) update.name = fields.name;
+    if (fields.address !== undefined) update.address = fields.address;
+    if (fields.phone !== undefined) update.phone = fields.phone;
+    if (fields.email !== undefined) update.email = fields.email;
+    if (fields.managerName !== undefined) update.manager_name = fields.managerName;
+
     const { data, error } = await supabase
       .from('stores')
-      .update({
-        name: fields.name,
-        address: fields.address,
-        manager_name: fields.managerName,
-      })
+      .update(update)
       .eq('id', id)
       .select()
       .single();
@@ -59,8 +102,9 @@ export const storeService = {
     return mapStore(data);
   },
 
-  getShopCount() {
-    return APP_CONFIG.ORDER_SHOP_COUNT;
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from('stores').delete().eq('id', id);
+    if (error) throw error;
   },
 };
 
@@ -71,6 +115,8 @@ function mapStore(row: Record<string, unknown>): Store {
     number: row.number as number,
     name: row.name as string | null,
     address: row.address as string | null,
+    phone: (row.phone as string | null) ?? null,
+    email: (row.email as string | null) ?? null,
     managerName: row.manager_name as string | null,
   };
 }

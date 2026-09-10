@@ -198,12 +198,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     },
     {
       label: 'Sieć sklepów',
-      sub: 'Wkrótce dostępne',
+      sub: 'Panel całej sieci',
       group: 'Sklep',
       accent: '#4f46e5',
       active: location.pathname === '/network',
       icon: Building2,
-      disabled: true,
       action: () => navigate('/network'),
     },
     {
